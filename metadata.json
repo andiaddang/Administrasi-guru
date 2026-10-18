@@ -1,0 +1,6 @@
+{
+  "name": "Aplikasi Administrasi Guru SMAN 1 Gowa",
+  "description": "Sistem Informasi Manajemen Administrasi Guru Terpadu SMA Negeri 1 Gowa: Presensi, Nilai Kurikulum Merdeka, Jurnal Mengajar, Jadwal, dan Cetak Rapor.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

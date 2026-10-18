@@ -1,0 +1,328 @@
+import React, { useState, useEffect } from 'react';
+import {
+  SchoolProfile,
+  User,
+  ClassRoom,
+  Student,
+  Schedule,
+  AttendanceRecord,
+  GradeRecord,
+  TeachingJournal,
+} from './types';
+import { StorageService } from './services/storageService';
+import { Header } from './components/Header';
+import { Sidebar } from './components/Sidebar';
+import { Dashboard } from './components/Dashboard';
+import { ClassManagement } from './components/ClassManagement';
+import { StudentManagement } from './components/StudentManagement';
+import { ScheduleManagement } from './components/ScheduleManagement';
+import { AttendanceManagement } from './components/AttendanceManagement';
+import { GradeManagement } from './components/GradeManagement';
+import { JournalManagement } from './components/JournalManagement';
+import { SchoolSettings } from './components/SchoolSettings';
+import { AuthModal } from './components/AuthModal';
+
+export default function App() {
+  // Application Data States
+  const [school, setSchool] = useState<SchoolProfile>(() => StorageService.getSchool());
+  const [currentUser, setCurrentUser] = useState<User | null>(() => StorageService.getCurrentUser());
+  const [classes, setClasses] = useState<ClassRoom[]>(() => StorageService.getClasses());
+  const [students, setStudents] = useState<Student[]>(() => StorageService.getStudents());
+  const [schedules, setSchedules] = useState<Schedule[]>(() => StorageService.getSchedules());
+  const [attendances, setAttendances] = useState<AttendanceRecord[]>(() =>
+    StorageService.getAttendances()
+  );
+  const [grades, setGrades] = useState<GradeRecord[]>(() => StorageService.getGrades());
+  const [journals, setJournals] = useState<TeachingJournal[]>(() => StorageService.getJournals());
+
+  // UI States
+  const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+  // Sync state changes with StorageService
+  useEffect(() => {
+    StorageService.saveSchool(school);
+  }, [school]);
+
+  useEffect(() => {
+    StorageService.saveClasses(classes);
+  }, [classes]);
+
+  useEffect(() => {
+    StorageService.saveStudents(students);
+  }, [students]);
+
+  useEffect(() => {
+    StorageService.saveSchedules(schedules);
+  }, [schedules]);
+
+  useEffect(() => {
+    StorageService.saveAttendances(attendances);
+  }, [attendances]);
+
+  useEffect(() => {
+    StorageService.saveGrades(grades);
+  }, [grades]);
+
+  useEffect(() => {
+    StorageService.saveJournals(journals);
+  }, [journals]);
+
+  // RESET TO FACTORY DEFAULTS
+  const handleResetToDefaults = () => {
+    if (
+      window.confirm(
+        'Apakah Anda yakin ingin mengatur ulang data ke data awal SMA Negeri 1 Gowa? Seluruh perubahan lokal akan ditimpa dengan data percontohan default.'
+      )
+    ) {
+      StorageService.resetToDefaults();
+      setSchool(StorageService.getSchool());
+      setCurrentUser(StorageService.getCurrentUser());
+      setClasses(StorageService.getClasses());
+      setStudents(StorageService.getStudents());
+      setSchedules(StorageService.getSchedules());
+      setAttendances(StorageService.getAttendances());
+      setGrades(StorageService.getGrades());
+      setJournals(StorageService.getJournals());
+      setActiveTab('dashboard');
+    }
+  };
+
+  // CLASS HANDLERS
+  const handleAddClass = (newClass: Omit<ClassRoom, 'id'>) => {
+    const created: ClassRoom = {
+      ...newClass,
+      id: `cls-${Date.now()}`,
+    };
+    setClasses((prev) => [...prev, created]);
+  };
+
+  const handleUpdateClass = (updated: ClassRoom) => {
+    setClasses((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+  };
+
+  const handleDeleteClass = (id: string) => {
+    setClasses((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  const handleDeleteBatchClasses = (ids: string[]) => {
+    setClasses((prev) => prev.filter((c) => !ids.includes(c.id)));
+  };
+
+  // STUDENT HANDLERS
+  const handleAddStudent = (newStudent: Omit<Student, 'id'>) => {
+    const created: Student = {
+      ...newStudent,
+      id: `std-${Date.now()}`,
+    };
+    setStudents((prev) => [...prev, created]);
+  };
+
+  const handleUpdateStudent = (updated: Student) => {
+    setStudents((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+  };
+
+  const handleDeleteStudent = (id: string) => {
+    setStudents((prev) => prev.filter((s) => s.id !== id));
+  };
+
+  const handleDeleteBatchStudents = (ids: string[]) => {
+    setStudents((prev) => prev.filter((s) => !ids.includes(s.id)));
+  };
+
+  const handleBatchImportStudents = (newStudents: Omit<Student, 'id'>[]) => {
+    const mapped: Student[] = newStudents.map((s, idx) => ({
+      ...s,
+      id: `std-${Date.now()}-${idx}`,
+    }));
+    setStudents((prev) => [...prev, ...mapped]);
+  };
+
+  // SCHEDULE HANDLERS
+  const handleAddSchedule = (newSchedule: Omit<Schedule, 'id'>) => {
+    const created: Schedule = {
+      ...newSchedule,
+      id: `sch-${Date.now()}`,
+    };
+    setSchedules((prev) => [...prev, created]);
+  };
+
+  const handleUpdateSchedule = (updated: Schedule) => {
+    setSchedules((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+  };
+
+  const handleDeleteSchedule = (id: string) => {
+    setSchedules((prev) => prev.filter((s) => s.id !== id));
+  };
+
+  // ATTENDANCE HANDLERS
+  const handleSaveAttendances = (records: AttendanceRecord[]) => {
+    setAttendances(records);
+  };
+
+  // GRADE HANDLERS
+  const handleSaveBatchGrades = (newGrades: GradeRecord[]) => {
+    setGrades((prev) => [...prev, ...newGrades]);
+  };
+
+  const handleDeleteGrade = (id: string) => {
+    setGrades((prev) => prev.filter((g) => g.id !== id));
+  };
+
+  // JOURNAL HANDLERS
+  const handleAddJournal = (newJournal: Omit<TeachingJournal, 'id'>) => {
+    const created: TeachingJournal = {
+      ...newJournal,
+      id: `jrn-${Date.now()}`,
+    };
+    setJournals((prev) => [created, ...prev]);
+  };
+
+  const handleUpdateJournal = (updated: TeachingJournal) => {
+    setJournals((prev) => prev.map((j) => (j.id === updated.id ? updated : j)));
+  };
+
+  const handleDeleteJournal = (id: string) => {
+    setJournals((prev) => prev.filter((j) => j.id !== id));
+  };
+
+  // SCHOOL PROFILE HANDLER
+  const handleSaveSchool = (profile: SchoolProfile) => {
+    setSchool(profile);
+  };
+
+  // AUTH HANDLERS
+  const handleLogout = () => {
+    if (window.confirm('Keluar dari sesi akun guru saat ini?')) {
+      setCurrentUser(null);
+      StorageService.saveCurrentUser(null);
+      setIsAuthModalOpen(true);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800 antialiased font-sans">
+      {/* Top Header */}
+      <Header
+        school={school}
+        currentUser={currentUser}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
+        onLogout={handleLogout}
+        onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+        activeTab={activeTab}
+      />
+
+      {/* Main Container: Sidebar + Content */}
+      <div className="flex-1 flex max-w-7xl w-full mx-auto">
+        <Sidebar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+          currentUser={currentUser}
+          school={school}
+          onResetData={handleResetToDefaults}
+        />
+
+        {/* Dynamic Main Workspace */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0 overflow-y-auto">
+          {activeTab === 'dashboard' && (
+            <Dashboard
+              classes={classes}
+              students={students}
+              attendances={attendances}
+              grades={grades}
+              journals={journals}
+              schedules={schedules}
+              onNavigateTab={setActiveTab}
+            />
+          )}
+
+          {activeTab === 'classes' && (
+            <ClassManagement
+              classes={classes}
+              students={students}
+              onAddClass={handleAddClass}
+              onUpdateClass={handleUpdateClass}
+              onDeleteClass={handleDeleteClass}
+              onDeleteBatchClasses={handleDeleteBatchClasses}
+            />
+          )}
+
+          {activeTab === 'students' && (
+            <StudentManagement
+              students={students}
+              classes={classes}
+              onAddStudent={handleAddStudent}
+              onUpdateStudent={handleUpdateStudent}
+              onDeleteStudent={handleDeleteStudent}
+              onDeleteBatchStudents={handleDeleteBatchStudents}
+              onBatchImportStudents={handleBatchImportStudents}
+            />
+          )}
+
+          {activeTab === 'schedules' && (
+            <ScheduleManagement
+              schedules={schedules}
+              classes={classes}
+              onAddSchedule={handleAddSchedule}
+              onUpdateSchedule={handleUpdateSchedule}
+              onDeleteSchedule={handleDeleteSchedule}
+            />
+          )}
+
+          {activeTab === 'attendance' && (
+            <AttendanceManagement
+              students={students}
+              classes={classes}
+              attendances={attendances}
+              onSaveAttendances={handleSaveAttendances}
+              school={school}
+              currentUser={currentUser}
+            />
+          )}
+
+          {activeTab === 'grades' && (
+            <GradeManagement
+              students={students}
+              classes={classes}
+              grades={grades}
+              onSaveBatchGrades={handleSaveBatchGrades}
+              onDeleteGrade={handleDeleteGrade}
+              school={school}
+              currentUser={currentUser}
+            />
+          )}
+
+          {activeTab === 'journals' && (
+            <JournalManagement
+              journals={journals}
+              classes={classes}
+              onAddJournal={handleAddJournal}
+              onUpdateJournal={handleUpdateJournal}
+              onDeleteJournal={handleDeleteJournal}
+              school={school}
+              currentUser={currentUser}
+            />
+          )}
+
+          {activeTab === 'settings' && (
+            <SchoolSettings school={school} onSaveSchool={handleSaveSchool} />
+          )}
+        </main>
+      </div>
+
+      {/* Auth Modal (Login / Register) */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onLoginSuccess={(user) => {
+          setCurrentUser(user);
+          setIsAuthModalOpen(false);
+        }}
+        school={school}
+      />
+    </div>
+  );
+}
