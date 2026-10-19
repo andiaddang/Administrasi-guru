@@ -8,8 +8,9 @@ import {
   AttendanceRecord,
   GradeRecord,
   TeachingJournal,
+  AppThemeConfig,
 } from './types';
-import { StorageService } from './services/storageService';
+import { StorageService, DEFAULT_THEME_CONFIG } from './services/storageService';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
@@ -22,6 +23,8 @@ import { JournalManagement } from './components/JournalManagement';
 import { SchoolSettings } from './components/SchoolSettings';
 import { AuthModal } from './components/AuthModal';
 import { ShareModal } from './components/ShareModal';
+import { ThemeModal } from './components/ThemeModal';
+import { EditProfileModal } from './components/EditProfileModal';
 
 export default function App() {
   // Application Data States
@@ -35,12 +38,26 @@ export default function App() {
   );
   const [grades, setGrades] = useState<GradeRecord[]>(() => StorageService.getGrades());
   const [journals, setJournals] = useState<TeachingJournal[]>(() => StorageService.getJournals());
+  const [theme, setTheme] = useState<AppThemeConfig>(() => StorageService.getTheme());
 
   // UI States
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
+
+  // Apply dark mode class to documentElement whenever theme.mode changes
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      if (theme.mode === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+  }, [theme.mode]);
 
   // Check URL query parameters on mount for deep linking (e.g. from shared QR code)
   useEffect(() => {
@@ -221,16 +238,44 @@ export default function App() {
     }
   };
 
+  // TEACHER PROFILE HANDLER
+  const handleSaveProfile = (updatedUser: User) => {
+    setCurrentUser(updatedUser);
+    StorageService.updateUserProfile(updatedUser);
+  };
+
+  // THEME HANDLER
+  const handleUpdateTheme = (updatedTheme: AppThemeConfig) => {
+    setTheme(updatedTheme);
+    StorageService.saveTheme(updatedTheme);
+    if (typeof document !== 'undefined') {
+      if (updatedTheme.mode === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+  };
+
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800 antialiased font-sans">
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 antialiased font-sans transition-colors">
       {/* Top Header */}
       <Header
         school={school}
         currentUser={currentUser}
+        theme={theme}
         onOpenAuth={() => setIsAuthModalOpen(true)}
         onLogout={handleLogout}
         onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
         onOpenShare={() => setIsShareModalOpen(true)}
+        onOpenTheme={() => setIsThemeModalOpen(true)}
+        onToggleThemeMode={() =>
+          handleUpdateTheme({
+            ...theme,
+            mode: theme.mode === 'dark' ? 'light' : 'dark',
+          })
+        }
+        onOpenEditProfile={() => setIsEditProfileModalOpen(true)}
         activeTab={activeTab}
       />
 
@@ -243,8 +288,11 @@ export default function App() {
           onClose={() => setIsSidebarOpen(false)}
           currentUser={currentUser}
           school={school}
+          theme={theme}
           onResetData={handleResetToDefaults}
           onOpenShare={() => setIsShareModalOpen(true)}
+          onOpenTheme={() => setIsThemeModalOpen(true)}
+          onOpenEditProfile={() => setIsEditProfileModalOpen(true)}
         />
 
         {/* Dynamic Main Workspace */}
@@ -330,7 +378,12 @@ export default function App() {
           )}
 
           {activeTab === 'settings' && (
-            <SchoolSettings school={school} onSaveSchool={handleSaveSchool} />
+            <SchoolSettings
+              school={school}
+              onSaveSchool={handleSaveSchool}
+              currentUser={currentUser}
+              onSaveProfile={handleSaveProfile}
+            />
           )}
         </main>
       </div>
@@ -352,6 +405,22 @@ export default function App() {
         onClose={() => setIsShareModalOpen(false)}
         school={school}
         currentUser={currentUser}
+      />
+
+      {/* Theme Modal (Light/Dark & Menu Bar Color Customization) */}
+      <ThemeModal
+        isOpen={isThemeModalOpen}
+        onClose={() => setIsThemeModalOpen(false)}
+        theme={theme}
+        onUpdateTheme={handleUpdateTheme}
+      />
+
+      {/* Edit Profile Modal (Teacher Name & NIP) */}
+      <EditProfileModal
+        isOpen={isEditProfileModalOpen}
+        onClose={() => setIsEditProfileModalOpen(false)}
+        currentUser={currentUser}
+        onSaveProfile={handleSaveProfile}
       />
     </div>
   );

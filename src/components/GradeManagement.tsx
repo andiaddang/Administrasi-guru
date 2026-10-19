@@ -190,7 +190,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
       return {
         no: idx + 1,
         id: student.id,
-        nisn: student.nisn,
+        nisnNis: student.nisnNis || student.nisn || student.nis || '-',
         name: student.name,
         gender: student.gender,
         avgTugas: avgTugas ?? '-',
@@ -209,26 +209,26 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
   const ledgerClassObj = classes.find((c) => c.id === ledgerClassId);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-slate-800 dark:text-slate-100">
       {/* Header bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
             Manajemen Penilaian & Rapor Siswa
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Input nilai massal per kelas, leger nilai kompilasi, dan cetak dokumen resmi
           </p>
         </div>
 
         {/* Tab switch */}
-        <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg self-start sm:self-auto">
+        <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg self-start sm:self-auto border border-slate-200 dark:border-slate-700">
           <button
             onClick={() => setActiveTab('mass')}
             className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
               activeTab === 'mass'
-                ? 'bg-white text-indigo-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Input Nilai Massal
@@ -237,8 +237,8 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
             onClick={() => setActiveTab('ledger')}
             className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
               activeTab === 'ledger'
-                ? 'bg-white text-indigo-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Leger & Rekap Nilai
@@ -247,8 +247,8 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
             onClick={() => setActiveTab('history')}
             className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
               activeTab === 'history'
-                ? 'bg-white text-indigo-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Riwayat ({grades.length})
@@ -260,16 +260,16 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
         /* TAB 1: INPUT NILAI MASSAL */
         <div className="space-y-4">
           {/* Controls Form Bar */}
-          <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-3">
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
               <div>
-                <label className="block text-[11px] font-medium text-slate-600 mb-1">
+                <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">
                   Rombel / Kelas
                 </label>
                 <select
                   value={selectedClassId}
                   onChange={(e) => setSelectedClassId(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs font-medium bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                  className="w-full px-3 py-1.5 text-xs font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                 >
                   {classes.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -280,25 +280,25 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-medium text-slate-600 mb-1">
+                <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">
                   Mata Pelajaran
                 </label>
                 <input
                   type="text"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-medium text-slate-600 mb-1">
+                <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">
                   Jenis Asesmen
                 </label>
                 <select
                   value={gradeType}
                   onChange={(e) => setGradeType(e.target.value as GradeType)}
-                  className="w-full px-3 py-1.5 text-xs font-medium bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                  className="w-full px-3 py-1.5 text-xs font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                 >
                   <option value="Tugas">Tugas Mandiri / Kelompok</option>
                   <option value="Harian">Formatif Harian</option>
@@ -309,7 +309,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-medium text-slate-600 mb-1">
+                <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">
                   Judul Penilaian / Materi
                 </label>
                 <input
@@ -317,25 +317,25 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                   value={assessmentTitle}
                   onChange={(e) => setAssessmentTitle(e.target.value)}
                   placeholder="Contoh: Sumatif Bab 2 Trigonometri"
-                  className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-medium text-slate-600 mb-1">
+                <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">
                   Tanggal Asesmen
                 </label>
                 <input
                   type="date"
                   value={assessmentDate}
                   onChange={(e) => setAssessmentDate(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs font-medium bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-mono"
+                  className="w-full px-3 py-1.5 text-xs font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 font-mono"
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-              <span className="text-xs text-slate-500">
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+              <span className="text-xs text-slate-500 dark:text-slate-400">
                 Ketik langsung angka nilai (0 - 100) pada kolom input di bawah, lalu klik simpan.
               </span>
               <button
@@ -350,47 +350,48 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
           </div>
 
           {saveSuccess && (
-            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-xs flex items-center gap-2 animate-in fade-in">
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-lg text-xs flex items-center gap-2 animate-in fade-in">
               <CheckCircle className="w-4 h-4 text-emerald-600" />
               <span>Nilai asesmen "{assessmentTitle}" berhasil disimpan ke sistem!</span>
             </div>
           )}
 
           {/* Mass Input Matrix Table */}
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
-            <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs">
-              <span className="font-semibold text-slate-700">
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+              <span className="font-semibold text-slate-700 dark:text-slate-200">
                 Form Nilai Massal: {selectedClassObj?.name} · {subject} · {gradeType}
               </span>
-              <span className="text-slate-500">
+              <span className="text-slate-500 dark:text-slate-400">
                 Skala Penilaian: 0 s/d 100 (KKM / Interval: 70)
               </span>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider border-b border-slate-200">
+                <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-semibold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
                   <tr>
                     <th className="p-3.5 w-10 text-center">No</th>
-                    <th className="p-3.5">NISN</th>
+                    <th className="p-3.5">NISN / NIS</th>
                     <th className="p-3.5">Nama Lengkap Siswa</th>
                     <th className="p-3.5 text-center">L/P</th>
                     <th className="p-3.5 text-center w-36">Nilai (0 - 100) *</th>
                     <th className="p-3.5">Catatan / Umpan Balik Guru</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-700">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-200">
                   {classStudents.length > 0 ? (
                     classStudents.map((student, idx) => {
                       const val = massScores[student.id] ?? '';
                       const note = massNotes[student.id] ?? '';
                       const isLow = typeof val === 'number' && val < 70;
+                      const studentIdNum = student.nisnNis || student.nisn || student.nis || '-';
                       return (
-                        <tr key={student.id} className="hover:bg-slate-50/70 transition-colors">
-                          <td className="p-3.5 text-center font-mono text-slate-500">{idx + 1}</td>
-                          <td className="p-3.5 font-mono text-slate-600">{student.nisn}</td>
-                          <td className="p-3.5 font-bold text-slate-900">{student.name}</td>
-                          <td className="p-3.5 text-center font-semibold text-slate-500">
+                        <tr key={student.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors">
+                          <td className="p-3.5 text-center font-mono text-slate-500 dark:text-slate-400">{idx + 1}</td>
+                          <td className="p-3.5 font-mono text-slate-600 dark:text-slate-300 font-medium">{studentIdNum}</td>
+                          <td className="p-3.5 font-bold text-slate-900 dark:text-white">{student.name}</td>
+                          <td className="p-3.5 text-center font-semibold text-slate-500 dark:text-slate-400">
                             {student.gender}
                           </td>
                           <td className="p-3.5 text-center">
@@ -403,8 +404,8 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                               placeholder="0"
                               className={`w-28 px-3 py-1.5 text-xs text-center font-mono font-bold rounded-lg border focus:outline-none focus:ring-2 ${
                                 isLow
-                                  ? 'border-rose-300 text-rose-700 bg-rose-50/60 focus:ring-rose-500'
-                                  : 'border-slate-300 text-slate-900 bg-white focus:ring-indigo-500'
+                                  ? 'border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-400 bg-rose-50/60 dark:bg-rose-950/40 focus:ring-rose-500'
+                                  : 'border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white bg-white dark:bg-slate-800 focus:ring-indigo-500'
                               }`}
                             />
                           </td>
@@ -419,7 +420,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                                 }))
                               }
                               placeholder="Tulis umpan balik / remedial jika perlu..."
-                              className="w-full px-2.5 py-1 text-xs border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
+                              className="w-full px-2.5 py-1 text-xs border border-slate-200 dark:border-slate-700 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                             />
                           </td>
                         </tr>
@@ -436,7 +437,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
               </table>
             </div>
 
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex justify-end">
               <button
                 type="button"
                 onClick={handleSaveMassInput}
@@ -452,13 +453,13 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
         /* TAB 2: LEGER & REKAPITULASI NILAI LENGKAP */
         <div className="space-y-4">
           {/* Controls Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
             <div className="flex items-center gap-3">
-              <label className="text-xs font-medium text-slate-600">Pilih Kelas:</label>
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Pilih Kelas:</label>
               <select
                 value={ledgerClassId}
                 onChange={(e) => setLedgerClassId(e.target.value)}
-                className="px-3 py-1.5 text-xs font-medium bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                className="px-3 py-1.5 text-xs font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
               >
                 {classes.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -471,7 +472,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
             <button
               type="button"
               onClick={() => setIsPrintModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer self-start sm:self-auto"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer self-start sm:self-auto"
             >
               <Printer className="w-4 h-4" />
               Cetak Dokumen Leger Nilai / Rapor
@@ -479,22 +480,22 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
           </div>
 
           {/* Leger Table */}
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
-            <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-2">
-              <span className="font-semibold text-slate-800">
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-2">
+              <span className="font-semibold text-slate-800 dark:text-slate-200">
                 Buku Leger Nilai Kompilasi · {ledgerClassObj?.name} · T.A. {school.academicYear} (Semester {school.semester})
               </span>
-              <span className="text-slate-500">
+              <span className="text-slate-500 dark:text-slate-400">
                 Wali Kelas: {ledgerClassObj?.homeroomTeacher}
               </span>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider border-b border-slate-200">
+                <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-semibold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
                   <tr>
                     <th className="p-3 w-8 text-center">No</th>
-                    <th className="p-3">NISN</th>
+                    <th className="p-3">NISN / NIS</th>
                     <th className="p-3">Nama Lengkap Siswa</th>
                     <th className="p-3 text-center">L/P</th>
                     <th className="p-3 text-center">Tugas</th>
@@ -502,42 +503,42 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                     <th className="p-3 text-center">Sumatif</th>
                     <th className="p-3 text-center">STS</th>
                     <th className="p-3 text-center">SAS</th>
-                    <th className="p-3 text-center font-bold bg-indigo-50/50 text-indigo-900">
+                    <th className="p-3 text-center font-bold bg-indigo-50/50 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200">
                       Nilai Akhir
                     </th>
                     <th className="p-3 text-center">Predikat</th>
                     <th className="p-3">Capaian Kompetensi</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-700">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-200">
                   {ledgerData.length > 0 ? (
                     ledgerData.map((row) => (
-                      <tr key={row.id} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="p-3 text-center font-mono text-slate-500">{row.no}</td>
-                        <td className="p-3 font-mono text-slate-600">{row.nisn}</td>
-                        <td className="p-3 font-bold text-slate-900">{row.name}</td>
-                        <td className="p-3 text-center font-semibold text-slate-500">{row.gender}</td>
+                      <tr key={row.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors">
+                        <td className="p-3 text-center font-mono text-slate-500 dark:text-slate-400">{row.no}</td>
+                        <td className="p-3 font-mono text-slate-600 dark:text-slate-300 font-medium">{row.nisnNis}</td>
+                        <td className="p-3 font-bold text-slate-900 dark:text-white">{row.name}</td>
+                        <td className="p-3 text-center font-semibold text-slate-500 dark:text-slate-400">{row.gender}</td>
                         <td className="p-3 text-center font-mono">{row.avgTugas}</td>
                         <td className="p-3 text-center font-mono">{row.avgHarian}</td>
                         <td className="p-3 text-center font-mono">{row.avgSumatif}</td>
                         <td className="p-3 text-center font-mono">{row.sts}</td>
                         <td className="p-3 text-center font-mono">{row.sas}</td>
-                        <td className="p-3 text-center font-mono font-bold text-sm bg-indigo-50/40 text-indigo-700">
+                        <td className="p-3 text-center font-mono font-bold text-sm bg-indigo-50/40 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300">
                           {row.finalGrade}
                         </td>
-                        <td className="p-3 text-center font-mono font-bold text-slate-800">
+                        <td className="p-3 text-center font-mono font-bold text-slate-800 dark:text-slate-100">
                           {row.predikat}
                         </td>
-                        <td className="p-3 text-[11px] text-slate-600">
+                        <td className="p-3 text-[11px] text-slate-600 dark:text-slate-300">
                           <span
                             className={`inline-block font-medium ${
                               row.predikat === 'A'
-                                ? 'text-emerald-700'
+                                ? 'text-emerald-700 dark:text-emerald-300'
                                 : row.predikat === 'B'
-                                ? 'text-indigo-700'
+                                ? 'text-indigo-700 dark:text-indigo-300'
                                 : row.predikat === 'C'
-                                ? 'text-amber-700'
-                                : 'text-rose-700'
+                                ? 'text-amber-700 dark:text-amber-300'
+                                : 'text-rose-700 dark:text-rose-300'
                             }`}
                           >
                             {row.statusKetercapaian}
@@ -560,7 +561,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
       ) : (
         /* TAB 3: RIWAYAT PENILAIAN INDIVIDUAL */
         <div className="space-y-4">
-          <div className="bg-white p-4 rounded-xl border border-slate-200">
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
             <div className="relative max-w-sm">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
               <input
@@ -568,15 +569,15 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                 value={historySearch}
                 onChange={(e) => setHistorySearch(e.target.value)}
                 placeholder="Cari judul penilaian atau mata pelajaran..."
-                className="w-full pl-9 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                className="w-full pl-9 pr-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
               />
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider border-b border-slate-200">
+                <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-semibold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
                   <tr>
                     <th className="p-3.5">Tanggal</th>
                     <th className="p-3.5">Kelas</th>
@@ -588,7 +589,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                     <th className="p-3.5 text-right">Aksi</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-700">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-200">
                   {grades.length > 0 ? (
                     grades
                       .filter(
@@ -600,16 +601,16 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                         const student = students.find((s) => s.id === g.studentId);
                         const cls = classes.find((c) => c.id === g.classId);
                         return (
-                          <tr key={g.id} className="hover:bg-slate-50/70 transition-colors">
-                            <td className="p-3.5 font-mono text-slate-500">{g.date}</td>
+                          <tr key={g.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors">
+                            <td className="p-3.5 font-mono text-slate-500 dark:text-slate-400">{g.date}</td>
                             <td className="p-3.5 font-medium">{cls?.name || '-'}</td>
                             <td className="p-3.5">{g.subject}</td>
                             <td className="p-3.5">
-                              <span className="font-semibold text-indigo-700">{g.type}</span>
+                              <span className="font-semibold text-indigo-700 dark:text-indigo-400">{g.type}</span>
                             </td>
-                            <td className="p-3.5 font-medium text-slate-900">{g.title}</td>
-                            <td className="p-3.5 font-bold text-slate-800">{student?.name || '-'}</td>
-                            <td className="p-3.5 text-center font-mono font-bold text-sm text-indigo-600">
+                            <td className="p-3.5 font-medium text-slate-900 dark:text-white">{g.title}</td>
+                            <td className="p-3.5 font-bold text-slate-800 dark:text-slate-100">{student?.name || '-'}</td>
+                            <td className="p-3.5 text-center font-mono font-bold text-sm text-indigo-600 dark:text-indigo-400">
                               {g.score}
                             </td>
                             <td className="p-3.5 text-right">
@@ -619,7 +620,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                                     onDeleteGrade(g.id);
                                   }
                                 }}
-                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
+                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-md transition-colors"
                                 title="Hapus Nilai"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -661,7 +662,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
           <thead>
             <tr className="bg-slate-100 print:bg-slate-200 text-slate-900 font-bold border-b border-slate-900">
               <th className="p-2 border border-slate-900 text-center w-8">No</th>
-              <th className="p-2 border border-slate-900 text-center">NISN</th>
+              <th className="p-2 border border-slate-900 text-center">NISN / NIS</th>
               <th className="p-2 border border-slate-900 text-left">Nama Siswa</th>
               <th className="p-2 border border-slate-900 text-center w-8">L/P</th>
               <th className="p-2 border border-slate-900 text-center w-12">Tugas</th>
@@ -678,7 +679,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
             {ledgerData.map((row) => (
               <tr key={row.id} className="border-b border-slate-900">
                 <td className="p-1.5 border border-slate-900 text-center font-mono">{row.no}</td>
-                <td className="p-1.5 border border-slate-900 text-center font-mono">{row.nisn}</td>
+                <td className="p-1.5 border border-slate-900 text-center font-mono font-medium">{row.nisnNis}</td>
                 <td className="p-1.5 border border-slate-900 font-medium">{row.name}</td>
                 <td className="p-1.5 border border-slate-900 text-center">{row.gender}</td>
                 <td className="p-1.5 border border-slate-900 text-center font-mono">{row.avgTugas}</td>

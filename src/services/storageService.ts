@@ -7,6 +7,7 @@ import {
   AttendanceRecord,
   GradeRecord,
   TeachingJournal,
+  AppThemeConfig,
 } from '../types';
 import {
   DEFAULT_SCHOOL,
@@ -29,6 +30,12 @@ const KEYS = {
   ATTENDANCES: 'sman1gowa_attendances',
   GRADES: 'sman1gowa_grades',
   JOURNALS: 'sman1gowa_journals',
+  THEME: 'sman1gowa_theme_config',
+};
+
+export const DEFAULT_THEME_CONFIG: AppThemeConfig = {
+  mode: 'light',
+  menuColor: 'indigo',
 };
 
 function safeGet<T>(key: string, fallback: T): T {
@@ -85,10 +92,30 @@ export const StorageService = {
   },
 
   getStudents(): Student[] {
-    return safeGet<Student[]>(KEYS.STUDENTS, DEFAULT_STUDENTS);
+    const raw = safeGet<any[]>(KEYS.STUDENTS, DEFAULT_STUDENTS);
+    return raw.map((s) => ({
+      ...s,
+      nisnNis: s.nisnNis || (s.nisn && s.nis ? `${s.nisn} / ${s.nis}` : s.nisn || s.nis || '-'),
+    }));
   },
   saveStudents(students: Student[]): void {
     safeSet(KEYS.STUDENTS, students);
+  },
+
+  getTheme(): AppThemeConfig {
+    return safeGet<AppThemeConfig>(KEYS.THEME, DEFAULT_THEME_CONFIG);
+  },
+  saveTheme(theme: AppThemeConfig): void {
+    safeSet(KEYS.THEME, theme);
+  },
+
+  updateUserProfile(updatedUser: User): void {
+    safeSet(KEYS.CURRENT_USER, updatedUser);
+    const accounts = this.getAccounts();
+    const updatedAccounts = accounts.map((acc) =>
+      acc.id === updatedUser.id ? { ...acc, ...updatedUser } : acc
+    );
+    this.saveAccounts(updatedAccounts);
   },
 
   getSchedules(): Schedule[] {
@@ -128,5 +155,6 @@ export const StorageService = {
     safeSet(KEYS.ATTENDANCES, DEFAULT_ATTENDANCES);
     safeSet(KEYS.GRADES, DEFAULT_GRADES);
     safeSet(KEYS.JOURNALS, DEFAULT_JOURNALS);
+    safeSet(KEYS.THEME, DEFAULT_THEME_CONFIG);
   },
 };

@@ -50,10 +50,20 @@ export interface ClassRoom {
   academicYear: string;
 }
 
+export type ThemeMode = 'light' | 'dark';
+
+export type MenuTheme = 'indigo' | 'emerald' | 'navy' | 'slate' | 'maroon' | 'amethyst';
+
+export interface AppThemeConfig {
+  mode: ThemeMode;
+  menuColor: MenuTheme;
+}
+
 export interface Student {
   id: string;
-  nisn: string;
-  nis: string;
+  nisnNis: string; // NISN dan NIS digabung sesuai permintaan
+  nisn?: string;
+  nis?: string;
   name: string;
   gender: Gender;
   classId: string;

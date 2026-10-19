@@ -1,24 +1,32 @@
 import React from 'react';
-import { User, SchoolProfile } from '../types';
-import { Menu, LogOut, UserCircle } from 'lucide-react';
+import { User, SchoolProfile, AppThemeConfig, MenuTheme, ThemeMode } from '../types';
+import { Menu, LogOut, UserCircle, Palette, Sun, Moon, Edit3 } from 'lucide-react';
 
 interface HeaderProps {
   school: SchoolProfile;
   currentUser: User | null;
+  theme: AppThemeConfig;
   onOpenAuth: () => void;
   onLogout: () => void;
   onToggleSidebar: () => void;
   onOpenShare: () => void;
+  onOpenTheme: () => void;
+  onToggleThemeMode: () => void;
+  onOpenEditProfile: () => void;
   activeTab: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   school,
   currentUser,
+  theme,
   onOpenAuth,
   onLogout,
   onToggleSidebar,
   onOpenShare,
+  onOpenTheme,
+  onToggleThemeMode,
+  onOpenEditProfile,
   activeTab,
 }) => {
   const getTabLabel = (tab: string) => {
@@ -44,14 +52,69 @@ export const Header: React.FC<HeaderProps> = ({
     }
   };
 
+  const getThemeHeaderStyles = (menuColor: MenuTheme, mode: ThemeMode) => {
+    if (mode === 'dark') {
+      switch (menuColor) {
+        case 'emerald':
+          return 'bg-slate-900 border-b border-emerald-900/50';
+        case 'navy':
+          return 'bg-slate-900 border-b border-blue-900/50';
+        case 'maroon':
+          return 'bg-stone-900 border-b border-rose-950';
+        case 'amethyst':
+          return 'bg-slate-900 border-b border-purple-900/50';
+        case 'slate':
+          return 'bg-zinc-900 border-b border-zinc-800';
+        default:
+          return 'bg-slate-900 border-b border-slate-800';
+      }
+    }
+    switch (menuColor) {
+      case 'emerald':
+        return 'bg-emerald-50/50 border-b border-emerald-200/80';
+      case 'navy':
+        return 'bg-blue-50/40 border-b border-blue-200/80';
+      case 'maroon':
+        return 'bg-rose-50/40 border-b border-rose-200/80';
+      case 'amethyst':
+        return 'bg-purple-50/40 border-b border-purple-200/80';
+      case 'slate':
+        return 'bg-slate-100/60 border-b border-slate-300';
+      default:
+        return 'bg-white border-b border-slate-200';
+    }
+  };
+
+  const getAccentDot = (menuColor: MenuTheme) => {
+    switch (menuColor) {
+      case 'emerald':
+        return 'bg-emerald-500';
+      case 'navy':
+        return 'bg-blue-600';
+      case 'maroon':
+        return 'bg-rose-700';
+      case 'amethyst':
+        return 'bg-purple-600';
+      case 'slate':
+        return 'bg-slate-700';
+      default:
+        return 'bg-indigo-600';
+    }
+  };
+
   return (
-    <header className="no-print bg-white border-b border-slate-200 sticky top-0 z-30">
-      <div className="flex items-center justify-between gap-8 px-4 sm:px-6 py-3.5 max-w-7xl mx-auto">
+    <header
+      className={`no-print sticky top-0 z-30 transition-colors ${getThemeHeaderStyles(
+        theme.menuColor,
+        theme.mode
+      )}`}
+    >
+      <div className="flex items-center justify-between gap-4 sm:gap-8 px-4 sm:px-6 py-3.5 max-w-7xl mx-auto">
         {/* Zone 1: Brand wordmark & mobile trigger */}
         <div className="flex items-center gap-3 shrink-0">
           <button
             onClick={onToggleSidebar}
-            className="md:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+            className="md:hidden p-2 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
             aria-label="Buka Navigasi"
           >
             <Menu className="w-5 h-5" />
@@ -66,50 +129,93 @@ export const Header: React.FC<HeaderProps> = ({
                 referrerPolicy="no-referrer"
               />
             ) : null}
-            <span className="text-base font-bold tracking-tight text-slate-900 group-hover:text-indigo-600 transition-colors">
+            <span className="text-base font-bold tracking-tight text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
               {school.name || 'SMAN 1 Gowa'}
             </span>
           </a>
         </div>
 
         {/* Zone 2: Navigation contextual metadata */}
-        <div className="hidden sm:flex items-center gap-2 text-xs font-medium text-slate-500 whitespace-nowrap truncate">
+        <div className="hidden lg:flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap truncate">
           <span>T.A. {school.academicYear}</span>
           <span aria-hidden="true">·</span>
           <span>Semester {school.semester}</span>
           <span aria-hidden="true">·</span>
-          <span className="text-slate-800 font-semibold">{getTabLabel(activeTab)}</span>
+          <span className="text-slate-800 dark:text-slate-200 font-semibold">{getTabLabel(activeTab)}</span>
         </div>
 
         {/* Zone 3: Primary actions & User status */}
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+          {/* Quick Dark / Light Mode Switcher */}
+          <button
+            type="button"
+            onClick={onToggleThemeMode}
+            className="p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white bg-white/80 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg transition-all cursor-pointer shadow-2xs flex items-center gap-1.5"
+            title={theme.mode === 'dark' ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
+            aria-label="Toggle Mode Gelap/Terang"
+          >
+            {theme.mode === 'dark' ? (
+              <Sun className="w-3.5 h-3.5 text-amber-400" />
+            ) : (
+              <Moon className="w-3.5 h-3.5 text-indigo-500" />
+            )}
+            <span className="hidden md:inline text-[11px] font-semibold">
+              {theme.mode === 'dark' ? 'Terang' : 'Gelap'}
+            </span>
+          </button>
+
+          {/* Menu Bar Color & Theme Customizer Button */}
+          <button
+            type="button"
+            onClick={onOpenTheme}
+            className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white bg-white/80 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg transition-all cursor-pointer shadow-2xs"
+            title="Pilih Warna Menu Bar & Aksen Aplikasi"
+          >
+            <span className={`w-2.5 h-2.5 rounded-full ${getAccentDot(theme.menuColor)} ring-1 ring-black/10 dark:ring-white/20`} />
+            <span className="hidden sm:inline text-[11px] font-semibold">Warna Menu</span>
+          </button>
+
+          {/* Share Link & Barcode Button */}
           <button
             type="button"
             onClick={onOpenShare}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:text-indigo-700 bg-slate-100 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-lg transition-all cursor-pointer shadow-2xs"
+            className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-indigo-700 dark:hover:text-indigo-300 bg-white/80 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 hover:border-indigo-200 rounded-lg transition-all cursor-pointer shadow-2xs"
             title="Bagikan Tautan & Barcode QR Code"
           >
-            <span className="text-indigo-600 font-bold">☵</span>
-            <span>Bagikan / Barcode</span>
+            <span className="text-indigo-600 dark:text-indigo-400 font-bold">☵</span>
+            <span className="hidden sm:inline">Bagikan / Barcode</span>
           </button>
 
+          {/* Teacher Profile / Login */}
           {currentUser ? (
-            <div className="flex items-center gap-2">
-              <div className="hidden lg:flex flex-col text-right">
-                <span className="text-xs font-semibold text-slate-800 leading-tight">
-                  {currentUser.name}
-                </span>
-                <span className="text-[10px] text-slate-500 font-mono">
-                  {currentUser.subject}
-                </span>
-              </div>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <button
+                type="button"
+                onClick={onOpenEditProfile}
+                title="Klik untuk mengubah nama guru dan NIP"
+                className="flex items-center gap-2 p-1 sm:px-2.5 sm:py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-left transition-colors cursor-pointer group border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+              >
+                <div className="hidden sm:flex flex-col text-right">
+                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 leading-tight flex items-center justify-end gap-1">
+                    <span>{currentUser.name}</span>
+                    <Edit3 className="w-3 h-3 text-slate-400 group-hover:text-indigo-500" />
+                  </span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                    NIP. {currentUser.nip}
+                  </span>
+                </div>
+                <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold text-xs shrink-0">
+                  {currentUser.name.charAt(0)}
+                </div>
+              </button>
+
               <button
                 onClick={onLogout}
                 title="Keluar Akun"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/50 rounded-lg transition-colors cursor-pointer"
               >
                 <LogOut className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Keluar</span>
+                <span className="hidden md:inline">Keluar</span>
               </button>
             </div>
           ) : (

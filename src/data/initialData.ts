@@ -86,37 +86,37 @@ export const DEFAULT_CLASSES: ClassRoom[] = [
 
 export const DEFAULT_STUDENTS: Student[] = [
   // Kelas X.1
-  { id: 'std-101', nisn: '0081234001', nis: '2425001', name: 'Andi Siti Nurhaliza', gender: 'P', classId: 'cls-1', parentPhone: '081242331101', status: 'Aktif' },
-  { id: 'std-102', nisn: '0081234002', nis: '2425002', name: 'Muh. Fajar Ramadhan', gender: 'L', classId: 'cls-1', parentPhone: '081242331102', status: 'Aktif' },
-  { id: 'std-103', nisn: '0081234003', nis: '2425003', name: 'Nur Aisyah Maharani', gender: 'P', classId: 'cls-1', parentPhone: '081242331103', status: 'Aktif' },
-  { id: 'std-104', nisn: '0081234004', nis: '2425004', name: 'Arya Pratama Putra', gender: 'L', classId: 'cls-1', parentPhone: '081242331104', status: 'Aktif' },
-  { id: 'std-105', nisn: '0081234005', nis: '2425005', name: 'Dian Anggraeni', gender: 'P', classId: 'cls-1', parentPhone: '081242331105', status: 'Aktif' },
-  { id: 'std-106', nisn: '0081234006', nis: '2425006', name: 'Muh. Rifqi Al-Farabi', gender: 'L', classId: 'cls-1', parentPhone: '081242331106', status: 'Aktif' },
-  { id: 'std-107', nisn: '0081234007', nis: '2425007', name: 'Sri Wahyuni', gender: 'P', classId: 'cls-1', parentPhone: '081242331107', status: 'Aktif' },
-  { id: 'std-108', nisn: '0081234008', nis: '2425008', name: 'Rezky Aditya Firmansyah', gender: 'L', classId: 'cls-1', parentPhone: '081242331108', status: 'Aktif' },
+  { id: 'std-101', nisnNis: '0081234001 / 2425001', nisn: '0081234001', nis: '2425001', name: 'Andi Siti Nurhaliza', gender: 'P', classId: 'cls-1', parentPhone: '081242331101', status: 'Aktif' },
+  { id: 'std-102', nisnNis: '0081234002 / 2425002', nisn: '0081234002', nis: '2425002', name: 'Muh. Fajar Ramadhan', gender: 'L', classId: 'cls-1', parentPhone: '081242331102', status: 'Aktif' },
+  { id: 'std-103', nisnNis: '0081234003 / 2425003', nisn: '0081234003', nis: '2425003', name: 'Nur Aisyah Maharani', gender: 'P', classId: 'cls-1', parentPhone: '081242331103', status: 'Aktif' },
+  { id: 'std-104', nisnNis: '0081234004 / 2425004', nisn: '0081234004', nis: '2425004', name: 'Arya Pratama Putra', gender: 'L', classId: 'cls-1', parentPhone: '081242331104', status: 'Aktif' },
+  { id: 'std-105', nisnNis: '0081234005 / 2425005', nisn: '0081234005', nis: '2425005', name: 'Dian Anggraeni', gender: 'P', classId: 'cls-1', parentPhone: '081242331105', status: 'Aktif' },
+  { id: 'std-106', nisnNis: '0081234006 / 2425006', nisn: '0081234006', nis: '2425006', name: 'Muh. Rifqi Al-Farabi', gender: 'L', classId: 'cls-1', parentPhone: '081242331106', status: 'Aktif' },
+  { id: 'std-107', nisnNis: '0081234007 / 2425007', nisn: '0081234007', nis: '2425007', name: 'Sri Wahyuni', gender: 'P', classId: 'cls-1', parentPhone: '081242331107', status: 'Aktif' },
+  { id: 'std-108', nisnNis: '0081234008 / 2425008', nisn: '0081234008', nis: '2425008', name: 'Rezky Aditya Firmansyah', gender: 'L', classId: 'cls-1', parentPhone: '081242331108', status: 'Aktif' },
 
   // Kelas XI.F-1
-  { id: 'std-201', nisn: '0071234001', nis: '2324001', name: 'Andi Muh. Dzaki', gender: 'L', classId: 'cls-2', parentPhone: '081342112201', status: 'Aktif' },
-  { id: 'std-202', nisn: '0071234002', nis: '2324002', name: 'Putri Ayu Lestari', gender: 'P', classId: 'cls-2', parentPhone: '081342112202', status: 'Aktif' },
-  { id: 'std-203', nisn: '0071234003', nis: '2324003', name: 'Ahmad Fauzan', gender: 'L', classId: 'cls-2', parentPhone: '081342112203', status: 'Aktif' },
-  { id: 'std-204', nisn: '0071234004', nis: '2324004', name: 'Salsabila Putri', gender: 'P', classId: 'cls-2', parentPhone: '081342112204', status: 'Aktif' },
-  { id: 'std-205', nisn: '0071234005', nis: '2324005', name: 'Muhammad Haidar', gender: 'L', classId: 'cls-2', parentPhone: '081342112205', status: 'Aktif' },
-  { id: 'std-206', nisn: '0071234006', nis: '2324006', name: 'Nurul Hidayah', gender: 'P', classId: 'cls-2', parentPhone: '081342112206', status: 'Aktif' },
-  { id: 'std-207', nisn: '0071234007', nis: '2324007', name: 'Ilham Jaya Kusuma', gender: 'L', classId: 'cls-2', parentPhone: '081342112207', status: 'Aktif' },
-  { id: 'std-208', nisn: '0071234008', nis: '2324008', name: 'Zahra Amelia', gender: 'P', classId: 'cls-2', parentPhone: '081342112208', status: 'Aktif' },
+  { id: 'std-201', nisnNis: '0071234001 / 2324001', nisn: '0071234001', nis: '2324001', name: 'Andi Muh. Dzaki', gender: 'L', classId: 'cls-2', parentPhone: '081342112201', status: 'Aktif' },
+  { id: 'std-202', nisnNis: '0071234002 / 2324002', nisn: '0071234002', nis: '2324002', name: 'Putri Ayu Lestari', gender: 'P', classId: 'cls-2', parentPhone: '081342112202', status: 'Aktif' },
+  { id: 'std-203', nisnNis: '0071234003 / 2324003', nisn: '0071234003', nis: '2324003', name: 'Ahmad Fauzan', gender: 'L', classId: 'cls-2', parentPhone: '081342112203', status: 'Aktif' },
+  { id: 'std-204', nisnNis: '0071234004 / 2324004', nisn: '0071234004', nis: '2324004', name: 'Salsabila Putri', gender: 'P', classId: 'cls-2', parentPhone: '081342112204', status: 'Aktif' },
+  { id: 'std-205', nisnNis: '0071234005 / 2324005', nisn: '0071234005', nis: '2324005', name: 'Muhammad Haidar', gender: 'L', classId: 'cls-2', parentPhone: '081342112205', status: 'Aktif' },
+  { id: 'std-206', nisnNis: '0071234006 / 2324006', nisn: '0071234006', nis: '2324006', name: 'Nurul Hidayah', gender: 'P', classId: 'cls-2', parentPhone: '081342112206', status: 'Aktif' },
+  { id: 'std-207', nisnNis: '0071234007 / 2324007', nisn: '0071234007', nis: '2324007', name: 'Ilham Jaya Kusuma', gender: 'L', classId: 'cls-2', parentPhone: '081342112207', status: 'Aktif' },
+  { id: 'std-208', nisnNis: '0071234008 / 2324008', nisn: '0071234008', nis: '2324008', name: 'Zahra Amelia', gender: 'P', classId: 'cls-2', parentPhone: '081342112208', status: 'Aktif' },
 
   // Kelas XI.F-2
-  { id: 'std-301', nisn: '0071234101', nis: '2324101', name: 'Bahrul Alam', gender: 'L', classId: 'cls-3', parentPhone: '085242551101', status: 'Aktif' },
-  { id: 'std-302', nisn: '0071234102', nis: '2324102', name: 'Citra Kirana Dewi', gender: 'P', classId: 'cls-3', parentPhone: '085242551102', status: 'Aktif' },
-  { id: 'std-303', nisn: '0071234103', nis: '2324103', name: 'Fikri Haikal', gender: 'L', classId: 'cls-3', parentPhone: '085242551103', status: 'Aktif' },
-  { id: 'std-304', nisn: '0071234104', nis: '2324104', name: 'Mutmainnah', gender: 'P', classId: 'cls-3', parentPhone: '085242551104', status: 'Aktif' },
-  { id: 'std-305', nisn: '0071234105', nis: '2324105', name: 'Rahmat Hidayat', gender: 'L', classId: 'cls-3', parentPhone: '085242551105', status: 'Aktif' },
+  { id: 'std-301', nisnNis: '0071234101 / 2324101', nisn: '0071234101', nis: '2324101', name: 'Bahrul Alam', gender: 'L', classId: 'cls-3', parentPhone: '085242551101', status: 'Aktif' },
+  { id: 'std-302', nisnNis: '0071234102 / 2324102', nisn: '0071234102', nis: '2324102', name: 'Citra Kirana Dewi', gender: 'P', classId: 'cls-3', parentPhone: '085242551102', status: 'Aktif' },
+  { id: 'std-303', nisnNis: '0071234103 / 2324103', nisn: '0071234103', nis: '2324103', name: 'Fikri Haikal', gender: 'L', classId: 'cls-3', parentPhone: '085242551103', status: 'Aktif' },
+  { id: 'std-304', nisnNis: '0071234104 / 2324104', nisn: '0071234104', nis: '2324104', name: 'Mutmainnah', gender: 'P', classId: 'cls-3', parentPhone: '085242551104', status: 'Aktif' },
+  { id: 'std-305', nisnNis: '0071234105 / 2324105', nisn: '0071234105', nis: '2324105', name: 'Rahmat Hidayat', gender: 'L', classId: 'cls-3', parentPhone: '085242551105', status: 'Aktif' },
 
   // Kelas XII.MIPA-1
-  { id: 'std-401', nisn: '0061234001', nis: '2223001', name: 'Aditya Nugraha', gender: 'L', classId: 'cls-4', parentPhone: '08114422001', status: 'Aktif' },
-  { id: 'std-402', nisn: '0061234002', nis: '2223002', name: 'Fitriani Syam', gender: 'P', classId: 'cls-4', parentPhone: '08114422002', status: 'Aktif' },
-  { id: 'std-403', nisn: '0061234003', nis: '2223003', name: 'Taufiq Hidayatullah', gender: 'L', classId: 'cls-4', parentPhone: '08114422003', status: 'Aktif' },
-  { id: 'std-404', nisn: '0061234004', nis: '2223004', name: 'Widya Astuti', gender: 'P', classId: 'cls-4', parentPhone: '08114422004', status: 'Aktif' },
+  { id: 'std-401', nisnNis: '0061234001 / 2223001', nisn: '0061234001', nis: '2223001', name: 'Aditya Nugraha', gender: 'L', classId: 'cls-4', parentPhone: '08114422001', status: 'Aktif' },
+  { id: 'std-402', nisnNis: '0061234002 / 2223002', nisn: '0061234002', nis: '2223002', name: 'Fitriani Syam', gender: 'P', classId: 'cls-4', parentPhone: '08114422002', status: 'Aktif' },
+  { id: 'std-403', nisnNis: '0061234003 / 2223003', nisn: '0061234003', nis: '2223003', name: 'Taufiq Hidayatullah', gender: 'L', classId: 'cls-4', parentPhone: '08114422003', status: 'Aktif' },
+  { id: 'std-404', nisnNis: '0061234004 / 2223004', nisn: '0061234004', nis: '2223004', name: 'Widya Astuti', gender: 'P', classId: 'cls-4', parentPhone: '08114422004', status: 'Aktif' },
 ];
 
 export const DEFAULT_SCHEDULES: Schedule[] = [

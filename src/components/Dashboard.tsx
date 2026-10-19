@@ -289,25 +289,25 @@ export const Dashboard: React.FC<DashboardProps> = ({
   }, [studentGradeRankings, studentAttendanceRankings]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-slate-800 dark:text-slate-100">
       {/* Top Header & Filter Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-xl border border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-slate-800">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
             Dashboard Administrasi Guru
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Ikhtisar komprehensif pembelajaran, nilai capaian, dan presensi siswa
           </p>
         </div>
 
         {/* Filter Kelas */}
         <div className="flex items-center gap-2 self-start sm:self-auto">
-          <label className="text-xs font-medium text-slate-600 whitespace-nowrap">Filter Kelas:</label>
+          <label className="text-xs font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">Filter Kelas:</label>
           <select
             value={selectedClassId}
             onChange={(e) => setSelectedClassId(e.target.value)}
-            className="px-3 py-1.5 text-xs font-medium bg-slate-50 border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+            className="px-3 py-1.5 text-xs font-medium bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
           >
             <option value="all">Semua Kelas ({classes.length})</option>
             {classes.map((cls) => (
@@ -322,86 +322,86 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* KPI Summary Strip */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Kelas */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-slate-500">Total Kelas Diampu</p>
-            <p className="text-2xl font-bold text-slate-900 mt-1 font-mono tabular-nums">
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Kelas Diampu</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1 font-mono tabular-nums">
               {classes.length}
             </p>
-            <p className="text-[11px] text-slate-400 mt-0.5">Tingkat X, XI, XII</p>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Tingkat X, XI, XII</p>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
             <Layers className="w-5 h-5" />
           </div>
         </div>
 
         {/* Total Siswa */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-slate-500">Total Siswa Aktif</p>
-            <p className="text-2xl font-bold text-slate-900 mt-1 font-mono tabular-nums">
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Siswa Aktif</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1 font-mono tabular-nums">
               {filteredStudents.length}
             </p>
-            <p className="text-[11px] text-slate-400 mt-0.5">
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
               {selectedClassId === 'all' ? 'Keseluruhan kelas' : 'Kelas terpilih'}
             </p>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
             <Users className="w-5 h-5" />
           </div>
         </div>
 
         {/* Total Jurnal */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-slate-500">Jurnal Mengajar</p>
-            <p className="text-2xl font-bold text-slate-900 mt-1 font-mono tabular-nums">
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Jurnal Mengajar</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1 font-mono tabular-nums">
               {journals.length}
             </p>
-            <p className="text-[11px] text-slate-400 mt-0.5">Pertemuan terlaksana</p>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Pertemuan terlaksana</p>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-lg bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center">
             <BookOpenCheck className="w-5 h-5" />
           </div>
         </div>
 
         {/* Rata-rata Kehadiran */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-slate-500">Rerata Presensi</p>
-            <p className="text-2xl font-bold text-slate-900 mt-1 font-mono tabular-nums">
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Rerata Presensi</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1 font-mono tabular-nums">
               {attendanceStats.rate}%
             </p>
-            <p className="text-[11px] text-slate-400 mt-0.5">
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
               {attendanceStats.hadir} hadir dari {attendanceStats.total} catatan
             </p>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
             <Percent className="w-5 h-5" />
           </div>
         </div>
       </div>
 
       {/* Quick Action Buttons */}
-      <div className="flex flex-wrap items-center gap-3 bg-white p-4 rounded-xl border border-slate-200">
-        <span className="text-xs font-semibold text-slate-700 mr-1">Aksi Cepat Guru:</span>
+      <div className="flex flex-wrap items-center gap-3 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+        <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 mr-1">Aksi Cepat Guru:</span>
         <button
           onClick={() => onNavigateTab('attendance')}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-lg transition-colors cursor-pointer"
         >
           <CheckCircle2 className="w-3.5 h-3.5" />
           Input Presensi Hari Ini
         </button>
         <button
           onClick={() => onNavigateTab('grades')}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 rounded-lg transition-colors cursor-pointer"
         >
           <TrendingUp className="w-3.5 h-3.5" />
           Input Nilai Massal
         </button>
         <button
           onClick={() => onNavigateTab('journals')}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-sky-50 text-sky-700 hover:bg-sky-100 rounded-lg transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-900/60 rounded-lg transition-colors cursor-pointer"
         >
           <BookOpenCheck className="w-3.5 h-3.5" />
           Buat Jurnal Baru
@@ -410,27 +410,27 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       {/* Alert Perhatian Khusus jika ada siswa presensi rendah */}
       {studentsNeedingAttention.length > 0 && (
-        <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-4">
+        <div className="bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-xl p-4">
           <div className="flex items-start gap-3">
-            <div className="p-1.5 bg-amber-100 text-amber-700 rounded-lg shrink-0 mt-0.5">
+            <div className="p-1.5 bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 rounded-lg shrink-0 mt-0.5">
               <AlertTriangle className="w-4 h-4" />
             </div>
             <div className="flex-1">
-              <h3 className="text-xs font-bold text-amber-900 uppercase tracking-wide">
+              <h3 className="text-xs font-bold text-amber-900 dark:text-amber-200 uppercase tracking-wide">
                 Peringatan Dini: Siswa Butuh Perhatian Khusus ({studentsNeedingAttention.length} Siswa)
               </h3>
-              <p className="text-xs text-amber-800 mt-0.5">
+              <p className="text-xs text-amber-800 dark:text-amber-300 mt-0.5">
                 Siswa berikut memiliki tingkat kehadiran di bawah batas minimum (75%) atau tercatat alpa berulang:
               </p>
               <div className="flex flex-wrap gap-2 mt-2">
                 {studentsNeedingAttention.map((s) => (
                   <span
                     key={s.id}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-amber-300 rounded-md text-xs font-medium text-amber-900"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 rounded-md text-xs font-medium text-amber-900 dark:text-amber-200"
                   >
                     <span>{s.name}</span>
-                    <span className="font-mono font-bold text-red-600">({s.percentage}%)</span>
-                    <span className="text-[10px] text-slate-500">· {s.className}</span>
+                    <span className="font-mono font-bold text-red-600 dark:text-red-400">({s.percentage}%)</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">· {s.className}</span>
                   </span>
                 ))}
               </div>
@@ -442,17 +442,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Chart A: Ranking Nilai Siswa (Terbaik ke Terendah) */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 flex flex-col justify-between">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
             <div>
-              <h2 className="text-sm font-bold text-slate-800">
+              <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">
                 Peringkat Capaian Nilai Siswa
               </h2>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Diurutkan dari nilai rerata terbaik ke terendah
               </p>
             </div>
-            <span className="text-[11px] font-mono text-indigo-600 font-semibold bg-indigo-50 px-2 py-0.5 rounded">
+            <span className="text-[11px] font-mono text-indigo-600 dark:text-indigo-400 font-semibold bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded">
               Skala 0 - 100
             </span>
           </div>
@@ -469,17 +469,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* Chart B: Persentase Kehadiran (Rendah ke Tertinggi) */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 flex flex-col justify-between">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
             <div>
-              <h2 className="text-sm font-bold text-slate-800">
+              <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">
                 Deteksi Presensi Kehadiran Siswa
               </h2>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Diurutkan dari persentase kehadiran terendah (deteksi perhatian khusus)
               </p>
             </div>
-            <div className="flex items-center gap-2 text-[10px] text-slate-500">
+            <div className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400">
               <span className="inline-block w-2.5 h-2.5 rounded-xs bg-red-600"></span>
               <span>&lt;60%</span>
               <span className="inline-block w-2.5 h-2.5 rounded-xs bg-amber-500"></span>
@@ -504,17 +504,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* Jadwal Hari Ini & Jurnal Terbaru */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Jadwal Hari Ini */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-3">
             <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-indigo-600" />
-              <h2 className="text-sm font-bold text-slate-800">
+              <Calendar className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">
                 Jadwal Mengajar ({todayName})
               </h2>
             </div>
             <button
               onClick={() => onNavigateTab('schedules')}
-              className="text-xs text-indigo-600 hover:text-indigo-800 font-medium inline-flex items-center gap-1 cursor-pointer"
+              className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 font-medium inline-flex items-center gap-1 cursor-pointer"
             >
               Lihat Semua
               <ArrowRight className="w-3.5 h-3.5" />
@@ -528,16 +528,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 return (
                   <div
                     key={sch.id}
-                    className="p-3 bg-slate-50 rounded-lg border border-slate-100 flex items-center justify-between"
+                    className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-100 dark:border-slate-700/60 flex items-center justify-between"
                   >
                     <div>
-                      <p className="text-xs font-bold text-slate-800">{sch.subject}</p>
-                      <p className="text-[11px] text-slate-500">
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{sch.subject}</p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
                         {cls?.name || 'Kelas'} · {sch.room}
                       </p>
                     </div>
                     <div className="text-right">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-mono font-medium text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-200">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-mono font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
                         <Clock className="w-3 h-3 text-slate-400" />
                         {sch.timeStart} - {sch.timeEnd}
                       </span>
@@ -554,15 +554,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* Jurnal Terakhir */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-3">
             <div className="flex items-center gap-2">
-              <BookOpenCheck className="w-4 h-4 text-sky-600" />
-              <h2 className="text-sm font-bold text-slate-800">Catatan Jurnal Mengajar Terakhir</h2>
+              <BookOpenCheck className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+              <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">Catatan Jurnal Mengajar Terakhir</h2>
             </div>
             <button
               onClick={() => onNavigateTab('journals')}
-              className="text-xs text-sky-600 hover:text-sky-800 font-medium inline-flex items-center gap-1 cursor-pointer"
+              className="text-xs text-sky-600 dark:text-sky-400 hover:text-sky-800 font-medium inline-flex items-center gap-1 cursor-pointer"
             >
               Kelola Jurnal
               <ArrowRight className="w-3.5 h-3.5" />
@@ -574,13 +574,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
               {journals.slice(0, 2).map((j) => {
                 const cls = classes.find((c) => c.id === j.classId);
                 return (
-                  <div key={j.id} className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                  <div key={j.id} className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-100 dark:border-slate-700/60">
                     <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="font-bold text-slate-800">{j.subject} - {cls?.name}</span>
-                      <span className="text-[11px] text-slate-500 font-mono">{j.date}</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-100">{j.subject} - {cls?.name}</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">{j.date}</span>
                     </div>
-                    <p className="text-xs text-slate-700 font-medium">{j.topic}</p>
-                    <p className="text-[11px] text-slate-500 mt-1 line-clamp-2">
+                    <p className="text-xs text-slate-700 dark:text-slate-300 font-medium">{j.topic}</p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
                       {j.learningActivities}
                     </p>
                   </div>
