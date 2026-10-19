@@ -8,6 +8,7 @@ interface HeaderProps {
   onOpenAuth: () => void;
   onLogout: () => void;
   onToggleSidebar: () => void;
+  onOpenShare: () => void;
   activeTab: string;
 }
 
@@ -17,6 +18,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAuth,
   onLogout,
   onToggleSidebar,
+  onOpenShare,
   activeTab,
 }) => {
   const getTabLabel = (tab: string) => {
@@ -79,8 +81,18 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="text-slate-800 font-semibold">{getTabLabel(activeTab)}</span>
         </div>
 
-        {/* Zone 3: 1 Primary user action */}
-        <div className="flex items-center gap-3 shrink-0">
+        {/* Zone 3: Primary actions & User status */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          <button
+            type="button"
+            onClick={onOpenShare}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:text-indigo-700 bg-slate-100 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-lg transition-all cursor-pointer shadow-2xs"
+            title="Bagikan Tautan & Barcode QR Code"
+          >
+            <span className="text-indigo-600 font-bold">☵</span>
+            <span>Bagikan / Barcode</span>
+          </button>
+
           {currentUser ? (
             <div className="flex items-center gap-2">
               <div className="hidden lg:flex flex-col text-right">

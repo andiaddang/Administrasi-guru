@@ -21,6 +21,7 @@ import { GradeManagement } from './components/GradeManagement';
 import { JournalManagement } from './components/JournalManagement';
 import { SchoolSettings } from './components/SchoolSettings';
 import { AuthModal } from './components/AuthModal';
+import { ShareModal } from './components/ShareModal';
 
 export default function App() {
   // Application Data States
@@ -39,6 +40,25 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
+  // Check URL query parameters on mount for deep linking (e.g. from shared QR code)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab');
+      if (
+        tabParam &&
+        ['dashboard', 'classes', 'students', 'schedules', 'attendance', 'grades', 'journals', 'settings'].includes(
+          tabParam
+        )
+      ) {
+        setActiveTab(tabParam);
+      }
+    } catch (e) {
+      console.error('Error reading URL params:', e);
+    }
+  }, []);
 
   // Sync state changes with StorageService
   useEffect(() => {
@@ -210,6 +230,7 @@ export default function App() {
         onOpenAuth={() => setIsAuthModalOpen(true)}
         onLogout={handleLogout}
         onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+        onOpenShare={() => setIsShareModalOpen(true)}
         activeTab={activeTab}
       />
 
@@ -223,6 +244,7 @@ export default function App() {
           currentUser={currentUser}
           school={school}
           onResetData={handleResetToDefaults}
+          onOpenShare={() => setIsShareModalOpen(true)}
         />
 
         {/* Dynamic Main Workspace */}
@@ -322,6 +344,14 @@ export default function App() {
           setIsAuthModalOpen(false);
         }}
         school={school}
+      />
+
+      {/* Share Modal (Link & Barcode QR Code) */}
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        school={school}
+        currentUser={currentUser}
       />
     </div>
   );

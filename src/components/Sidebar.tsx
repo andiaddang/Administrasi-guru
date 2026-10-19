@@ -12,6 +12,7 @@ import {
   RotateCcw,
   X,
   UserCheck,
+  QrCode,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -22,6 +23,7 @@ interface SidebarProps {
   currentUser: User | null;
   school: SchoolProfile;
   onResetData: () => void;
+  onOpenShare: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -32,6 +34,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentUser,
   school,
   onResetData,
+  onOpenShare,
 }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard Utama', icon: LayoutDashboard },
@@ -122,6 +125,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
             </div>
           )}
+
+          <button
+            type="button"
+            onClick={() => {
+              onOpenShare();
+              onClose();
+            }}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-200 shadow-2xs cursor-pointer"
+          >
+            <QrCode className="w-4 h-4 text-indigo-600" />
+            <span>Bagikan Link & Barcode</span>
+          </button>
 
           <button
             type="button"
