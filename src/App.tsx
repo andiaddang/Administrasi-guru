@@ -160,12 +160,19 @@ export default function App() {
     setStudents((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
   };
 
+  const handleBatchUpdateStudents = (updatedList: Student[]) => {
+    setStudents((prev) => {
+      const map = new Map(updatedList.map((s) => [s.id, s]));
+      return prev.map((s) => map.get(s.id) || s);
+    });
+  };
+
   const handleDeleteStudent = (id: string) => {
     setStudents((prev) => prev.filter((s) => s.id !== id));
   };
 
   const handleDeleteBatchStudents = (ids: string[]) => {
-    setStudents((prev) => prev.filter((s) => !ids.includes(s.id)));
+    setStudents((prev) => prev.filter((c) => !ids.includes(c.id)));
   };
 
   const handleBatchImportStudents = (newStudents: Omit<Student, 'id'>[]) => {
@@ -326,6 +333,7 @@ export default function App() {
               classes={classes}
               onAddStudent={handleAddStudent}
               onUpdateStudent={handleUpdateStudent}
+              onBatchUpdateStudents={handleBatchUpdateStudents}
               onDeleteStudent={handleDeleteStudent}
               onDeleteBatchStudents={handleDeleteBatchStudents}
               onBatchImportStudents={handleBatchImportStudents}

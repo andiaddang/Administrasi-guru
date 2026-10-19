@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Student, ClassRoom, Gender } from '../types';
 import {
   Plus,
@@ -17,6 +17,13 @@ import {
   ClipboardPaste,
   CheckCircle2,
   Sparkles,
+  Zap,
+  Check,
+  Clipboard,
+  ChevronDown,
+  ChevronUp,
+  RefreshCw,
+  Info,
 } from 'lucide-react';
 
 interface StudentManagementProps {
@@ -24,9 +31,126 @@ interface StudentManagementProps {
   classes: ClassRoom[];
   onAddStudent: (newStudent: Omit<Student, 'id'>) => void;
   onUpdateStudent: (updatedStudent: Student) => void;
+  onBatchUpdateStudents?: (updatedStudents: Student[]) => void;
   onDeleteStudent: (id: string) => void;
   onDeleteBatchStudents: (ids: string[]) => void;
   onBatchImportStudents: (newStudents: Omit<Student, 'id'>[]) => void;
+}
+
+// Universal parser for external clipboard text (Excel, Sheets, Word, WhatsApp, Web table)
+export function parseExternalStudentText(
+  rawText: string,
+  defaultClassId: string,
+  classes: ClassRoom[]
+): Array<Omit<Student, 'id'>> {
+  if (!rawText || !rawText.trim()) return [];
+
+  const lines = rawText
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+
+  const result: Array<Omit<Student, 'id'>> = [];
+
+  for (const line of lines) {
+    // 1. Remove leading list numbering like "1. ", "1) ", "1 - ", "1: ", "#1 "
+    const cleanLine = line.replace(/^\s*(?:#|\b)?\d+[\.\)\-:\s]+\s*/, '').trim();
+    if (!cleanLine) continue;
+
+    // Skip table headers if copied with header row like "NISN\tNama\tJK"
+    const lowerLine = cleanLine.toLowerCase();
+    if (
+      (lowerLine.includes('nisn') || lowerLine.includes('nomor induk')) &&
+      (lowerLine.includes('nama') || lowerLine.includes('siswa'))
+    ) {
+      continue;
+    }
+
+    // 2. Try splitting by tab, semicolon, comma, or double/multiple space
+    let tokens: string[] = [];
+    if (cleanLine.includes('\t')) {
+      tokens = cleanLine.split('\t').map((t) => t.trim());
+    } else if (cleanLine.includes(';')) {
+      tokens = cleanLine.split(';').map((t) => t.trim());
+    } else if (cleanLine.includes(',')) {
+      tokens = cleanLine.split(',').map((t) => t.trim());
+    } else if (/\s{2,}/.test(cleanLine)) {
+      tokens = cleanLine.split(/\s{2,}/).map((t) => t.trim());
+    } else {
+      // Single space separated pattern: [NISN/NIS] [Nama Siswa] [L/P/Laki-laki/Perempuan]
+      const spaceMatch = cleanLine.match(
+        /^(\S+(?:\s*\/\s*\S+)?)\s+(.+?)(?:\s+([LP]|Laki-laki|Perempuan|Wanita|Pria))?(?:\s+(\+?\d[\d\s\-]{7,}\d))?$/i
+      );
+      if (spaceMatch) {
+        tokens = [spaceMatch[1], spaceMatch[2]];
+        if (spaceMatch[3]) tokens.push(spaceMatch[3]);
+        if (spaceMatch[4]) tokens.push(spaceMatch[4]);
+      } else {
+        tokens = cleanLine.split(/\s+/).map((t) => t.trim());
+      }
+    }
+
+    // Filter empty tokens
+    tokens = tokens.filter((t) => t.length > 0);
+    if (tokens.length < 2) continue;
+
+    // Token 0: NISN or NISN/NIS
+    const rawNis = tokens[0];
+    // Token 1: Nama
+    const rawName = tokens[1];
+
+    let parsedGender: Gender = 'L';
+    let targetClassId = defaultClassId;
+    let rawPhone = '-';
+
+    for (let i = 2; i < tokens.length; i++) {
+      const tok = tokens[i].trim();
+      const tokUpper = tok.toUpperCase();
+      if (
+        tokUpper === 'P' ||
+        tokUpper.startsWith('PER') ||
+        tokUpper === 'PR' ||
+        tokUpper === 'F' ||
+        tokUpper.startsWith('WAN')
+      ) {
+        parsedGender = 'P';
+      } else if (
+        tokUpper === 'L' ||
+        tokUpper.startsWith('LAK') ||
+        tokUpper.startsWith('PRI') ||
+        tokUpper === 'M'
+      ) {
+        parsedGender = 'L';
+      } else if (tok.match(/^\+?0?8[\d\-]{7,}$/) || tok.match(/^\d{9,}$/)) {
+        rawPhone = tok;
+      } else {
+        // Attempt to match a class name
+        const matchedClass = classes.find(
+          (c) =>
+            c.name.toLowerCase() === tok.toLowerCase() ||
+            c.name.toLowerCase().includes(tok.toLowerCase())
+        );
+        if (matchedClass) {
+          targetClassId = matchedClass.id;
+        }
+      }
+    }
+
+    if (rawName && rawName.toLowerCase() !== 'nama' && rawName.toLowerCase() !== 'nama lengkap') {
+      result.push({
+        nisnNis: rawNis,
+        nisn: rawNis,
+        nis: rawNis,
+        name: rawName,
+        gender: parsedGender,
+        classId: targetClassId,
+        parentPhone: rawPhone,
+        status: 'Aktif',
+      });
+    }
+  }
+
+  return result;
 }
 
 export const StudentManagement: React.FC<StudentManagementProps> = ({
@@ -34,6 +158,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
   classes,
   onAddStudent,
   onUpdateStudent,
+  onBatchUpdateStudents,
   onDeleteStudent,
   onDeleteBatchStudents,
   onBatchImportStudents,
@@ -42,7 +167,30 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
   const [selectedClassFilter, setSelectedClassFilter] = useState<string>('all');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // Modals
+  // INLINE EDITING STATE
+  const [isInlineEditMode, setIsInlineEditMode] = useState(false);
+  const [editingRowId, setEditingRowId] = useState<string | null>(null);
+  const [saveToast, setSaveToast] = useState<string | null>(null);
+
+  // EXTERNAL PASTE STATE
+  const [isQuickPasteBoxOpen, setIsQuickPasteBoxOpen] = useState(false);
+  const [quickPasteText, setQuickPasteText] = useState('');
+  const [quickPasteClassId, setQuickPasteClassId] = useState(
+    selectedClassFilter !== 'all' ? selectedClassFilter : classes[0]?.id || ''
+  );
+  const [quickPasteOverwriteDuplicates, setQuickPasteOverwriteDuplicates] = useState(true);
+
+  // MODAL DETEKSI PASTE DARI LUAR (Ctrl+V Popup)
+  const [clipboardDetectedModalOpen, setClipboardDetectedModalOpen] = useState(false);
+  const [detectedClipboardStudents, setDetectedClipboardStudents] = useState<
+    Array<Omit<Student, 'id'>>
+  >([]);
+  const [detectedClassId, setDetectedClassId] = useState(
+    selectedClassFilter !== 'all' ? selectedClassFilter : classes[0]?.id || ''
+  );
+  const [detectedOverwriteDuplicates, setDetectedOverwriteDuplicates] = useState(true);
+
+  // MODALS LAINNYA
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [addMode, setAddMode] = useState<'paste' | 'single'>('paste');
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -56,7 +204,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
   const [parentPhone, setParentPhone] = useState('');
   const [status, setStatus] = useState<'Aktif' | 'Mutasi' | 'Alumni'>('Aktif');
 
-  // Multi-Student Quick Copy-Paste state
+  // Multi-Student Quick Copy-Paste modal state
   const [pasteTargetClassId, setPasteTargetClassId] = useState(classes[0]?.id || '');
   const [rawPastedText, setRawPastedText] = useState('');
 
@@ -64,92 +212,72 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
   const [importPreview, setImportPreview] = useState<Array<Omit<Student, 'id'>>>([]);
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const quickPasteInputRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // Helper to parse pasted raw lines into structured student items
+  // Notification helper
+  const showSaveToast = (msg: string) => {
+    setSaveToast(msg);
+    setTimeout(() => {
+      setSaveToast((curr) => (curr === msg ? null : curr));
+    }, 2500);
+  };
+
+  // Keep target class in sync when filter changes
+  useEffect(() => {
+    if (selectedClassFilter !== 'all') {
+      setPasteTargetClassId(selectedClassFilter);
+      setQuickPasteClassId(selectedClassFilter);
+      setDetectedClassId(selectedClassFilter);
+    }
+  }, [selectedClassFilter]);
+
+  // GLOBAL PASTE LISTENER (Ctrl+V dari Excel / Sumber Luar)
+  useEffect(() => {
+    const handleGlobalPaste = (e: ClipboardEvent) => {
+      // Check if user is typing in standard inputs (except if multi-line is pasted into single input)
+      const target = e.target as HTMLElement | null;
+      const isInput =
+        target &&
+        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') &&
+        !target.classList.contains('allow-global-paste-intercept');
+
+      const text = e.clipboardData?.getData('text');
+      if (!text || !text.trim()) return;
+
+      // If user is focused on a textarea or input but pasted multi-line student table, intercept!
+      const hasMultipleLines = text.includes('\n') || text.includes('\t');
+      if (isInput && !hasMultipleLines) {
+        return; // Allow normal typing in single fields
+      }
+
+      // Check if text looks like student data
+      const defaultCls =
+        selectedClassFilter !== 'all' ? selectedClassFilter : classes[0]?.id || '';
+      const parsed = parseExternalStudentText(text, defaultCls, classes);
+
+      if (parsed.length >= 1) {
+        e.preventDefault();
+        setDetectedClipboardStudents(parsed);
+        setDetectedClassId(defaultCls);
+        setClipboardDetectedModalOpen(true);
+      }
+    };
+
+    window.addEventListener('paste', handleGlobalPaste);
+    return () => {
+      window.removeEventListener('paste', handleGlobalPaste);
+    };
+  }, [selectedClassFilter, classes]);
+
+  // Parse students inside the quick paste box in real-time
+  const parsedQuickPasteStudents = useMemo(() => {
+    return parseExternalStudentText(quickPasteText, quickPasteClassId, classes);
+  }, [quickPasteText, quickPasteClassId, classes]);
+
+  // Parse students inside the modal tab in real-time
   const parsedPastedStudents = useMemo(() => {
-    if (!rawPastedText.trim()) return [];
-
-    const lines = rawPastedText
-      .split('\n')
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0);
-
-    const result: Array<Omit<Student, 'id'>> = [];
-
-    lines.forEach((line) => {
-      // 1. Remove leading list numbering like "1. ", "1) ", "1 - ", "1: "
-      const cleanLine = line.replace(/^\s*\d+[\.\)\-:\s]+\s*/, '').trim();
-      if (!cleanLine) return;
-
-      // 2. Try splitting by tab, semicolon, comma, or double space
-      let tokens: string[] = [];
-      if (cleanLine.includes('\t')) {
-        tokens = cleanLine.split('\t').map((t) => t.trim());
-      } else if (cleanLine.includes(';')) {
-        tokens = cleanLine.split(';').map((t) => t.trim());
-      } else if (cleanLine.includes(',')) {
-        tokens = cleanLine.split(',').map((t) => t.trim());
-      } else if (/\s{2,}/.test(cleanLine)) {
-        tokens = cleanLine.split(/\s{2,}/).map((t) => t.trim());
-      } else {
-        // Fallback for single space separated text:
-        // Pattern: [NISN/NIS] [Nama Lengkap Siswa] [L/P/Laki-laki/Perempuan]
-        // E.g.: "0081234991 / 2425001 Andi Muhammad Ilham L" or "0081234991 Andi Muhammad Ilham L"
-        const spaceMatch = cleanLine.match(
-          /^(\S+(?:\s*\/\s*\S+)?)\s+(.+?)(?:\s+([LP]|Laki-laki|Perempuan|Wanita|Pria))?$/i
-        );
-        if (spaceMatch) {
-          tokens = [spaceMatch[1], spaceMatch[2]];
-          if (spaceMatch[3]) tokens.push(spaceMatch[3]);
-        } else {
-          tokens = cleanLine.split(/\s+/).map((t) => t.trim());
-        }
-      }
-
-      // Filter out empty tokens
-      tokens = tokens.filter((t) => t.length > 0);
-      if (tokens.length < 2) return;
-
-      // Token 0: NISN/NIS
-      const rawNis = tokens[0];
-      // Token 1: Nama
-      const rawName = tokens[1];
-      // Token 2 (or last token): Gender
-      let rawGenderToken = tokens[2] || 'L';
-      let parsedGender: Gender = 'L';
-
-      const gClean = rawGenderToken.toUpperCase();
-      if (
-        gClean === 'P' ||
-        gClean.startsWith('PER') ||
-        gClean === 'PR' ||
-        gClean === 'F' ||
-        gClean.startsWith('WAN')
-      ) {
-        parsedGender = 'P';
-      } else {
-        parsedGender = 'L';
-      }
-
-      // Token 3 (optional): Nomor HP
-      const rawPhone = tokens[3] || '-';
-
-      if (rawName && rawName.toLowerCase() !== 'nama' && rawName.toLowerCase() !== 'nama lengkap') {
-        result.push({
-          nisnNis: rawNis,
-          nisn: rawNis,
-          nis: rawNis,
-          name: rawName,
-          gender: parsedGender,
-          classId: pasteTargetClassId,
-          parentPhone: rawPhone,
-          status: 'Aktif',
-        });
-      }
-    });
-
-    return result;
-  }, [rawPastedText, pasteTargetClassId]);
+    return parseExternalStudentText(rawPastedText, pasteTargetClassId, classes);
+  }, [rawPastedText, pasteTargetClassId, classes]);
 
   // Filter students
   const filteredStudents = students.filter((s) => {
@@ -161,6 +289,118 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
       (s.parentPhone && s.parentPhone.includes(searchTerm));
     return matchesClass && matchesSearch;
   });
+
+  // Handle direct inline update for a field
+  const handleInlineFieldChange = (student: Student, field: keyof Student, value: any) => {
+    const updated: Student = {
+      ...student,
+      [field]: value,
+    };
+    if (field === 'nisnNis') {
+      updated.nisn = value;
+      updated.nis = value;
+    }
+    onUpdateStudent(updated);
+    showSaveToast('Perubahan tersimpan otomatis');
+  };
+
+  // Handle instant 1-tap gender toggle
+  const handleToggleGender = (student: Student) => {
+    const newGender: Gender = student.gender === 'L' ? 'P' : 'L';
+    const updated: Student = {
+      ...student,
+      gender: newGender,
+    };
+    onUpdateStudent(updated);
+    showSaveToast(`Jenis kelamin ${student.name.split(' ')[0]} diubah ke ${newGender === 'L' ? 'Laki-laki (L)' : 'Perempuan (P)'}`);
+  };
+
+  // Handle paste from clipboard via button click
+  const handleReadClipboard = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        const text = await navigator.clipboard.readText();
+        if (text && text.trim()) {
+          const defaultCls =
+            selectedClassFilter !== 'all' ? selectedClassFilter : classes[0]?.id || '';
+          const parsed = parseExternalStudentText(text, defaultCls, classes);
+          if (parsed.length > 0) {
+            setDetectedClipboardStudents(parsed);
+            setDetectedClassId(defaultCls);
+            setClipboardDetectedModalOpen(true);
+            return;
+          }
+        }
+      }
+    } catch {
+      // Permission blocked or not supported, fallback to opening quick paste drawer
+    }
+    setIsQuickPasteBoxOpen(true);
+    setTimeout(() => {
+      quickPasteInputRef.current?.focus();
+    }, 100);
+  };
+
+  // Commit external pasted students (from detected modal or quick box)
+  const handleCommitPastedStudents = (
+    pastedList: Array<Omit<Student, 'id'>>,
+    targetClsId: string,
+    overwriteDuplicates: boolean
+  ) => {
+    if (pastedList.length === 0) return;
+
+    // Apply target class to rows if not specifically specified
+    const prepared = pastedList.map((item) => ({
+      ...item,
+      classId: item.classId || targetClsId,
+    }));
+
+    if (overwriteDuplicates && onBatchUpdateStudents) {
+      const existingMap = new Map<string, Student>();
+      students.forEach((s) => {
+        const key = (s.nisnNis || s.nisn || s.nis || '').trim().toLowerCase();
+        if (key) existingMap.set(key, s);
+      });
+
+      const toUpdate: Student[] = [];
+      const toAdd: Array<Omit<Student, 'id'>> = [];
+
+      prepared.forEach((newItem) => {
+        const key = (newItem.nisnNis || newItem.nisn || newItem.nis || '').trim().toLowerCase();
+        if (key && existingMap.has(key)) {
+          const existing = existingMap.get(key)!;
+          toUpdate.push({
+            ...existing,
+            name: newItem.name,
+            gender: newItem.gender,
+            classId: newItem.classId,
+            parentPhone: newItem.parentPhone !== '-' ? newItem.parentPhone : existing.parentPhone,
+          });
+        } else {
+          toAdd.push(newItem);
+        }
+      });
+
+      if (toUpdate.length > 0) {
+        onBatchUpdateStudents(toUpdate);
+      }
+      if (toAdd.length > 0) {
+        onBatchImportStudents(toAdd);
+      }
+
+      showSaveToast(
+        `Berhasil memproses ${prepared.length} data siswa (${toAdd.length} baru, ${toUpdate.length} diperbarui)`
+      );
+    } else {
+      onBatchImportStudents(prepared);
+      showSaveToast(`Berhasil menambahkan ${prepared.length} siswa baru dari data luar`);
+    }
+
+    setClipboardDetectedModalOpen(false);
+    setDetectedClipboardStudents([]);
+    setQuickPasteText('');
+    setIsQuickPasteBoxOpen(false);
+  };
 
   const handleOpenAdd = () => {
     setEditingStudent(null);
@@ -190,36 +430,16 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
 
   // Auto-fill single form fields from a pasted single line
   const handleAutoFillSingleLine = (raw: string) => {
-    let clean = raw.replace(/^\s*\d+[\.\)\-:\s]+\s*/, '').trim();
-    let tokens: string[] = [];
-    if (clean.includes('\t')) tokens = clean.split('\t');
-    else if (clean.includes(';')) tokens = clean.split(';');
-    else if (clean.includes(',')) tokens = clean.split(',');
-    else if (/\s{2,}/.test(clean)) tokens = clean.split(/\s{2,}/);
-    else {
-      const match = clean.match(
-        /^(\S+(?:\s*\/\s*\S+)?)\s+(.+?)(?:\s+([LP]|Laki-laki|Perempuan|Wanita|Pria))?$/i
-      );
-      if (match) {
-        tokens = [match[1], match[2]];
-        if (match[3]) tokens.push(match[3]);
-      } else {
-        tokens = clean.split(/\s+/);
-      }
-    }
-    tokens = tokens.map((t) => t.trim()).filter((t) => t.length > 0);
-    if (tokens.length >= 2) {
-      setNisnNis(tokens[0]);
-      setName(tokens[1]);
-      if (tokens[2]) {
-        const g = tokens[2].toUpperCase();
-        if (g === 'P' || g.startsWith('PER') || g.startsWith('WAN') || g === 'PR' || g === 'F') {
-          setGender('P');
-        } else {
-          setGender('L');
-        }
-      }
-      if (tokens[3]) setParentPhone(tokens[3]);
+    const defaultCls = classId || classes[0]?.id || '';
+    const parsed = parseExternalStudentText(raw, defaultCls, classes);
+    if (parsed.length > 0) {
+      const item = parsed[0];
+      setNisnNis(item.nisnNis);
+      setName(item.name);
+      setGender(item.gender);
+      if (item.classId) setClassId(item.classId);
+      if (item.parentPhone && item.parentPhone !== '-') setParentPhone(item.parentPhone);
+      showSaveToast('Form otomatis terisi dari data yang ditempel');
     }
   };
 
@@ -240,6 +460,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
         parentPhone: parentPhone.trim() || '-',
         status,
       });
+      showSaveToast('Data siswa berhasil diperbarui');
     } else {
       onAddStudent({
         nisnNis: nisnNis.trim(),
@@ -251,29 +472,30 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
         parentPhone: parentPhone.trim() || '-',
         status,
       });
+      showSaveToast('Siswa baru berhasil ditambahkan');
     }
+
     setIsModalOpen(false);
   };
 
-  // Submit Quick Pasted Students
-  const handleSubmitPasted = () => {
+  // Submit Multi-Student from Modal tab
+  const handleSavePastedStudents = () => {
     if (parsedPastedStudents.length === 0) return;
     onBatchImportStudents(parsedPastedStudents);
+    showSaveToast(`Berhasil menambahkan ${parsedPastedStudents.length} siswa ke kelas`);
     setIsModalOpen(false);
     setRawPastedText('');
   };
 
-  // Fill sample paste content
-  const handleFillSamplePaste = () => {
-    const sample = 
-`0081234991	Andi Muhammad Ilham	L	081242001122
-0081234992	Nurul Fatimah Az-Zahra	P	081242001133
-0081234993	Bima Sakti Pratama	L	081342110044
-0081234994	Siti Khadijah Al-Munawwarah	P	085242551155
-0081234995	Rizky Fauzan Arsyad	L	081298765432`;
-    setRawPastedText(sample);
+  const handleDeleteSingle = (id: string, sName: string) => {
+    if (window.confirm(`Yakin ingin menghapus data siswa "${sName}"?`)) {
+      onDeleteStudent(id);
+      setSelectedIds((prev) => prev.filter((item) => item !== id));
+      showSaveToast('Siswa berhasil dihapus');
+    }
   };
 
+  // Batch Selection
   const handleToggleSelectAll = () => {
     if (selectedIds.length === filteredStudents.length) {
       setSelectedIds([]);
@@ -283,100 +505,88 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
   };
 
   const handleToggleSelect = (id: string) => {
-    if (selectedIds.includes(id)) {
-      setSelectedIds(selectedIds.filter((item) => item !== id));
-    } else {
-      setSelectedIds([...selectedIds, id]);
-    }
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
   };
 
   const handleDeleteSelected = () => {
-    if (selectedIds.length === 0) return;
     if (
       window.confirm(
-        `Apakah Anda yakin ingin menghapus ${selectedIds.length} data siswa terpilih?`
+        `Yakin ingin menghapus ${selectedIds.length} data siswa yang dipilih sekaligus?`
       )
     ) {
       onDeleteBatchStudents(selectedIds);
       setSelectedIds([]);
+      showSaveToast(`${selectedIds.length} siswa berhasil dihapus sekaligus`);
     }
   };
 
-  const handleDeleteSingle = (id: string, studentName: string) => {
-    if (window.confirm(`Hapus data siswa "${studentName}"?`)) {
-      onDeleteStudent(id);
-      setSelectedIds(selectedIds.filter((item) => item !== id));
+  // Template Excel Download
+  const handleDownloadTemplateXlsx = () => {
+    const XLSX = (window as any).XLSX;
+    if (!XLSX) {
+      alert('Fitur SheetJS belum siap.');
+      return;
     }
+
+    const templateData = [
+      {
+        NISN_NIS: '0081234901 / 2425001',
+        NamaLengkap: 'Andi Muhammad Rifky',
+        JenisKelamin: 'L',
+        NamaKelas: classes[0]?.name || '10-A',
+        KontakOrtu: '081234567890',
+      },
+      {
+        NISN_NIS: '0081234902 / 2425002',
+        NamaLengkap: 'Nurul Fadhilah Putri',
+        JenisKelamin: 'P',
+        NamaKelas: classes[0]?.name || '10-A',
+        KontakOrtu: '081298765432',
+      },
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(templateData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'TemplateSiswa');
+    XLSX.writeFile(workbook, 'Template_Import_Siswa_SMAN1Gowa.xlsx');
   };
 
-  // Unduh Template CSV
+  // Template CSV Download
   const handleDownloadTemplateCsv = () => {
     const csvContent =
       'data:text/csv;charset=utf-8,' +
-      encodeURIComponent(
-        'NISN_NIS,NamaLengkap,JenisKelamin,NamaKelas,KontakOrtu\n' +
-          '0081234991 / 2425101,Andi Muhammad Ilham,L,X.1 (Fase E-1),081234567890\n' +
-          '0081234992 / 2425102,Nurul Fatimah Az-Zahra,P,X.1 (Fase E-1),081298765432\n' +
-          '0071234993 / 2324103,Bima Sakti Pratama,L,XI.F-1 (MIPA),085211223344\n'
-      );
+      'NISN_NIS,NamaLengkap,JenisKelamin,NamaKelas,KontakOrtu\n' +
+      '0081234901 / 2425001,Andi Muhammad Rifky,L,10-A,081234567890\n' +
+      '0081234902 / 2425002,Nurul Fadhilah Putri,P,10-A,081298765432\n';
+
+    const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
-    link.setAttribute('href', csvContent);
-    link.setAttribute('download', 'Template_Import_Siswa_SMAN1GOWA.csv');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', 'Template_Import_Siswa_SMAN1Gowa.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  // Unduh Template Excel (.xlsx)
-  const handleDownloadTemplateXlsx = () => {
-    const XLSX = (window as any).XLSX;
-    if (!XLSX) {
-      handleDownloadTemplateCsv();
-      return;
-    }
-    const sampleData = [
-      {
-        NISN_NIS: '0081234991 / 2425101',
-        NamaLengkap: 'Andi Muhammad Ilham',
-        JenisKelamin: 'L',
-        NamaKelas: 'X.1 (Fase E-1)',
-        KontakOrtu: '081234567890',
-      },
-      {
-        NISN_NIS: '0081234992 / 2425102',
-        NamaLengkap: 'Nurul Fatimah Az-Zahra',
-        JenisKelamin: 'P',
-        NamaKelas: 'X.1 (Fase E-1)',
-        KontakOrtu: '081298765432',
-      },
-      {
-        NISN_NIS: '0071234993 / 2324103',
-        NamaLengkap: 'Bima Sakti Pratama',
-        JenisKelamin: 'L',
-        NamaKelas: 'XI.F-1 (MIPA)',
-        KontakOrtu: '085211223344',
-      },
-    ];
-
-    const worksheet = XLSX.utils.json_to_sheet(sampleData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'DataSiswa');
-    XLSX.writeFile(workbook, 'Template_Import_Siswa_SMAN1GOWA.xlsx');
-  };
-
-  // Export Siswa ke Excel
+  // Export to Excel
   const handleExportStudents = () => {
     const XLSX = (window as any).XLSX;
-    if (!XLSX) return;
+    if (!XLSX) {
+      alert('Pustaka SheetJS belum dimuat di browser.');
+      return;
+    }
 
     const exportData = filteredStudents.map((s, idx) => {
       const cls = classes.find((c) => c.id === s.classId);
+      const displayId = s.nisnNis || `${s.nisn || ''}${s.nis ? ` / ${s.nis}` : ''}`;
       return {
         No: idx + 1,
-        'NISN / NIS': s.nisnNis || `${s.nisn || ''}${s.nis ? ` / ${s.nis}` : ''}`,
+        NISN_NIS: displayId,
         NamaLengkap: s.name,
-        JK: s.gender === 'L' ? 'Laki-laki' : 'Perempuan',
-        Kelas: cls?.name || '-',
+        JenisKelamin: s.gender === 'L' ? 'Laki-laki' : 'Perempuan',
+        Kelas: cls?.name || 'Tanpa Kelas',
         KontakOrtu: s.parentPhone,
         Status: s.status,
       };
@@ -465,22 +675,70 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
     onBatchImportStudents(importPreview);
     setIsImportModalOpen(false);
     setImportPreview([]);
+    showSaveToast(`Berhasil mengimpor ${importPreview.length} siswa dari file`);
   };
 
   return (
     <div className="space-y-6">
+      {/* Floating Save Toast */}
+      {saveToast && (
+        <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2 bg-slate-900/90 text-white px-4 py-2.5 rounded-xl shadow-xl border border-slate-700 text-xs font-semibold animate-in fade-in slide-in-from-bottom-2 backdrop-blur-xs">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{saveToast}</span>
+        </div>
+      )}
+
       {/* Header bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 transition-colors">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 transition-colors shadow-xs">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
-            Manajemen Data Siswa
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Daftar biodata, NISN / NIS gabungan, rombel kelas, dan kontak orang tua
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+              Manajemen Data Siswa
+            </h1>
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
+              {students.length} Siswa
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Bisa diedit langsung (NISN/NIS, Nama, Jenis Kelamin) & mendukung paste langsung (Ctrl+V) dari Excel / WhatsApp
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          {/* Quick Paste External Data Button */}
+          <button
+            type="button"
+            onClick={handleReadClipboard}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-50 dark:bg-indigo-950/70 hover:bg-indigo-100 dark:hover:bg-indigo-900/70 text-indigo-700 dark:text-indigo-300 text-xs font-semibold rounded-lg transition-colors cursor-pointer border border-indigo-200 dark:border-indigo-800 shadow-2xs"
+            title="Tempel data siswa dari clipboard (Ctrl+V)"
+          >
+            <ClipboardPaste className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <span>Paste dari Luar</span>
+            <kbd className="hidden md:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-indigo-200/60 dark:bg-indigo-900/90 text-indigo-800 dark:text-indigo-200 rounded">
+              Ctrl+V
+            </kbd>
+          </button>
+
+          {/* Toggle Direct Inline Edit Mode */}
+          <button
+            type="button"
+            onClick={() => {
+              setIsInlineEditMode(!isInlineEditMode);
+              if (!isInlineEditMode) {
+                showSaveToast('Mode Edit Langsung Aktif: Anda bisa mengetik langsung di tabel');
+              }
+            }}
+            className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer border shadow-2xs ${
+              isInlineEditMode
+                ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-600 ring-2 ring-amber-300 dark:ring-amber-900'
+                : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700'
+            }`}
+            title="Aktifkan pengeditan NISN, Nama, dan Jenis Kelamin langsung pada tabel"
+          >
+            <Zap className={`w-4 h-4 ${isInlineEditMode ? 'text-amber-100 animate-pulse' : 'text-amber-500'}`} />
+            <span>{isInlineEditMode ? 'Mode Edit Langsung: AKTIF' : '⚡ Edit Langsung di Tabel'}</span>
+          </button>
+
           <button
             onClick={() => {
               setImportPreview([]);
@@ -490,7 +748,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
             className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-xs font-semibold rounded-lg transition-colors cursor-pointer border border-emerald-200 dark:border-emerald-800"
           >
             <Upload className="w-4 h-4" />
-            Import Excel / CSV
+            Import Excel
           </button>
 
           <button
@@ -511,8 +769,124 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
         </div>
       </div>
 
+      {/* QUICK PASTE BOX (DRAWER LANGSUNG DI HALAMAN) */}
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs transition-colors">
+        <button
+          type="button"
+          onClick={() => setIsQuickPasteBoxOpen(!isQuickPasteBoxOpen)}
+          className="w-full flex items-center justify-between p-3.5 bg-slate-50/80 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold text-xs transition-colors cursor-pointer"
+        >
+          <div className="flex items-center gap-2">
+            <Clipboard className="w-4 h-4 text-indigo-500" />
+            <span>📋 Kotak Tempel Cepat (Paste Excel / WA / Spreadsheet)</span>
+            <span className="text-[11px] font-normal text-slate-500 dark:text-slate-400">
+              — Copy dari Excel, lalu paste di sini untuk langsung dimasukkan ke tabel
+            </span>
+          </div>
+          <div className="flex items-center gap-1 text-slate-400">
+            <span className="text-[11px]">{isQuickPasteBoxOpen ? 'Tutup Kotak' : 'Buka Kotak'}</span>
+            {isQuickPasteBoxOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </div>
+        </button>
+
+        {isQuickPasteBoxOpen && (
+          <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-indigo-50/20 dark:bg-indigo-950/10 space-y-3 animate-in fade-in">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Target Kelas:
+                </label>
+                <select
+                  value={quickPasteClassId}
+                  onChange={(e) => setQuickPasteClassId(e.target.value)}
+                  className="px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                >
+                  {classes.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <label className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={quickPasteOverwriteDuplicates}
+                    onChange={(e) => setQuickPasteOverwriteDuplicates(e.target.checked)}
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span>Perbarui data jika NISN sudah ada</span>
+                </label>
+              </div>
+            </div>
+
+            <textarea
+              ref={quickPasteInputRef}
+              rows={3}
+              value={quickPasteText}
+              onChange={(e) => setQuickPasteText(e.target.value)}
+              placeholder="Tempel (Ctrl+V) data siswa di sini... Contoh:
+0081234991 / 2425001	Andi Muhammad Ilham	L
+0081234992 / 2425002	Siti Fatimah Zahra	P
+0081234993	Budi Gunawan	Laki-laki"
+              className="w-full p-3 font-mono text-xs border border-indigo-200 dark:border-indigo-900/60 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+              <div className="text-xs">
+                {parsedQuickPasteStudents.length > 0 ? (
+                  <span className="inline-flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 className="w-4 h-4" />
+                    Terdeteksi {parsedQuickPasteStudents.length} siswa siap dimasukkan (
+                    {parsedQuickPasteStudents.filter((s) => s.gender === 'L').length} L,{' '}
+                    {parsedQuickPasteStudents.filter((s) => s.gender === 'P').length} P)
+                  </span>
+                ) : (
+                  <span className="text-slate-500 dark:text-slate-400 text-[11px]">
+                    Tip: Format didukung: Tab (Excel), Titik Koma (;), Koma (,), atau Spasi.
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                {quickPasteText && (
+                  <button
+                    type="button"
+                    onClick={() => setQuickPasteText('')}
+                    className="px-3 py-1.5 text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+                  >
+                    Bersihkan
+                  </button>
+                )}
+                <button
+                  type="button"
+                  disabled={parsedQuickPasteStudents.length === 0}
+                  onClick={() =>
+                    handleCommitPastedStudents(
+                      parsedQuickPasteStudents,
+                      quickPasteClassId,
+                      quickPasteOverwriteDuplicates
+                    )
+                  }
+                  className={`inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer ${
+                    parsedQuickPasteStudents.length > 0
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                      : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'
+                  }`}
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Tambahkan {parsedQuickPasteStudents.length > 0 ? `${parsedQuickPasteStudents.length} Siswa` : 'ke Tabel'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
         <div className="flex flex-1 flex-col sm:flex-row items-stretch sm:items-center gap-3">
           {/* Search */}
           <div className="relative flex-1 max-w-sm">
@@ -528,7 +902,9 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
 
           {/* Filter Kelas */}
           <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">Kelas:</label>
+            <label className="text-xs font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
+              Kelas:
+            </label>
             <select
               value={selectedClassFilter}
               onChange={(e) => setSelectedClassFilter(e.target.value)}
@@ -542,6 +918,14 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
               ))}
             </select>
           </div>
+
+          {/* Mode Edit Indicator Pill */}
+          {isInlineEditMode && (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-200 rounded-lg text-xs font-semibold animate-in fade-in">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>Edit Langsung Aktif (Ketik & Simpan Otomatis)</span>
+            </div>
+          )}
         </div>
 
         {/* Batch Action Strip */}
@@ -561,7 +945,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
         )}
       </div>
 
-      {/* Table */}
+      {/* Main Table with Direct Inline Editing */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
@@ -581,13 +965,40 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                     )}
                   </button>
                 </th>
-                <th className="p-3.5">NISN / NIS</th>
-                <th className="p-3.5">Nama Lengkap Siswa</th>
-                <th className="p-3.5 text-center">L/P</th>
-                <th className="p-3.5">Rombel / Kelas</th>
-                <th className="p-3.5">Kontak Ortu (WA)</th>
-                <th className="p-3.5">Status</th>
-                <th className="p-3.5 text-right">Aksi</th>
+                <th className="p-3.5 w-44">
+                  <div className="flex items-center gap-1">
+                    <span>NISN / NIS</span>
+                    {isInlineEditMode && (
+                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-normal lowercase">
+                        (bisa diedit)
+                      </span>
+                    )}
+                  </div>
+                </th>
+                <th className="p-3.5">
+                  <div className="flex items-center gap-1">
+                    <span>Nama Lengkap Siswa</span>
+                    {isInlineEditMode && (
+                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-normal lowercase">
+                        (bisa diedit)
+                      </span>
+                    )}
+                  </div>
+                </th>
+                <th className="p-3.5 text-center w-28">
+                  <div className="flex items-center justify-center gap-1">
+                    <span>L/P</span>
+                    {isInlineEditMode && (
+                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-normal lowercase">
+                        (klik)
+                      </span>
+                    )}
+                  </div>
+                </th>
+                <th className="p-3.5 w-36">Rombel / Kelas</th>
+                <th className="p-3.5 w-36">Kontak Ortu (WA)</th>
+                <th className="p-3.5 w-20">Status</th>
+                <th className="p-3.5 text-right w-24">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-200">
@@ -595,14 +1006,18 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                 filteredStudents.map((student) => {
                   const cls = classes.find((c) => c.id === student.classId);
                   const isSelected = selectedIds.includes(student.id);
-                  const displayNis = student.nisnNis || `${student.nisn || ''}${student.nis ? ` / ${student.nis}` : ''}`;
+                  const isRowEditing = isInlineEditMode || editingRowId === student.id;
+                  const displayNis =
+                    student.nisnNis || `${student.nisn || ''}${student.nis ? ` / ${student.nis}` : ''}`;
+
                   return (
                     <tr
                       key={student.id}
                       className={`hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors ${
                         isSelected ? 'bg-indigo-50/40 dark:bg-indigo-950/30' : ''
-                      }`}
+                      } ${isRowEditing ? 'bg-amber-50/20 dark:bg-amber-950/10' : ''}`}
                     >
+                      {/* Checkbox */}
                       <td className="p-3.5 text-center">
                         <button
                           onClick={() => handleToggleSelect(student.id)}
@@ -616,23 +1031,137 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                           )}
                         </button>
                       </td>
+
+                      {/* NISN / NIS (BISA DIEDIT LANGSUNG) */}
                       <td className="p-3.5 font-mono">
-                        <span className="font-semibold text-slate-900 dark:text-white">
-                          {displayNis}
-                        </span>
+                        {isRowEditing ? (
+                          <input
+                            type="text"
+                            value={displayNis}
+                            onChange={(e) =>
+                              handleInlineFieldChange(student, 'nisnNis', e.target.value)
+                            }
+                            placeholder="NISN / NIS..."
+                            className="w-full px-2.5 py-1 text-xs font-mono font-semibold bg-white dark:bg-slate-800 border border-indigo-300 dark:border-indigo-600 focus:border-indigo-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-900 dark:text-white"
+                          />
+                        ) : (
+                          <span
+                            onDoubleClick={() => setEditingRowId(student.id)}
+                            className="font-semibold text-slate-900 dark:text-white cursor-pointer hover:underline decoration-dotted"
+                            title="Klik ganda untuk edit langsung"
+                          >
+                            {displayNis || '-'}
+                          </span>
+                        )}
                       </td>
-                      <td className="p-3.5 font-bold text-slate-900 dark:text-white">{student.name}</td>
+
+                      {/* NAMA SISWA (BISA DIEDIT LANGSUNG) */}
+                      <td className="p-3.5">
+                        {isRowEditing ? (
+                          <input
+                            type="text"
+                            value={student.name}
+                            onChange={(e) =>
+                              handleInlineFieldChange(student, 'name', e.target.value)
+                            }
+                            placeholder="Nama lengkap siswa..."
+                            className="w-full px-2.5 py-1 text-xs font-semibold bg-white dark:bg-slate-800 border border-indigo-300 dark:border-indigo-600 focus:border-indigo-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-900 dark:text-white"
+                          />
+                        ) : (
+                          <span
+                            onDoubleClick={() => setEditingRowId(student.id)}
+                            className="font-bold text-slate-900 dark:text-white cursor-pointer hover:underline decoration-dotted"
+                            title="Klik ganda untuk edit langsung"
+                          >
+                            {student.name}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* JENIS KELAMIN (BISA DIKLIK & DIUBAH LANGSUNG DENGAN 1 KLIK) */}
                       <td className="p-3.5 text-center">
-                        <span
-                          className={`font-semibold text-xs ${
-                            student.gender === 'L' ? 'text-blue-600 dark:text-blue-400' : 'text-pink-600 dark:text-pink-400'
-                          }`}
-                        >
-                          {student.gender}
-                        </span>
+                        {isRowEditing ? (
+                          <div className="inline-flex items-center rounded-lg border border-slate-300 dark:border-slate-700 p-0.5 bg-slate-100 dark:bg-slate-800">
+                            <button
+                              type="button"
+                              onClick={() => handleInlineFieldChange(student, 'gender', 'L')}
+                              className={`px-2 py-0.5 text-xs font-bold rounded-md transition-colors cursor-pointer ${
+                                student.gender === 'L'
+                                  ? 'bg-blue-600 text-white shadow-2xs'
+                                  : 'text-slate-500 hover:text-blue-600 dark:text-slate-400'
+                              }`}
+                              title="Set ke Laki-laki"
+                            >
+                              L
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleInlineFieldChange(student, 'gender', 'P')}
+                              className={`px-2 py-0.5 text-xs font-bold rounded-md transition-colors cursor-pointer ${
+                                student.gender === 'P'
+                                  ? 'bg-pink-600 text-white shadow-2xs'
+                                  : 'text-slate-500 hover:text-pink-600 dark:text-slate-400'
+                              }`}
+                              title="Set ke Perempuan"
+                            >
+                              P
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleToggleGender(student)}
+                            className={`px-2.5 py-0.5 rounded-full text-xs font-bold transition-all cursor-pointer hover:scale-105 active:scale-95 ${
+                              student.gender === 'L'
+                                ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
+                                : 'bg-pink-50 dark:bg-pink-950/60 text-pink-700 dark:text-pink-300 border border-pink-200 dark:border-pink-800'
+                            }`}
+                            title="Klik untuk ubah L / P dengan cepat"
+                          >
+                            {student.gender === 'L' ? 'L (Laki)' : 'P (Perempuan)'}
+                          </button>
+                        )}
                       </td>
-                      <td className="p-3.5 font-medium">{cls?.name || 'Tanpa Kelas'}</td>
-                      <td className="p-3.5 font-mono text-slate-600 dark:text-slate-400">{student.parentPhone}</td>
+
+                      {/* KELAS */}
+                      <td className="p-3.5 font-medium">
+                        {isRowEditing ? (
+                          <select
+                            value={student.classId}
+                            onChange={(e) =>
+                              handleInlineFieldChange(student, 'classId', e.target.value)
+                            }
+                            className="w-full px-2 py-1 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                          >
+                            {classes.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span>{cls?.name || 'Tanpa Kelas'}</span>
+                        )}
+                      </td>
+
+                      {/* KONTAK ORTU */}
+                      <td className="p-3.5 font-mono text-slate-600 dark:text-slate-400">
+                        {isRowEditing ? (
+                          <input
+                            type="text"
+                            value={student.parentPhone}
+                            onChange={(e) =>
+                              handleInlineFieldChange(student, 'parentPhone', e.target.value)
+                            }
+                            placeholder="08..."
+                            className="w-full px-2 py-1 text-xs font-mono bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                          />
+                        ) : (
+                          student.parentPhone || '-'
+                        )}
+                      </td>
+
+                      {/* STATUS */}
                       <td className="p-3.5">
                         <span
                           className={`text-[11px] font-medium ${
@@ -644,15 +1173,39 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                           {student.status}
                         </span>
                       </td>
+
+                      {/* AKSI */}
                       <td className="p-3.5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {editingRowId === student.id ? (
+                            <button
+                              onClick={() => {
+                                setEditingRowId(null);
+                                showSaveToast('Edit baris selesai');
+                              }}
+                              className="p-1.5 bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 rounded-md transition-colors cursor-pointer"
+                              title="Selesai Edit"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => setEditingRowId(student.id)}
+                              className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-slate-800 rounded-md transition-colors cursor-pointer"
+                              title="Edit Cepat Baris Ini"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+
                           <button
                             onClick={() => handleOpenEdit(student)}
                             className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-800 rounded-md transition-colors cursor-pointer"
-                            title="Edit Siswa"
+                            title="Edit Formulir Lengkap"
                           >
-                            <Edit2 className="w-3.5 h-3.5" />
+                            <FileText className="w-3.5 h-3.5" />
                           </button>
+
                           <button
                             onClick={() => handleDeleteSingle(student.id, student.name)}
                             className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 rounded-md transition-colors cursor-pointer"
@@ -667,7 +1220,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                 })
               ) : (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-slate-400">
+                  <td colSpan={8} className="p-8 text-center text-slate-400 dark:text-slate-500">
                     <p>Tidak ada data siswa ditemukan.</p>
                   </td>
                 </tr>
@@ -676,6 +1229,155 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
           </table>
         </div>
       </div>
+
+      {/* POPUP MODAL DETEKSI PASTE DARI LUAR (Ctrl+V / Clipboard Popup) */}
+      {clipboardDetectedModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl overflow-hidden animate-in zoom-in-95 text-slate-800 dark:text-slate-100">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-700 to-indigo-900 text-white">
+              <div className="flex items-center gap-2.5">
+                <ClipboardPaste className="w-5 h-5 text-indigo-300" />
+                <div>
+                  <h3 className="text-sm font-bold">
+                    Deteksi Data Siswa dari Clipboard (Hasil Paste Luar)
+                  </h3>
+                  <p className="text-[11px] text-indigo-200">
+                    Ditemukan {detectedClipboardStudents.length} siswa siap dimasukkan
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setClipboardDetectedModalOpen(false)}
+                className="text-slate-300 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-5 space-y-4 text-xs">
+              {/* Options */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 dark:bg-slate-800/70 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700">
+                <div className="flex items-center gap-2">
+                  <label className="font-bold text-slate-700 dark:text-slate-300">
+                    Masukkan ke Kelas:
+                  </label>
+                  <select
+                    value={detectedClassId}
+                    onChange={(e) => setDetectedClassId(e.target.value)}
+                    className="px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    {classes.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={detectedOverwriteDuplicates}
+                    onChange={(e) => setDetectedOverwriteDuplicates(e.target.checked)}
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span>Perbarui data jika NISN sudah ada di daftar</span>
+                </label>
+              </div>
+
+              {/* Preview Table */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="font-bold text-slate-800 dark:text-slate-200">
+                    Daftar Pratinjau Siswa ({detectedClipboardStudents.length}):
+                  </p>
+                  <span className="text-[11px] text-slate-500">
+                    {detectedClipboardStudents.filter((s) => s.gender === 'L').length} Laki-laki,{' '}
+                    {detectedClipboardStudents.filter((s) => s.gender === 'P').length} Perempuan
+                  </span>
+                </div>
+
+                <div className="max-h-60 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl">
+                  <table className="w-full text-left text-[11px]">
+                    <thead className="bg-slate-100 dark:bg-slate-800 sticky top-0 font-semibold text-slate-700 dark:text-slate-300">
+                      <tr>
+                        <th className="p-2 w-8 text-center">No</th>
+                        <th className="p-2">NISN / NIS</th>
+                        <th className="p-2">Nama Siswa</th>
+                        <th className="p-2 text-center">L/P</th>
+                        <th className="p-2 text-right">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {detectedClipboardStudents.map((item, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                          <td className="p-2 text-center text-slate-400">{idx + 1}</td>
+                          <td className="p-2 font-mono font-medium">{item.nisnNis}</td>
+                          <td className="p-2 font-bold">{item.name}</td>
+                          <td className="p-2 text-center">
+                            <span
+                              className={`font-semibold ${
+                                item.gender === 'L'
+                                  ? 'text-blue-600 dark:text-blue-400'
+                                  : 'text-pink-600 dark:text-pink-400'
+                              }`}
+                            >
+                              {item.gender}
+                            </span>
+                          </td>
+                          <td className="p-2 text-right">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDetectedClipboardStudents((prev) =>
+                                  prev.filter((_, i) => i !== idx)
+                                );
+                              }}
+                              className="text-slate-400 hover:text-rose-600"
+                              title="Hapus baris ini dari pratinjau"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setClipboardDetectedModalOpen(false)}
+                  className="px-3.5 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleCommitPastedStudents(
+                      detectedClipboardStudents,
+                      detectedClassId,
+                      detectedOverwriteDuplicates
+                    )
+                  }
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg shadow-sm transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>
+                    Simpan Semua ({detectedClipboardStudents.length} Siswa) ke Tabel
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL TAMBAH / EDIT SISWA (MENDUKUNG COPY-PASTE KILAT & INPUT TUNGGAL) */}
       {isModalOpen && (
@@ -750,81 +1452,108 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                       ))}
                     </select>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={handleFillSamplePaste}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    Isi Contoh Format
-                  </button>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Mendukung copy dari <strong>Excel</strong>, <strong>Google Sheets</strong>, <strong>WhatsApp</strong>, atau <strong>Word</strong>
+                  </span>
                 </div>
 
                 {/* Paste Area */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="block font-semibold text-slate-700 dark:text-slate-300">
-                      Tempel (Paste) Data Siswa dari Excel / Spreadsheet / Catatan:
+                    <label className="font-semibold text-slate-700 dark:text-slate-300">
+                      Tempelkan Teks Siswa di Bawah Ini:
                     </label>
                     <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                      Format per baris: [NISN/NIS] [NAMA] [L/P]
+                      Format: [NISN/NIS] [NAMA LENGKAP] [L/P]
                     </span>
                   </div>
                   <textarea
-                    rows={6}
+                    rows={5}
                     value={rawPastedText}
                     onChange={(e) => setRawPastedText(e.target.value)}
-                    placeholder="Contoh salin langsung dari Excel (kolom otomatis terbaca):&#10;0081234991	Andi Muhammad Ilham	L&#10;0081234992	Nurul Fatimah Az-Zahra	P&#10;0081234993	Bima Sakti Pratama	L"
-                    className="w-full p-3 text-xs font-mono border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed"
+                    placeholder="Contoh salinan dari Excel / WhatsApp:
+0081234901 / 2425001	Andi Muhammad Rifky	L
+0081234902 / 2425002	Nurul Fadhilah Putri	P
+0081234903 / 2425003	Siti Aisyah Rahma	Perempuan
+0081234904 / 2425004	Fajar Hidayatullah	Laki-laki"
+                    className="w-full p-3 font-mono text-xs border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                    *Mendukung pemisah Tab (copy langsung dari tabel Excel/Sheets), koma, titik koma, atau spasi.
-                  </p>
+                  <div className="flex items-center justify-between mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                    <span>
+                      Dapat menggunakan pemisah Tab, Titik Koma (;), Koma (,), atau Spasi bertingkat.
+                    </span>
+                    {rawPastedText && (
+                      <button
+                        type="button"
+                        onClick={() => setRawPastedText('')}
+                        className="text-rose-500 hover:underline cursor-pointer"
+                      >
+                        Hapus Teks
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                {/* Realtime Live Preview */}
+                {/* Parsed Live Preview Table */}
                 {parsedPastedStudents.length > 0 && (
-                  <div className="space-y-2 pt-1">
+                  <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                        Terdeteksi {parsedPastedStudents.length} Siswa Siap Ditambahkan:
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>
+                          {parsedPastedStudents.length} Siswa Terdeteksi Siap Ditambahkan:
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                        ({parsedPastedStudents.filter((s) => s.gender === 'L').length} Laki-laki,{' '}
+                        {parsedPastedStudents.filter((s) => s.gender === 'P').length} Perempuan)
                       </span>
                     </div>
 
-                    <div className="max-h-44 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl">
+                    <div className="max-h-48 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl">
                       <table className="w-full text-left text-[11px]">
-                        <thead className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 sticky top-0 font-semibold">
+                        <thead className="bg-slate-100 dark:bg-slate-800 sticky top-0 font-semibold text-slate-700 dark:text-slate-300">
                           <tr>
                             <th className="p-2 w-8 text-center">No</th>
                             <th className="p-2">NISN / NIS</th>
-                            <th className="p-2">Nama Lengkap</th>
-                            <th className="p-2 text-center w-12">L/P</th>
-                            <th className="p-2">No HP Ortu</th>
+                            <th className="p-2">Nama Lengkap Siswa</th>
+                            <th className="p-2 text-center">L/P</th>
+                            <th className="p-2">Kelas</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                          {parsedPastedStudents.map((s, idx) => (
-                            <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                              <td className="p-2 text-center font-mono text-slate-500">{idx + 1}</td>
-                              <td className="p-2 font-mono font-medium text-slate-900 dark:text-white">
-                                {s.nisnNis}
-                              </td>
-                              <td className="p-2 font-bold text-slate-900 dark:text-white">{s.name}</td>
-                              <td className="p-2 text-center font-semibold text-slate-600 dark:text-slate-300">
-                                {s.gender}
-                              </td>
-                              <td className="p-2 font-mono text-slate-500">{s.parentPhone || '-'}</td>
-                            </tr>
-                          ))}
+                          {parsedPastedStudents.map((s, idx) => {
+                            const cls = classes.find((c) => c.id === s.classId);
+                            return (
+                              <tr
+                                key={idx}
+                                className="hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                              >
+                                <td className="p-2 text-center text-slate-400">{idx + 1}</td>
+                                <td className="p-2 font-mono font-medium">{s.nisnNis}</td>
+                                <td className="p-2 font-bold">{s.name}</td>
+                                <td className="p-2 text-center">
+                                  <span
+                                    className={`font-semibold ${
+                                      s.gender === 'L'
+                                        ? 'text-blue-600 dark:text-blue-400'
+                                        : 'text-pink-600 dark:text-pink-400'
+                                    }`}
+                                  >
+                                    {s.gender}
+                                  </span>
+                                </td>
+                                <td className="p-2">{cls?.name || 'Dipilih'}</td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
                   </div>
                 )}
 
-                {/* Submit button */}
+                {/* Modal Footer */}
                 <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                   <button
                     type="button"
@@ -836,14 +1565,17 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                   <button
                     type="button"
                     disabled={parsedPastedStudents.length === 0}
-                    onClick={handleSubmitPasted}
-                    className={`px-4 py-2 font-semibold rounded-lg shadow-sm transition-colors cursor-pointer ${
+                    onClick={handleSavePastedStudents}
+                    className={`px-4 py-2 font-semibold rounded-lg shadow-sm transition-colors cursor-pointer flex items-center gap-1.5 ${
                       parsedPastedStudents.length > 0
                         ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
                         : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'
                     }`}
                   >
-                    Tambahkan {parsedPastedStudents.length} Siswa Sekaligus
+                    <Plus className="w-4 h-4" />
+                    <span>
+                      Tambahkan ({parsedPastedStudents.length} Siswa) Sekarang
+                    </span>
                   </button>
                 </div>
               </div>
@@ -927,7 +1659,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                     <select
                       value={gender}
                       onChange={(e) => setGender(e.target.value as Gender)}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white cursor-pointer"
                     >
                       <option value="L">Laki-laki (L)</option>
                       <option value="P">Perempuan (P)</option>
@@ -941,7 +1673,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                     <select
                       value={classId}
                       onChange={(e) => setClassId(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white cursor-pointer"
                     >
                       {classes.map((c) => (
                         <option key={c.id} value={c.id}>
@@ -972,7 +1704,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value as any)}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white cursor-pointer"
                   >
                     <option value="Aktif">Aktif</option>
                     <option value="Mutasi">Mutasi Keluar</option>
