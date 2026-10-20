@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SchoolProfile, User } from '../types';
 import {
   Building,
@@ -13,6 +13,8 @@ import {
   BookOpen,
   Edit3,
   BadgeCheck,
+  Camera,
+  Trash2,
 } from 'lucide-react';
 import { DEFAULT_SCHOOL, DEFAULT_LOGO_KIRI, DEFAULT_LOGO_KANAN } from '../data/initialData';
 
@@ -39,7 +41,9 @@ export const SchoolSettings: React.FC<SchoolSettingsProps> = ({
   const [teacherSubject, setTeacherSubject] = useState(currentUser?.subject || '');
   const [teacherEmail, setTeacherEmail] = useState(currentUser?.email || '');
   const [teacherRole, setTeacherRole] = useState(currentUser?.role || 'Guru Mata Pelajaran');
+  const [teacherAvatar, setTeacherAvatar] = useState(currentUser?.avatar || '');
   const [teacherSuccessMsg, setTeacherSuccessMsg] = useState(false);
+  const teacherAvatarInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (currentUser) {
@@ -48,8 +52,28 @@ export const SchoolSettings: React.FC<SchoolSettingsProps> = ({
       setTeacherSubject(currentUser.subject || '');
       setTeacherEmail(currentUser.email || '');
       setTeacherRole(currentUser.role || 'Guru Mata Pelajaran');
+      setTeacherAvatar(currentUser.avatar || '');
     }
   }, [currentUser]);
+
+  const handleTeacherAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Harap pilih file gambar (JPG, PNG, WebP).');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (dataUrl) {
+        setTeacherAvatar(dataUrl);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleChange = (field: keyof SchoolProfile, value: string) => {
     setFormData((prev) => ({
@@ -99,7 +123,7 @@ export const SchoolSettings: React.FC<SchoolSettingsProps> = ({
       subject: teacherSubject.trim() || 'Mata Pelajaran',
       email: teacherEmail.trim(),
       role: teacherRole.trim() || 'Guru Mata Pelajaran',
-      avatar: currentUser?.avatar,
+      avatar: teacherAvatar.trim() || undefined,
     };
 
     onSaveProfile(updatedUser);
@@ -173,9 +197,33 @@ export const SchoolSettings: React.FC<SchoolSettingsProps> = ({
                 </div>
 
                 <div className="flex flex-col items-center text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
-                  <div className="w-16 h-16 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-2xl shadow-md mb-3">
-                    {teacherName ? teacherName.charAt(0) : 'G'}
+                  <div className="relative group mb-3">
+                    <div className="w-20 h-20 rounded-full overflow-hidden bg-gradient-to-tr from-indigo-500 to-purple-600 p-0.5 shadow-md">
+                      <div className="w-full h-full rounded-full overflow-hidden bg-white dark:bg-slate-900 flex items-center justify-center">
+                        {teacherAvatar ? (
+                          <img
+                            src={teacherAvatar}
+                            alt={teacherName}
+                            className="w-full h-full object-cover"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-indigo-600 text-white flex items-center justify-center font-bold text-2xl">
+                            {teacherName ? teacherName.charAt(0) : 'G'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => teacherAvatarInputRef.current?.click()}
+                      className="absolute bottom-0 right-0 p-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-md cursor-pointer transition-transform hover:scale-110"
+                      title="Klik untuk memilih foto dari perangkat"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                    </button>
                   </div>
+
                   <h4 className="text-sm font-bold text-slate-900 dark:text-white">
                     {teacherName || 'Nama Belum Diisi'}
                   </h4>
@@ -188,13 +236,41 @@ export const SchoolSettings: React.FC<SchoolSettingsProps> = ({
                   <p className="text-[11px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">
                     {teacherEmail || '-'}
                   </p>
+
+                  <div className="mt-3 flex items-center gap-2">
+                    <input
+                      ref={teacherAvatarInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleTeacherAvatarUpload}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => teacherAvatarInputRef.current?.click()}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-200 cursor-pointer shadow-2xs"
+                    >
+                      <Upload className="w-3.5 h-3.5 text-indigo-500" />
+                      <span>Unggah Foto Profil</span>
+                    </button>
+                    {teacherAvatar && (
+                      <button
+                        type="button"
+                        onClick={() => setTeacherAvatar('')}
+                        className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg cursor-pointer"
+                        title="Hapus foto"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
               <div className="mt-4 p-3 bg-indigo-50/70 dark:bg-indigo-950/40 rounded-lg border border-indigo-100 dark:border-indigo-900/50 text-[11px] text-indigo-900 dark:text-indigo-300">
-                <p className="font-semibold mb-1">Informasi Sinkronisasi Dokumen:</p>
+                <p className="font-semibold mb-1">Foto & Identitas Akun:</p>
                 <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                  Nama lengkap dan NIP di samping digunakan sebagai tanda tangan resmi pengajar pada formulir cetak Rapor Nilai, Absensi, dan Buku Jurnal Harian.
+                  Foto profil guru akan otomatis tampil di sudut kanan atas header aplikasi dan sidebar. Nama & NIP digunakan sebagai tanda tangan resmi pengajar pada formulir cetak.
                 </p>
               </div>
             </div>

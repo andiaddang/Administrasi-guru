@@ -1,6 +1,6 @@
 import React from 'react';
 import { User, SchoolProfile, AppThemeConfig, MenuTheme, ThemeMode } from '../types';
-import { Menu, LogOut, UserCircle, Palette, Sun, Moon, Edit3 } from 'lucide-react';
+import { Menu, LogOut, UserCircle, Palette, Sun, Moon, Edit3, Camera } from 'lucide-react';
 
 interface HeaderProps {
   school: SchoolProfile;
@@ -192,20 +192,44 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={onOpenEditProfile}
-                title="Klik untuk mengubah nama guru dan NIP"
-                className="flex items-center gap-2 p-1 sm:px-2.5 sm:py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-left transition-colors cursor-pointer group border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+                title="Klik untuk mengubah foto profil, nama guru, dan NIP"
+                className="flex items-center gap-2.5 p-1 sm:pl-2.5 sm:pr-1.5 sm:py-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-left transition-all cursor-pointer group border border-slate-200/60 dark:border-slate-700/60 hover:border-indigo-300 dark:hover:border-indigo-600 bg-white/50 dark:bg-slate-800/50 shadow-2xs"
               >
                 <div className="hidden sm:flex flex-col text-right">
-                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 leading-tight flex items-center justify-end gap-1">
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 leading-tight flex items-center justify-end gap-1">
                     <span>{currentUser.name}</span>
-                    <Edit3 className="w-3 h-3 text-slate-400 group-hover:text-indigo-500" />
+                    <Edit3 className="w-3 h-3 text-slate-400 group-hover:text-indigo-500 opacity-60 group-hover:opacity-100 transition-opacity" />
                   </span>
                   <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
                     NIP. {currentUser.nip}
                   </span>
                 </div>
-                <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold text-xs shrink-0">
-                  {currentUser.name.charAt(0)}
+
+                {/* Profile Photo Avatar in corner */}
+                <div className="relative shrink-0">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden ring-2 ring-indigo-500/40 group-hover:ring-indigo-600 transition-all bg-indigo-50 dark:bg-indigo-950 flex items-center justify-center shadow-xs">
+                    {currentUser.avatar ? (
+                      <img
+                        src={currentUser.avatar}
+                        alt={currentUser.name}
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center font-bold text-xs">
+                        {currentUser.name ? currentUser.name.charAt(0) : 'G'}
+                      </div>
+                    )}
+                  </div>
+                  {/* Camera icon hover overlay */}
+                  <div className="absolute inset-0 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Camera className="w-3.5 h-3.5" />
+                  </div>
+                  {/* Status Indicator Dot */}
+                  <span
+                    className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full"
+                    title="Akun Guru Aktif"
+                  />
                 </div>
               </button>
 
