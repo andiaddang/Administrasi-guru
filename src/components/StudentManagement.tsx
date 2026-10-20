@@ -793,16 +793,16 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
           <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-indigo-50/20 dark:bg-indigo-950/10 space-y-3 animate-in fade-in">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                <label className="text-xs font-bold text-slate-800 dark:text-slate-100">
                   Target Kelas:
                 </label>
                 <select
                   value={quickPasteClassId}
                   onChange={(e) => setQuickPasteClassId(e.target.value)}
-                  className="px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                  className="px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                 >
                   {classes.map((c) => (
-                    <option key={c.id} value={c.id}>
+                    <option key={c.id} value={c.id} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
                       {c.name}
                     </option>
                   ))}
@@ -810,7 +810,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
               </div>
 
               <div className="flex items-center gap-3">
-                <label className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
+                <label className="inline-flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-200 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={quickPasteOverwriteDuplicates}
@@ -831,7 +831,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
 0081234991 / 2425001	Andi Muhammad Ilham	L
 0081234992 / 2425002	Siti Fatimah Zahra	P
 0081234993	Budi Gunawan	Laki-laki"
-              className="w-full p-3 font-mono text-xs border border-indigo-200 dark:border-indigo-900/60 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full p-3 font-mono text-xs border border-indigo-200 dark:border-indigo-900/60 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
@@ -1131,21 +1131,21 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                             onChange={(e) =>
                               handleInlineFieldChange(student, 'classId', e.target.value)
                             }
-                            className="w-full px-2 py-1 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                            className="w-full px-2 py-1 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
                           >
                             {classes.map((c) => (
-                              <option key={c.id} value={c.id}>
+                              <option key={c.id} value={c.id} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
                                 {c.name}
                               </option>
                             ))}
                           </select>
                         ) : (
-                          <span>{cls?.name || 'Tanpa Kelas'}</span>
+                          <span className="text-slate-800 dark:text-slate-200">{cls?.name || 'Tanpa Kelas'}</span>
                         )}
                       </td>
 
                       {/* KONTAK ORTU */}
-                      <td className="p-3.5 font-mono text-slate-600 dark:text-slate-400">
+                      <td className="p-3.5 font-mono text-slate-700 dark:text-slate-200">
                         {isRowEditing ? (
                           <input
                             type="text"
@@ -1154,7 +1154,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                               handleInlineFieldChange(student, 'parentPhone', e.target.value)
                             }
                             placeholder="08..."
-                            className="w-full px-2 py-1 text-xs font-mono bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                            className="w-full px-2 py-1 text-xs font-mono bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                           />
                         ) : (
                           student.parentPhone || '-'
@@ -1164,7 +1164,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                       {/* STATUS */}
                       <td className="p-3.5">
                         <span
-                          className={`text-[11px] font-medium ${
+                          className={`text-[11px] font-semibold ${
                             student.status === 'Aktif'
                               ? 'text-emerald-700 dark:text-emerald-400'
                               : 'text-slate-500 dark:text-slate-400'
@@ -1260,23 +1260,23 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
               {/* Options */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 dark:bg-slate-800/70 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700">
                 <div className="flex items-center gap-2">
-                  <label className="font-bold text-slate-700 dark:text-slate-300">
+                  <label className="font-bold text-slate-800 dark:text-slate-100">
                     Masukkan ke Kelas:
                   </label>
                   <select
                     value={detectedClassId}
                     onChange={(e) => setDetectedClassId(e.target.value)}
-                    className="px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   >
                     {classes.map((c) => (
-                      <option key={c.id} value={c.id}>
+                      <option key={c.id} value={c.id} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
                         {c.name}
                       </option>
                     ))}
                   </select>
                 </div>
 
-                <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-300 cursor-pointer">
+                <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-800 dark:text-slate-200 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={detectedOverwriteDuplicates}
@@ -1290,10 +1290,10 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
               {/* Preview Table */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="font-bold text-slate-800 dark:text-slate-200">
+                  <p className="font-bold text-slate-800 dark:text-slate-100">
                     Daftar Pratinjau Siswa ({detectedClipboardStudents.length}):
                   </p>
-                  <span className="text-[11px] text-slate-500">
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
                     {detectedClipboardStudents.filter((s) => s.gender === 'L').length} Laki-laki,{' '}
                     {detectedClipboardStudents.filter((s) => s.gender === 'P').length} Perempuan
                   </span>
@@ -1301,7 +1301,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
 
                 <div className="max-h-60 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl">
                   <table className="w-full text-left text-[11px]">
-                    <thead className="bg-slate-100 dark:bg-slate-800 sticky top-0 font-semibold text-slate-700 dark:text-slate-300">
+                    <thead className="bg-slate-100 dark:bg-slate-800 sticky top-0 font-semibold text-slate-700 dark:text-slate-200">
                       <tr>
                         <th className="p-2 w-8 text-center">No</th>
                         <th className="p-2">NISN / NIS</th>
@@ -1313,9 +1313,9 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                       {detectedClipboardStudents.map((item, idx) => (
                         <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                          <td className="p-2 text-center text-slate-400">{idx + 1}</td>
-                          <td className="p-2 font-mono font-medium">{item.nisnNis}</td>
-                          <td className="p-2 font-bold">{item.name}</td>
+                          <td className="p-2 text-center text-slate-500 dark:text-slate-400">{idx + 1}</td>
+                          <td className="p-2 font-mono font-medium text-slate-900 dark:text-slate-100">{item.nisnNis}</td>
+                          <td className="p-2 font-bold text-slate-900 dark:text-white">{item.name}</td>
                           <td className="p-2 text-center">
                             <span
                               className={`font-semibold ${
@@ -1435,32 +1435,32 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
             {addMode === 'paste' && !editingStudent ? (
               <div className="p-5 space-y-4 text-xs max-h-[75vh] overflow-y-auto">
                 {/* Target Class & Helper */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 p-3.5 rounded-xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-indigo-50/80 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-900 p-3.5 rounded-xl">
                   <div className="flex items-center gap-2">
-                    <label className="font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                    <label className="font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap">
                       Masukkan ke Kelas:
                     </label>
                     <select
                       value={pasteTargetClassId}
                       onChange={(e) => setPasteTargetClassId(e.target.value)}
-                      className="px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-800 rounded-lg text-indigo-900 dark:text-indigo-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-800 border border-indigo-300 dark:border-indigo-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                     >
                       {classes.map((c) => (
-                        <option key={c.id} value={c.id}>
+                        <option key={c.id} value={c.id} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
                           {c.name}
                         </option>
                       ))}
                     </select>
                   </div>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Mendukung copy dari <strong>Excel</strong>, <strong>Google Sheets</strong>, <strong>WhatsApp</strong>, atau <strong>Word</strong>
+                  <span className="text-[11px] text-slate-700 dark:text-slate-200 font-medium">
+                    Mendukung copy dari <strong className="text-slate-900 dark:text-white">Excel</strong>, <strong className="text-slate-900 dark:text-white">Google Sheets</strong>, <strong className="text-slate-900 dark:text-white">WhatsApp</strong>, atau <strong className="text-slate-900 dark:text-white">Word</strong>
                   </span>
                 </div>
 
                 {/* Paste Area */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="font-semibold text-slate-700 dark:text-slate-300">
+                    <label className="font-bold text-slate-800 dark:text-slate-100">
                       Tempelkan Teks Siswa di Bawah Ini:
                     </label>
                     <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
@@ -1476,7 +1476,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
 0081234902 / 2425002	Nurul Fadhilah Putri	P
 0081234903 / 2425003	Siti Aisyah Rahma	Perempuan
 0081234904 / 2425004	Fajar Hidayatullah	Laki-laki"
-                    className="w-full p-3 font-mono text-xs border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full p-3 font-mono text-xs border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                   <div className="flex items-center justify-between mt-1 text-[11px] text-slate-500 dark:text-slate-400">
                     <span>
@@ -1486,7 +1486,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                       <button
                         type="button"
                         onClick={() => setRawPastedText('')}
-                        className="text-rose-500 hover:underline cursor-pointer"
+                        className="text-rose-500 hover:text-rose-600 dark:text-rose-400 hover:underline cursor-pointer font-medium"
                       >
                         Hapus Teks
                       </button>
@@ -1512,7 +1512,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
 
                     <div className="max-h-48 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl">
                       <table className="w-full text-left text-[11px]">
-                        <thead className="bg-slate-100 dark:bg-slate-800 sticky top-0 font-semibold text-slate-700 dark:text-slate-300">
+                        <thead className="bg-slate-100 dark:bg-slate-800 sticky top-0 font-semibold text-slate-700 dark:text-slate-200">
                           <tr>
                             <th className="p-2 w-8 text-center">No</th>
                             <th className="p-2">NISN / NIS</th>
@@ -1529,9 +1529,9 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                                 key={idx}
                                 className="hover:bg-slate-50 dark:hover:bg-slate-800/50"
                               >
-                                <td className="p-2 text-center text-slate-400">{idx + 1}</td>
-                                <td className="p-2 font-mono font-medium">{s.nisnNis}</td>
-                                <td className="p-2 font-bold">{s.name}</td>
+                                <td className="p-2 text-center text-slate-500 dark:text-slate-400">{idx + 1}</td>
+                                <td className="p-2 font-mono font-medium text-slate-900 dark:text-slate-100">{s.nisnNis}</td>
+                                <td className="p-2 font-bold text-slate-900 dark:text-white">{s.name}</td>
                                 <td className="p-2 text-center">
                                   <span
                                     className={`font-semibold ${
@@ -1543,7 +1543,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                                     {s.gender}
                                   </span>
                                 </td>
-                                <td className="p-2">{cls?.name || 'Dipilih'}</td>
+                                <td className="p-2 text-slate-700 dark:text-slate-200">{cls?.name || 'Dipilih'}</td>
                               </tr>
                             );
                           })}
@@ -1583,7 +1583,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
               /* TAB 2: INPUT FORMULIR TUNGGAL (NISN/NIS DIGABUNG) */
               <form onSubmit={handleSubmitSingle} className="p-5 space-y-3.5 text-xs">
                 {!editingStudent && (
-                  <div className="p-3 bg-indigo-50/70 dark:bg-indigo-950/40 rounded-xl border border-indigo-100 dark:border-indigo-900/60 mb-2">
+                  <div className="p-3 bg-indigo-50/80 dark:bg-indigo-950/60 rounded-xl border border-indigo-200 dark:border-indigo-900 mb-2">
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-[11px] font-bold text-indigo-900 dark:text-indigo-200 flex items-center gap-1.5">
                         <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
@@ -1596,7 +1596,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                     <input
                       type="text"
                       placeholder="Tempel di sini, misal: 0081234991 / 2425001 Andi Muhammad Ilham L"
-                      className="w-full px-2.5 py-1.5 text-xs bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-800 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                      className="w-full px-2.5 py-1.5 text-xs bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-800 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
                       onPaste={(e) => {
                         const text = e.clipboardData.getData('text');
                         if (text) {
@@ -1614,14 +1614,14 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                         }
                       }}
                     />
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                    <p className="text-[10px] text-slate-600 dark:text-slate-300 mt-1">
                       Cukup tempel (Ctrl+V) baris teks di atas, kolom NISN/NIS, Nama, dan Jenis Kelamin akan otomatis terisi!
                     </p>
                   </div>
                 )}
 
                 <div>
-                  <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block font-bold text-slate-800 dark:text-slate-100 mb-1">
                     Nama Lengkap Siswa *
                   </label>
                   <input
@@ -1630,12 +1630,12 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Contoh: Muh. Fajar Ramadhan"
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 font-medium"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block font-bold text-slate-800 dark:text-slate-100 mb-1">
                     NISN / NIS (Digabungkan) *
                   </label>
                   <input
@@ -1644,7 +1644,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                     value={nisnNis}
                     onChange={(e) => setNisnNis(e.target.value)}
                     placeholder="Contoh: 0081234002 / 2425002 atau 0081234002"
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 font-semibold"
                   />
                   <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
                     Anda dapat memasukkan nomor identitas siswa secara gabungan.
@@ -1653,30 +1653,30 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="block font-bold text-slate-800 dark:text-slate-100 mb-1">
                       Jenis Kelamin
                     </label>
                     <select
                       value={gender}
                       onChange={(e) => setGender(e.target.value as Gender)}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white cursor-pointer"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white cursor-pointer font-medium"
                     >
-                      <option value="L">Laki-laki (L)</option>
-                      <option value="P">Perempuan (P)</option>
+                      <option value="L" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Laki-laki (L)</option>
+                      <option value="P" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Perempuan (P)</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="block font-bold text-slate-800 dark:text-slate-100 mb-1">
                       Rombel / Kelas
                     </label>
                     <select
                       value={classId}
                       onChange={(e) => setClassId(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white cursor-pointer"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white cursor-pointer font-medium"
                     >
                       {classes.map((c) => (
-                        <option key={c.id} value={c.id}>
+                        <option key={c.id} value={c.id} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
                           {c.name}
                         </option>
                       ))}
@@ -1685,7 +1685,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                 </div>
 
                 <div>
-                  <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block font-bold text-slate-800 dark:text-slate-100 mb-1">
                     Kontak Telepon / WA Orang Tua
                   </label>
                   <input
@@ -1693,22 +1693,22 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                     value={parentPhone}
                     onChange={(e) => setParentPhone(e.target.value)}
                     placeholder="0812xxxxxxxx"
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block font-bold text-slate-800 dark:text-slate-100 mb-1">
                     Status Keaktifan
                   </label>
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value as any)}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white cursor-pointer"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white cursor-pointer font-medium"
                   >
-                    <option value="Aktif">Aktif</option>
-                    <option value="Mutasi">Mutasi Keluar</option>
-                    <option value="Alumni">Alumni / Lulus</option>
+                    <option value="Aktif" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Aktif</option>
+                    <option value="Mutasi" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Mutasi Keluar</option>
+                    <option value="Alumni" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Alumni / Lulus</option>
                   </select>
                 </div>
 

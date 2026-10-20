@@ -272,7 +272,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                   className="w-full px-3 py-1.5 text-xs font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                 >
                   {classes.map((c) => (
-                    <option key={c.id} value={c.id}>
+                    <option key={c.id} value={c.id} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
                       {c.name}
                     </option>
                   ))}
@@ -300,11 +300,11 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                   onChange={(e) => setGradeType(e.target.value as GradeType)}
                   className="w-full px-3 py-1.5 text-xs font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                 >
-                  <option value="Tugas">Tugas Mandiri / Kelompok</option>
-                  <option value="Harian">Formatif Harian</option>
-                  <option value="Sumatif">Sumatif Lingkup Materi</option>
-                  <option value="STS">Sumatif Tengah Semester (STS)</option>
-                  <option value="SAS">Sumatif Akhir Semester (SAS)</option>
+                  <option value="Tugas" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Tugas Mandiri / Kelompok</option>
+                  <option value="Harian" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Formatif Harian</option>
+                  <option value="Sumatif" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Sumatif Lingkup Materi</option>
+                  <option value="STS" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Sumatif Tengah Semester (STS)</option>
+                  <option value="SAS" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Sumatif Akhir Semester (SAS)</option>
                 </select>
               </div>
 
