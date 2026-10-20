@@ -183,6 +183,10 @@ export default function App() {
     setStudents((prev) => [...prev, ...mapped]);
   };
 
+  const handleReorderStudents = (reorderedList: Student[]) => {
+    setStudents(reorderedList);
+  };
+
   // SCHEDULE HANDLERS
   const handleAddSchedule = (newSchedule: Omit<Schedule, 'id'>) => {
     const created: Schedule = {
@@ -380,6 +384,7 @@ export default function App() {
               onDeleteStudent={handleDeleteStudent}
               onDeleteBatchStudents={handleDeleteBatchStudents}
               onBatchImportStudents={handleBatchImportStudents}
+              onReorderStudents={handleReorderStudents}
             />
           )}
 

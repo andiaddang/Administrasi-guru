@@ -24,6 +24,8 @@ import {
   ChevronUp,
   RefreshCw,
   Info,
+  GripVertical,
+  ArrowUpDown,
 } from 'lucide-react';
 
 interface StudentManagementProps {
@@ -35,6 +37,7 @@ interface StudentManagementProps {
   onDeleteStudent: (id: string) => void;
   onDeleteBatchStudents: (ids: string[]) => void;
   onBatchImportStudents: (newStudents: Omit<Student, 'id'>[]) => void;
+  onReorderStudents?: (reorderedStudents: Student[]) => void;
 }
 
 // Universal parser for external clipboard text (Excel, Sheets, Word, WhatsApp, Web table)
@@ -162,10 +165,16 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
   onDeleteStudent,
   onDeleteBatchStudents,
   onBatchImportStudents,
+  onReorderStudents,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClassFilter, setSelectedClassFilter] = useState<string>('all');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // DRAG AND DROP REORDER STATE
+  const [draggedStudentId, setDraggedStudentId] = useState<string | null>(null);
+  const [dragOverStudentId, setDragOverStudentId] = useState<string | null>(null);
+  const [dropPosition, setDropPosition] = useState<'above' | 'below'>('above');
 
   // INLINE EDITING STATE
   const [isInlineEditMode, setIsInlineEditMode] = useState(false);
@@ -313,6 +322,113 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
     };
     onUpdateStudent(updated);
     showSaveToast(`Jenis kelamin ${student.name.split(' ')[0]} diubah ke ${newGender === 'L' ? 'Laki-laki (L)' : 'Perempuan (P)'}`);
+  };
+
+  // Handle Drag and Drop Reordering
+  const handleReorderStudents = (draggedId: string, targetId: string, position: 'above' | 'below') => {
+    if (draggedId === targetId) return;
+
+    const currentList = [...students];
+    const fromIndex = currentList.findIndex((s) => s.id === draggedId);
+    if (fromIndex === -1) return;
+
+    const [draggedItem] = currentList.splice(fromIndex, 1);
+
+    let toIndex = currentList.findIndex((s) => s.id === targetId);
+    if (toIndex === -1) {
+      currentList.push(draggedItem);
+    } else {
+      if (position === 'below') {
+        toIndex += 1;
+      }
+      currentList.splice(toIndex, 0, draggedItem);
+    }
+
+    if (onReorderStudents) {
+      onReorderStudents(currentList);
+    } else if (onBatchUpdateStudents) {
+      onBatchUpdateStudents(currentList);
+    }
+
+    // Compute updated position number for toast notification
+    const newIdx = currentList
+      .filter((s) => {
+        const matchesClass = selectedClassFilter === 'all' || s.classId === selectedClassFilter;
+        const combinedId = s.nisnNis || `${s.nisn || ''} ${s.nis || ''}`;
+        const matchesSearch =
+          s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          combinedId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (s.parentPhone && s.parentPhone.includes(searchTerm));
+        return matchesClass && matchesSearch;
+      })
+      .findIndex((s) => s.id === draggedItem.id);
+
+    const posLabel = newIdx >= 0 ? `urutan #${newIdx + 1}` : 'posisi baru';
+    showSaveToast(`Urutan siswa disimpan: "${draggedItem.name}" dipindahkan ke ${posLabel}`);
+  };
+
+  // Quick Move 1 step up or down
+  const handleMoveSingleStep = (studentId: string, direction: 'up' | 'down') => {
+    const filteredIdx = filteredStudents.findIndex((s) => s.id === studentId);
+    if (filteredIdx === -1) return;
+
+    const targetFilteredIdx = direction === 'up' ? filteredIdx - 1 : filteredIdx + 1;
+    if (targetFilteredIdx < 0 || targetFilteredIdx >= filteredStudents.length) return;
+
+    const targetStudent = filteredStudents[targetFilteredIdx];
+    handleReorderStudents(studentId, targetStudent.id, direction === 'up' ? 'above' : 'below');
+  };
+
+  // Quick Sort Helpers
+  const handleSortByNameAZ = () => {
+    const currentList = [...students];
+    if (selectedClassFilter !== 'all') {
+      const classStudents = currentList.filter((s) => s.classId === selectedClassFilter);
+      classStudents.sort((a, b) => a.name.localeCompare(b.name, 'id'));
+      let classIdx = 0;
+      const reordered = currentList.map((s) => {
+        if (s.classId === selectedClassFilter) {
+          return classStudents[classIdx++];
+        }
+        return s;
+      });
+      if (onReorderStudents) onReorderStudents(reordered);
+      else if (onBatchUpdateStudents) onBatchUpdateStudents(reordered);
+      showSaveToast('Siswa kelas berhasil diurutkan A-Z berdasarkan nama');
+    } else {
+      currentList.sort((a, b) => a.name.localeCompare(b.name, 'id'));
+      if (onReorderStudents) onReorderStudents(currentList);
+      else if (onBatchUpdateStudents) onBatchUpdateStudents(currentList);
+      showSaveToast('Seluruh siswa berhasil diurutkan A-Z berdasarkan nama');
+    }
+  };
+
+  const handleSortByNisn = () => {
+    const currentList = [...students];
+    const getNisNum = (s: Student) => {
+      const val = s.nisnNis || s.nisn || s.nis || '';
+      const digits = val.replace(/\D/g, '');
+      return digits ? parseInt(digits.slice(0, 14), 10) : 0;
+    };
+    if (selectedClassFilter !== 'all') {
+      const classStudents = currentList.filter((s) => s.classId === selectedClassFilter);
+      classStudents.sort((a, b) => getNisNum(a) - getNisNum(b) || a.name.localeCompare(b.name, 'id'));
+      let classIdx = 0;
+      const reordered = currentList.map((s) => {
+        if (s.classId === selectedClassFilter) {
+          return classStudents[classIdx++];
+        }
+        return s;
+      });
+      if (onReorderStudents) onReorderStudents(reordered);
+      else if (onBatchUpdateStudents) onBatchUpdateStudents(reordered);
+      showSaveToast('Siswa kelas berhasil diurutkan berdasarkan NISN/NIS');
+    } else {
+      currentList.sort((a, b) => getNisNum(a) - getNisNum(b) || a.name.localeCompare(b.name, 'id'));
+      if (onReorderStudents) onReorderStudents(currentList);
+      else if (onBatchUpdateStudents) onBatchUpdateStudents(currentList);
+      showSaveToast('Seluruh siswa berhasil diurutkan berdasarkan NISN/NIS');
+    }
   };
 
   // Handle paste from clipboard via button click
@@ -919,6 +1035,27 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
             </select>
           </div>
 
+          {/* Quick Sort Helpers */}
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleSortByNameAZ}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors cursor-pointer border border-slate-200 dark:border-slate-700 shadow-2xs"
+              title="Urutkan daftar siswa alfabetis A ke Z"
+            >
+              <ArrowUpDown className="w-3.5 h-3.5 text-indigo-500" />
+              <span>Urut A-Z</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleSortByNisn}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors cursor-pointer border border-slate-200 dark:border-slate-700 shadow-2xs"
+              title="Urutkan daftar siswa berdasarkan NISN terkecil"
+            >
+              <span>Urut NISN</span>
+            </button>
+          </div>
+
           {/* Mode Edit Indicator Pill */}
           {isInlineEditMode && (
             <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-200 rounded-lg text-xs font-semibold animate-in fade-in">
@@ -945,12 +1082,38 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
         )}
       </div>
 
-      {/* Main Table with Direct Inline Editing */}
+      {/* Drag & Drop Reorder Guidance Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-3.5 py-2.5 bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900/60 rounded-xl text-xs text-indigo-950 dark:text-indigo-200 shadow-2xs">
+        <div className="flex items-center gap-2">
+          <div className="p-1 rounded bg-indigo-200/60 dark:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300">
+            <GripVertical className="w-4 h-4" />
+          </div>
+          <span>
+            <strong>Atur Urutan Siswa:</strong> Tahan &amp; geser (drag) ikon <span className="font-mono font-bold bg-indigo-100 dark:bg-indigo-900/80 px-1 py-0.5 rounded text-[11px]">⠿</span> pada kolom nomor untuk memindahkan baris siswa ke posisi urut yang diinginkan pada tabel.
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[11px] text-indigo-600 dark:text-indigo-400 font-medium">
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+          <span>Tersimpan otomatis ke leger &amp; rekap nilai</span>
+        </div>
+      </div>
+
+      {/* Main Table with Direct Inline Editing & Drag Reorder */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-semibold uppercase tracking-wider">
               <tr>
+                {/* No & Drag Header */}
+                <th className="p-3.5 w-24 text-center">
+                  <div
+                    className="flex items-center justify-center gap-1 text-slate-600 dark:text-slate-300"
+                    title="Nomor Urut Siswa. Tahan & drag ikon ⠿ pada baris untuk mengatur posisi urutan."
+                  >
+                    <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+                    <span>No</span>
+                  </div>
+                </th>
                 <th className="p-3.5 w-10 text-center">
                   <button
                     onClick={handleToggleSelectAll}
@@ -1003,26 +1166,135 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-200">
               {filteredStudents.length > 0 ? (
-                filteredStudents.map((student) => {
+                filteredStudents.map((student, idx) => {
                   const cls = classes.find((c) => c.id === student.classId);
                   const isSelected = selectedIds.includes(student.id);
                   const isRowEditing = isInlineEditMode || editingRowId === student.id;
+                  const isBeingDragged = draggedStudentId === student.id;
+                  const isTargetOver = dragOverStudentId === student.id;
                   const displayNis =
                     student.nisnNis || `${student.nisn || ''}${student.nis ? ` / ${student.nis}` : ''}`;
+
+                  let dragStyleClasses = '';
+                  if (isBeingDragged) {
+                    dragStyleClasses =
+                      'opacity-30 bg-indigo-100/70 dark:bg-indigo-950/70 border-y-2 border-dashed border-indigo-500 shadow-inner';
+                  } else if (isTargetOver) {
+                    if (dropPosition === 'above') {
+                      dragStyleClasses =
+                        'border-t-4 border-t-indigo-600 dark:border-t-indigo-400 bg-indigo-50/60 dark:bg-indigo-950/40 transition-all';
+                    } else {
+                      dragStyleClasses =
+                        'border-b-4 border-b-indigo-600 dark:border-b-indigo-400 bg-indigo-50/60 dark:bg-indigo-950/40 transition-all';
+                    }
+                  }
 
                   return (
                     <tr
                       key={student.id}
+                      draggable={!isInlineEditMode && !editingRowId}
+                      onDragStart={(e) => {
+                        setDraggedStudentId(student.id);
+                        e.dataTransfer.setData('text/plain', student.id);
+                        e.dataTransfer.effectAllowed = 'move';
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        if (draggedStudentId && draggedStudentId !== student.id) {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const midY = rect.top + rect.height / 2;
+                          const isAbove = e.clientY < midY;
+                          if (
+                            dragOverStudentId !== student.id ||
+                            dropPosition !== (isAbove ? 'above' : 'below')
+                          ) {
+                            setDragOverStudentId(student.id);
+                            setDropPosition(isAbove ? 'above' : 'below');
+                          }
+                        }
+                      }}
+                      onDragLeave={(e) => {
+                        if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                        if (dragOverStudentId === student.id) {
+                          setDragOverStudentId(null);
+                        }
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const sourceId = e.dataTransfer.getData('text/plain') || draggedStudentId;
+                        if (sourceId && sourceId !== student.id) {
+                          handleReorderStudents(sourceId, student.id, dropPosition);
+                        }
+                        setDraggedStudentId(null);
+                        setDragOverStudentId(null);
+                      }}
+                      onDragEnd={() => {
+                        setDraggedStudentId(null);
+                        setDragOverStudentId(null);
+                      }}
                       className={`hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors ${
                         isSelected ? 'bg-indigo-50/40 dark:bg-indigo-950/30' : ''
-                      } ${isRowEditing ? 'bg-amber-50/20 dark:bg-amber-950/10' : ''}`}
+                      } ${isRowEditing ? 'bg-amber-50/20 dark:bg-amber-950/10' : ''} ${dragStyleClasses}`}
                     >
+                      {/* No & Drag Grip Handle */}
+                      <td className="p-3 text-center select-none" draggable={false}>
+                        <div className="flex items-center justify-center gap-1.5">
+                          <div
+                            draggable={!isInlineEditMode && !editingRowId}
+                            onDragStart={(e) => {
+                              e.stopPropagation();
+                              setDraggedStudentId(student.id);
+                              e.dataTransfer.setData('text/plain', student.id);
+                              e.dataTransfer.effectAllowed = 'move';
+                            }}
+                            className="p-1 rounded text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-100/70 dark:hover:bg-indigo-950/60 cursor-grab active:cursor-grabbing transition-colors"
+                            title="Tahan & geser untuk memindahkan posisi urut siswa ini"
+                          >
+                            <GripVertical className="w-4 h-4 shrink-0" />
+                          </div>
+                          <span className="font-mono text-xs font-bold text-slate-600 dark:text-slate-300 w-5 text-center">
+                            {idx + 1}
+                          </span>
+                          <div className="flex flex-col -space-y-1 ml-0.5">
+                            <button
+                              type="button"
+                              disabled={idx === 0}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMoveSingleStep(student.id, 'up');
+                              }}
+                              className="p-0.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-20 disabled:hover:text-slate-400 cursor-pointer transition-colors"
+                              title="Pindahkan 1 baris ke atas"
+                              draggable={false}
+                            >
+                              <ChevronUp className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={idx === filteredStudents.length - 1}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMoveSingleStep(student.id, 'down');
+                              }}
+                              className="p-0.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-20 disabled:hover:text-slate-400 cursor-pointer transition-colors"
+                              title="Pindahkan 1 baris ke bawah"
+                              draggable={false}
+                            >
+                              <ChevronDown className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+
                       {/* Checkbox */}
                       <td className="p-3.5 text-center">
                         <button
                           onClick={() => handleToggleSelect(student.id)}
                           className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer"
                           aria-label={`Pilih ${student.name}`}
+                          draggable={false}
+                          onMouseDown={(e) => e.stopPropagation()}
                         >
                           {isSelected ? (
                             <CheckSquare className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
@@ -1220,7 +1492,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                 })
               ) : (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-slate-400 dark:text-slate-500">
+                  <td colSpan={9} className="p-8 text-center text-slate-400 dark:text-slate-500">
                     <p>Tidak ada data siswa ditemukan.</p>
                   </td>
                 </tr>
