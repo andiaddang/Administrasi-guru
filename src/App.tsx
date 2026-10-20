@@ -207,7 +207,46 @@ export default function App() {
 
   // GRADE HANDLERS
   const handleSaveBatchGrades = (newGrades: GradeRecord[]) => {
-    setGrades((prev) => [...prev, ...newGrades]);
+    setGrades((prev) => {
+      const updated = [...prev];
+      newGrades.forEach((ng) => {
+        const existingIdx = updated.findIndex(
+          (g) =>
+            g.id === ng.id ||
+            (g.studentId === ng.studentId &&
+              g.classId === ng.classId &&
+              g.type === ng.type &&
+              g.title.trim().toLowerCase() === ng.title.trim().toLowerCase() &&
+              g.date === ng.date)
+        );
+        if (existingIdx >= 0) {
+          updated[existingIdx] = { ...updated[existingIdx], ...ng };
+        } else {
+          updated.push(ng);
+        }
+      });
+      return updated;
+    });
+  };
+
+  const handleUpdateSingleGrade = (grade: GradeRecord) => {
+    setGrades((prev) => {
+      const existingIdx = prev.findIndex(
+        (g) =>
+          g.id === grade.id ||
+          (g.studentId === grade.studentId &&
+            g.classId === grade.classId &&
+            g.type === grade.type &&
+            g.title.trim().toLowerCase() === grade.title.trim().toLowerCase() &&
+            g.date === grade.date)
+      );
+      if (existingIdx >= 0) {
+        const copy = [...prev];
+        copy[existingIdx] = { ...copy[existingIdx], ...grade };
+        return copy;
+      }
+      return [...prev, grade];
+    });
   };
 
   const handleDeleteGrade = (id: string) => {
@@ -367,6 +406,7 @@ export default function App() {
               classes={classes}
               grades={grades}
               onSaveBatchGrades={handleSaveBatchGrades}
+              onUpdateSingleGrade={handleUpdateSingleGrade}
               onDeleteGrade={handleDeleteGrade}
               school={school}
               currentUser={currentUser}
