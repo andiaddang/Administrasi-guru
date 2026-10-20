@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Student,
   ClassRoom,
@@ -43,6 +43,7 @@ interface GradeManagementProps {
   onSaveBatchGrades: (newGrades: GradeRecord[]) => void;
   onUpdateSingleGrade?: (grade: GradeRecord) => void;
   onDeleteGrade: (id: string) => void;
+  onDeleteBatchGrades?: (ids: string[]) => void;
   school: SchoolProfile;
   currentUser: User | null;
 }
@@ -63,6 +64,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
   onSaveBatchGrades,
   onUpdateSingleGrade,
   onDeleteGrade,
+  onDeleteBatchGrades,
   school,
   currentUser,
 }) => {
@@ -115,6 +117,12 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
   const [massNotes, setMassNotes] = useState<Record<string, string>>({});
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [selectedExistingSessionKey, setSelectedExistingSessionKey] = useState<string>('');
+
+  // Auto-save states
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [lastAutoSavedTime, setLastAutoSavedTime] = useState<string>('');
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isInternalAutoSavingRef = useRef<boolean>(false);
 
   // History state
   const [historySearch, setHistorySearch] = useState('');
@@ -342,8 +350,12 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
     return stats;
   }, [uniqueAssessments, detailedLedgerData]);
 
-  // Prepopulate mass scores when editing or switching
+  // Prepopulate mass scores when editing or switching (skips if triggered by internal auto-save)
   useEffect(() => {
+    if (isInternalAutoSavingRef.current) {
+      return;
+    }
+
     const existing = grades.filter(
       (g) =>
         g.classId === selectedClassId &&
@@ -368,13 +380,85 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
     setMassNotes(notesMap);
   }, [selectedClassId, gradeType, assessmentTitle, classStudents, grades]);
 
-  // Mass score change handler
+  // Direct single student auto-save in Mass Input
+  const handleAutoSaveStudentScore = (
+    studentId: string,
+    score: number | '',
+    note: string
+  ) => {
+    if (!assessmentTitle.trim()) return;
+    if (score === '' || typeof score !== 'number') return;
+
+    isInternalAutoSavingRef.current = true;
+    setAutoSaveStatus('saving');
+
+    const newRecord: GradeRecord = {
+      id: `grd-${Date.now()}-${studentId}`,
+      studentId,
+      classId: selectedClassId,
+      subject: subject.trim(),
+      type: gradeType,
+      title: assessmentTitle.trim(),
+      score,
+      maxScore: 100,
+      date: assessmentDate,
+      semester: school.semester,
+      notes: note || '',
+    };
+
+    if (onUpdateSingleGrade) {
+      onUpdateSingleGrade(newRecord);
+    } else {
+      onSaveBatchGrades([newRecord]);
+    }
+
+    setTimeout(() => {
+      setAutoSaveStatus('saved');
+      setLastAutoSavedTime(
+        new Date().toLocaleTimeString('id-ID', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        })
+      );
+      isInternalAutoSavingRef.current = false;
+    }, 250);
+  };
+
+  // Mass score change handler with debounced auto-save
   const handleScoreChange = (studentId: string, val: string) => {
     const num = val === '' ? '' : Math.min(100, Math.max(0, Number(val)));
     setMassScores((prev) => ({
       ...prev,
       [studentId]: num,
     }));
+
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+    autoSaveTimerRef.current = setTimeout(() => {
+      if (assessmentTitle.trim() && num !== '' && typeof num === 'number') {
+        handleAutoSaveStudentScore(studentId, num, massNotes[studentId] || '');
+      }
+    }, 700);
+  };
+
+  // Mass note change handler with debounced auto-save
+  const handleNoteChange = (studentId: string, val: string) => {
+    setMassNotes((prev) => ({
+      ...prev,
+      [studentId]: val,
+    }));
+
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+    autoSaveTimerRef.current = setTimeout(() => {
+      const scoreVal = massScores[studentId];
+      if (assessmentTitle.trim() && scoreVal !== '' && typeof scoreVal === 'number') {
+        handleAutoSaveStudentScore(studentId, scoreVal, val);
+      }
+    }, 900);
   };
 
   // Mass input save
@@ -411,6 +495,14 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
 
     onSaveBatchGrades(newRecords);
     setSaveSuccess(true);
+    setAutoSaveStatus('saved');
+    setLastAutoSavedTime(
+      new Date().toLocaleTimeString('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })
+    );
     triggerToast(`Nilai asesmen "${assessmentTitle}" (${newRecords.length} siswa) berhasil disimpan!`);
     setTimeout(() => setSaveSuccess(false), 3000);
   };
@@ -425,7 +517,44 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
       setAssessmentTitle(session.title);
       setAssessmentDate(session.date);
       setSubject(session.subject);
-      triggerToast(`Data sesi "${session.title}" dimuat. Anda dapat mengubah nilai dan menyimpannya kembali.`);
+      triggerToast(`Data sesi "${session.title}" dimuat. Anda dapat mengubah nilai dan nilainya tersimpan otomatis.`);
+    }
+  };
+
+  // Hapus seluruh nilai untuk sesi asesmen yang dipilih pada dropdown
+  const handleDeleteSelectedSession = () => {
+    if (!selectedExistingSessionKey) return;
+    const session = massUniqueAssessments.find((a) => a.key === selectedExistingSessionKey);
+    if (!session) return;
+
+    const matchingGrades = grades.filter(
+      (g) =>
+        g.classId === selectedClassId &&
+        g.type === session.type &&
+        (g.title || '').trim().toLowerCase() === session.title.trim().toLowerCase() &&
+        (g.date || '').trim() === session.date.trim()
+    );
+
+    const count = matchingGrades.length;
+    const confirmDelete = window.confirm(
+      `Apakah Anda yakin ingin menghapus seluruh nilai untuk asesmen:\n\n` +
+      `[${session.type}] "${session.title}" (Tanggal: ${formatDateId(session.date)})?\n\n` +
+      `Tindakan ini akan menghapus ${count} nilai siswa pada asesmen ini dari sistem.`
+    );
+
+    if (confirmDelete) {
+      const idsToDelete = matchingGrades.map((g) => g.id);
+      if (onDeleteBatchGrades) {
+        onDeleteBatchGrades(idsToDelete);
+      } else {
+        idsToDelete.forEach((id) => onDeleteGrade(id));
+      }
+
+      setSelectedExistingSessionKey('');
+      setAssessmentTitle('');
+      setMassScores({});
+      setMassNotes({});
+      triggerToast(`Asesmen "${session.title}" beserta ${count} nilai siswa berhasil dihapus.`);
     }
   };
 
@@ -436,11 +565,12 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
     setAssessmentTitle(col.title);
     setAssessmentDate(col.date);
     setSubject(col.subject);
+    setSelectedExistingSessionKey(col.key);
     setActiveTab('mass');
     triggerToast(`Memuat asesmen "${col.title}" ke formulir pengeditan massal.`);
   };
 
-  // INLINE EDITING LOGIC
+  // INLINE EDITING LOGIC (With Auto-Save on Blur / Enter)
   const handleStartInlineEdit = (studentId: string, col: AssessmentColumn, currentVal: number | null) => {
     setEditingCell({ studentId, assessmentKey: col.key });
     setCellEditValue(currentVal !== null && currentVal !== undefined ? String(currentVal) : '');
@@ -505,7 +635,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
     }
 
     setEditingCell(null);
-    triggerToast(`Nilai ${studentObj?.name || 'siswa'} pada "${col.title}" diubah menjadi ${numVal}`);
+    triggerToast(`Nilai ${studentObj?.name || 'siswa'} pada "${col.title}" tersimpan otomatis: ${numVal}`);
   };
 
   // OPEN EDIT MODAL FOR A STUDENT'S ALL GRADES
@@ -649,7 +779,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Tabel matriks komponen penilaian lengkap (Tugas, Harian, Sumatif, STS, SAS), edit nilai interaktif, dan rekap leger resmi
+            Tabel matriks komponen penilaian lengkap (Tugas, Harian, Sumatif, STS, SAS), simpan otomatis nilai, dan rekap leger resmi
           </p>
         </div>
 
@@ -692,7 +822,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
       </div>
 
       {activeTab === 'ledger' ? (
-        /* TAB 1: MATRIKS PENILAIAN LENGKAP SEMUA KOMPONEN DENGAN FITUR EDIT NILAI */
+        /* TAB 1: MATRIKS PENILAIAN LENGKAP SEMUA KOMPONEN DENGAN FITUR EDIT & AUTO-SAVE */
         <div className="space-y-4">
           {/* Controls Bar */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs transition-colors">
@@ -821,7 +951,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <span>
-                  <strong>Mode Edit Langsung Aktif:</strong> Klik pada angka nilai atau tanda strip (<span className="font-mono font-bold">-</span>) pada kolom asesmen untuk langsung mengetik dan mengedit nilai siswa. Tekan <strong>Enter</strong> atau klik tanda centang untuk menyimpan.
+                  <strong>Mode Edit Langsung Aktif:</strong> Klik pada angka nilai atau tanda strip (<span className="font-mono font-bold">-</span>) pada kolom asesmen. Ketik nilai baru lalu <strong>klik di luar sel atau tekan Enter</strong> untuk <strong>simpan otomatis</strong>.
                 </span>
               </div>
               <button
@@ -847,7 +977,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                     Daftar {uniqueAssessments.length} Komponen Asesmen Terinput di Kelas {ledgerClassObj?.name}
                   </span>
                   <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                    (Klik tombol pensil pada kartu untuk mengedit nilai 1 sesi asesmen sekaligus)
+                    (Klik tombol pensil pada kartu untuk memuat dan mengedit nilai massal sesi ini)
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -981,7 +1111,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                             colSpan={displayedAssessments.length}
                             className="p-2 bg-indigo-50/80 dark:bg-indigo-950/60 text-indigo-900 dark:text-indigo-200 font-bold border-l border-r border-indigo-200 dark:border-indigo-900"
                           >
-                            Rincian Seluruh Asesmen Terinput ({displayedAssessments.length} Asesmen) · Klik Angka Nilai Untuk Mengedit
+                            Rincian Seluruh Asesmen Terinput ({displayedAssessments.length} Asesmen) · Edit & Simpan Otomatis
                           </th>
                         )}
 
@@ -1148,7 +1278,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                           {row.gender}
                         </td>
 
-                        {/* MATRIX & DETAILED ASSESSMENT CELLS WITH INTERACTIVE EDITING */}
+                        {/* MATRIX & DETAILED ASSESSMENT CELLS WITH INTERACTIVE AUTO-SAVING */}
                         {legerViewMode !== 'summary' &&
                           displayedAssessments.map((col) => {
                             const scoreVal = row.scoresMap[col.key];
@@ -1161,7 +1291,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                                 className="p-2 text-center font-mono border-l border-slate-100 dark:border-slate-800 relative group"
                               >
                                 {isThisCellEditing ? (
-                                  /* INLINE CELL INPUT */
+                                  /* INLINE CELL INPUT WITH AUTO-SAVE ON BLUR */
                                   <div className="flex items-center justify-center gap-1">
                                     <input
                                       type="number"
@@ -1170,6 +1300,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                                       autoFocus
                                       value={cellEditValue}
                                       onChange={(e) => setCellEditValue(e.target.value)}
+                                      onBlur={() => handleSaveInlineScore(row.id, col, cellEditValue)}
                                       onKeyDown={(e) => {
                                         if (e.key === 'Enter') {
                                           handleSaveInlineScore(row.id, col, cellEditValue);
@@ -1181,7 +1312,10 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                                     />
                                     <button
                                       type="button"
-                                      onClick={() => handleSaveInlineScore(row.id, col, cellEditValue)}
+                                      onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        handleSaveInlineScore(row.id, col, cellEditValue);
+                                      }}
                                       className="p-1 bg-emerald-600 text-white rounded hover:bg-emerald-700 cursor-pointer"
                                       title="Simpan (Enter)"
                                     >
@@ -1189,7 +1323,10 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={() => setEditingCell(null)}
+                                      onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        setEditingCell(null);
+                                      }}
                                       className="p-1 bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded hover:bg-slate-400 cursor-pointer"
                                       title="Batal (Esc)"
                                     >
@@ -1205,7 +1342,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                                         ? 'ring-1 ring-dashed ring-indigo-400 dark:ring-indigo-600 hover:ring-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/60'
                                         : 'hover:ring-1 hover:ring-indigo-300 dark:hover:ring-indigo-700'
                                     }`}
-                                    title="Klik untuk mengedit nilai siswa ini"
+                                    title="Klik untuk mengedit nilai siswa ini (otomatis tersimpan saat klik selesai)"
                                   >
                                     {scoreVal !== null && scoreVal !== undefined ? (
                                       <span
@@ -1226,7 +1363,6 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                                         -
                                       </span>
                                     )}
-                                    {/* Small hover pencil icon */}
                                     <Edit2 className="w-2.5 h-2.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                                   </div>
                                 )}
@@ -1375,37 +1511,58 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
           </div>
         </div>
       ) : activeTab === 'mass' ? (
-        /* TAB 2: INPUT & RE-EDIT NILAI MASSAL */
+        /* TAB 2: INPUT & RE-EDIT NILAI MASSAL DENGAN SIMPAN OTOMATIS DAN TOMBOL HAPUS ASESMEN */
         <div className="space-y-4">
           {/* Controls Form Bar */}
           <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-xs transition-colors">
-            {/* Quick Picker: Muat Nilai Asesmen Yang Sudah Ada Untuk Diedit */}
+            {/* Quick Picker: Muat Nilai Asesmen Yang Sudah Ada Untuk Diedit + Tombol Hapus */}
             {massUniqueAssessments.length > 0 && (
-              <div className="p-3 bg-indigo-50/70 dark:bg-indigo-950/50 rounded-xl border border-indigo-200 dark:border-indigo-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-2">
+              <div className="p-3.5 bg-indigo-50/80 dark:bg-indigo-950/60 rounded-xl border border-indigo-200 dark:border-indigo-900 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2.5">
                   <RefreshCw className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
                   <div>
-                    <span className="font-bold text-indigo-900 dark:text-indigo-200">
-                      Edit Asesmen Yang Telah Terinput Sebelumnya:
+                    <span className="font-bold text-indigo-950 dark:text-indigo-100">
+                      Pilih Asesmen Yang Ingin Diedit atau Dihapus:
                     </span>
                     <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                      Pilih sesi penilaian di bawah untuk memuat nilai seluruh siswa dan mengeditnya kembali
+                      Pilih dari dropdown untuk memuat nilai seluruh siswa, atau klik <strong>Hapus Asesmen</strong> untuk menghapus sesi ini
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+
+                <div className="flex items-center gap-2 flex-wrap">
                   <select
                     value={selectedExistingSessionKey}
                     onChange={(e) => handleLoadExistingSession(e.target.value)}
                     className="px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-800 border border-indigo-300 dark:border-indigo-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer min-w-[220px]"
                   >
-                    <option value="">-- Pilih Asesmen Yang Ingin Diedit --</option>
+                    <option value="">-- Pilih Asesmen Yang Ingin Diedit / Dihapus --</option>
                     {massUniqueAssessments.map((a) => (
                       <option key={a.key} value={a.key}>
                         [{a.type}] {a.title} ({formatDateId(a.date)})
                       </option>
                     ))}
                   </select>
+
+                  {/* Tombol Hapus Sesi Asesmen */}
+                  <button
+                    type="button"
+                    onClick={handleDeleteSelectedSession}
+                    disabled={!selectedExistingSessionKey}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer ${
+                      selectedExistingSessionKey
+                        ? 'bg-rose-600 hover:bg-rose-700 text-white'
+                        : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed opacity-60'
+                    }`}
+                    title={
+                      selectedExistingSessionKey
+                        ? `Hapus seluruh nilai untuk sesi asesmen yang dipilih ini`
+                        : 'Pilih salah satu asesmen pada dropdown terlebih dahulu untuk menghapus'
+                    }
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Hapus Asesmen Ini</span>
+                  </button>
                 </div>
               </div>
             )}
@@ -1486,19 +1643,40 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
-              <span className="text-xs text-slate-500 dark:text-slate-400">
-                Menilai untuk {classStudents.length} siswa di kelas {selectedClassObj?.name}
-              </span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2.5 border-t border-slate-100 dark:border-slate-800">
+              {/* Auto-Save Indicator Status */}
+              <div className="flex items-center gap-2">
+                {autoSaveStatus === 'saving' ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 animate-pulse">
+                    <RefreshCw className="w-3 h-3 animate-spin" />
+                    <span>Menyimpan otomatis...</span>
+                  </span>
+                ) : lastAutoSavedTime ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 animate-in fade-in">
+                    <CheckCircle2 className="w-3 h-3" />
+                    <span>Tersimpan otomatis ({lastAutoSavedTime})</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                    <Sparkles className="w-3 h-3 text-indigo-500" />
+                    <span>Simpan otomatis nilai aktif</span>
+                  </span>
+                )}
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:inline">
+                  · Nilai yang Anda ketik langsung tersimpan tanpa perlu menekan tombol
+                </span>
+              </div>
 
-              <button
-                type="button"
-                onClick={handleSaveMassInput}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
-              >
-                <Save className="w-4 h-4" />
-                Simpan Penilaian Massal
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleSaveMassInput}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>Simpan Semua Sekarang</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1509,7 +1687,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
             </div>
           )}
 
-          {/* Student list for mass grading */}
+          {/* Student list for mass grading with auto-save */}
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs transition-colors">
             <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
               <span className="font-bold text-slate-800 dark:text-slate-100">
@@ -1551,6 +1729,10 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                               max="100"
                               value={scoreVal}
                               onChange={(e) => handleScoreChange(student.id, e.target.value)}
+                              onBlur={() => {
+                                if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+                                handleAutoSaveStudentScore(student.id, scoreVal, massNotes[student.id] || '');
+                              }}
                               placeholder="0 - 100"
                               className="w-24 px-3 py-1.5 text-center font-mono font-bold text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white"
                             />
@@ -1559,12 +1741,11 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                             <input
                               type="text"
                               value={massNotes[student.id] || ''}
-                              onChange={(e) =>
-                                setMassNotes((prev) => ({
-                                  ...prev,
-                                  [student.id]: e.target.value,
-                                }))
-                              }
+                              onChange={(e) => handleNoteChange(student.id, e.target.value)}
+                              onBlur={() => {
+                                if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+                                handleAutoSaveStudentScore(student.id, scoreVal, massNotes[student.id] || '');
+                              }}
                               placeholder="Catatan kemajuan atau remedial..."
                               className="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400"
                             />

@@ -253,6 +253,10 @@ export default function App() {
     setGrades((prev) => prev.filter((g) => g.id !== id));
   };
 
+  const handleDeleteBatchGrades = (ids: string[]) => {
+    setGrades((prev) => prev.filter((g) => !ids.includes(g.id)));
+  };
+
   // JOURNAL HANDLERS
   const handleAddJournal = (newJournal: Omit<TeachingJournal, 'id'>) => {
     const created: TeachingJournal = {
@@ -408,6 +412,7 @@ export default function App() {
               onSaveBatchGrades={handleSaveBatchGrades}
               onUpdateSingleGrade={handleUpdateSingleGrade}
               onDeleteGrade={handleDeleteGrade}
+              onDeleteBatchGrades={handleDeleteBatchGrades}
               school={school}
               currentUser={currentUser}
             />
