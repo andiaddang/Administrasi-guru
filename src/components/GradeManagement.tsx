@@ -307,11 +307,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
         ? Math.round((sumTugasWithZero / totalTugasCount) * 10) / 10
         : null;
 
-      // Rata-rata per jenis penilaian hanya untuk komponen yang sudah dikerjakan
+      // Rata-rata per jenis penilaian: untuk Tugas gunakan akumulasi rata-rata tugas (kosong dihitung 0) sebagai bobot ke Nilai Akhir
       const typeAverages: Record<GradeType, number | null> = {
-        Tugas: typeScores.Tugas.length > 0
-          ? typeScores.Tugas.reduce((a, b) => a + b, 0) / typeScores.Tugas.length
-          : null,
+        Tugas: rataRataTugas,
         Harian: typeScores.Harian.length > 0
           ? typeScores.Harian.reduce((a, b) => a + b, 0) / typeScores.Harian.length
           : null,
@@ -1320,16 +1318,14 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
           <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-900">
             {displayColumns.length} Komponen Asesmen
           </span>
-          {shouldShowAvgTugasCol && (
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-50 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-300 dark:border-sky-800 flex items-center gap-1.5">
-              <span>Rata-Rata Tugas Akumulasi: {tugasColumns.length} Tugas (Kosong = 0)</span>
-              {classAnalytics.avgClassTugas !== null && (
-                <span className="px-1.5 py-0.2 bg-sky-200 dark:bg-sky-800 text-sky-900 dark:text-sky-100 rounded text-[11px] font-extrabold">
-                  Rerata Kelas: {classAnalytics.avgClassTugas.toFixed(1)}
-                </span>
-              )}
-            </span>
-          )}
+          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-50 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-300 dark:border-sky-800 flex items-center gap-1.5">
+            <span>Rata-Rata Tugas Akumulasi: {tugasColumns.length} Tugas (Bobot ke Nilai Akhir: {weights.Tugas}%)</span>
+            {classAnalytics.avgClassTugas !== null && (
+              <span className="px-1.5 py-0.2 bg-sky-200 dark:bg-sky-800 text-sky-900 dark:text-sky-100 rounded text-[11px] font-extrabold">
+                Rerata Kelas: {classAnalytics.avgClassTugas.toFixed(1)}
+              </span>
+            )}
+          </span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -1365,100 +1361,67 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                   Nama Siswa ({filteredStudents.length})
                 </th>
 
-                {/* Jika filter Tugas atau All dan belum ada tugas yang dibuat */}
-                {shouldShowAvgTugasCol && tugasColumns.length === 0 && (
+                {/* Kolom Tugas & Penilaian Dinamis */}
+                {displayColumns.map((col) => (
                   <th
-                    key="col-rata-rata-tugas-empty"
-                    className="py-3 px-3 min-w-[140px] font-bold text-center bg-sky-50 dark:bg-sky-950/70 border-x-2 border-sky-300 dark:border-sky-800 text-sky-950 dark:text-sky-100 align-top shadow-xs"
+                    key={col.key}
+                    className="py-3 px-3 min-w-[170px] max-w-[220px] font-bold text-slate-800 dark:text-slate-100 align-top group"
                   >
-                    <div className="space-y-1">
-                      <span className="inline-block px-2 py-0.5 rounded text-[10px] font-black bg-sky-200 dark:bg-sky-800 text-sky-900 dark:text-sky-100 border border-sky-300 dark:border-sky-700 uppercase tracking-wider">
-                        REKAP TUGAS
-                      </span>
-                      <div className="font-extrabold text-xs text-sky-950 dark:text-sky-100 uppercase">
-                        RATA-RATA TUGAS
+                    <div className="flex items-start justify-between gap-1.5">
+                      <div className="space-y-1">
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${getTypeBadge(
+                            col.type
+                          )}`}
+                        >
+                          {GRADE_TYPE_SHORT[col.type]}
+                        </span>
+                        <div
+                          className="font-bold text-slate-900 dark:text-white leading-tight line-clamp-2"
+                          title={col.title}
+                        >
+                          {col.title}
+                        </div>
+                        <div className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">
+                          Tgl: {col.date || '-'}
+                        </div>
                       </div>
-                      <div className="text-[10px] text-slate-400 font-normal">
-                        (Belum ada tugas)
-                      </div>
+
+                      {/* Tombol Hapus Tugas / Komponen */}
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteColumn(col)}
+                        className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 p-1 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer shrink-0"
+                        title={`Hapus komponen "${col.title}"`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </th>
-                )}
+                ))}
 
-                {/* Kolom Tugas & Penilaian Dinamis */}
-                {displayColumns.map((col, idx) => {
-                  const isLastTugas =
-                    shouldShowAvgTugasCol &&
-                    col.type === 'Tugas' &&
-                    (idx === displayColumns.length - 1 || displayColumns[idx + 1].type !== 'Tugas');
-
-                  return (
-                    <React.Fragment key={col.key}>
-                      <th
-                        className="py-3 px-3 min-w-[170px] max-w-[220px] font-bold text-slate-800 dark:text-slate-100 align-top group"
-                      >
-                        <div className="flex items-start justify-between gap-1.5">
-                          <div className="space-y-1">
-                            <span
-                              className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${getTypeBadge(
-                                col.type
-                              )}`}
-                            >
-                              {GRADE_TYPE_SHORT[col.type]}
-                            </span>
-                            <div
-                              className="font-bold text-slate-900 dark:text-white leading-tight line-clamp-2"
-                              title={col.title}
-                            >
-                              {col.title}
-                            </div>
-                            <div className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">
-                              Tgl: {col.date || '-'}
-                            </div>
-                          </div>
-
-                          {/* Tombol Hapus Tugas / Komponen */}
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteColumn(col)}
-                            className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 p-1 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer shrink-0"
-                            title={`Hapus komponen "${col.title}"`}
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </th>
-
-                      {/* KOLOM KHUSUS RATA-RATA TUGAS SETELAH TUGAS */}
-                      {isLastTugas && (
-                        <th
-                          key="col-rata-rata-tugas"
-                          className="py-3 px-3 min-w-[145px] max-w-[185px] font-bold text-center bg-sky-50 dark:bg-sky-950/70 border-x-2 border-sky-300 dark:border-sky-800 text-sky-950 dark:text-sky-100 align-top shadow-xs"
-                        >
-                          <div className="space-y-1">
-                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-black bg-sky-200 dark:bg-sky-800 text-sky-900 dark:text-sky-100 border border-sky-300 dark:border-sky-700 uppercase tracking-wider">
-                              REKAP TUGAS
-                            </span>
-                            <div className="font-black text-xs text-sky-950 dark:text-sky-100 leading-tight uppercase tracking-tight">
-                              RATA-RATA TUGAS
-                            </div>
-                            <div className="text-[10px] text-sky-700 dark:text-sky-300 font-bold">
-                              Σ Nilai ÷ {tugasColumns.length} Tugas
-                            </div>
-                            <div className="text-[9px] text-slate-500 dark:text-slate-400 font-normal">
-                              (Kosong dihitung 0)
-                            </div>
-                          </div>
-                        </th>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
+                {/* Kolom Khusus RATA-RATA TUGAS (Samping Kiri / Sebelum Nilai Akhir) */}
+                <th className="py-3 px-3.5 font-bold text-center bg-sky-50 dark:bg-sky-950/70 border-x-2 border-sky-300 dark:border-sky-800 text-sky-950 dark:text-sky-100 min-w-[150px] max-w-[190px] shadow-xs">
+                  <div className="space-y-1">
+                    <span className="inline-block px-2 py-0.5 rounded text-[10px] font-black bg-sky-200 dark:bg-sky-800 text-sky-900 dark:text-sky-100 border border-sky-300 dark:border-sky-700 uppercase tracking-wider">
+                      BOBOT TUGAS ({weights.Tugas}%)
+                    </span>
+                    <div className="font-black text-xs text-sky-950 dark:text-sky-100 leading-tight uppercase tracking-tight">
+                      RATA-RATA TUGAS
+                    </div>
+                    <div className="text-[10px] text-sky-700 dark:text-sky-300 font-bold">
+                      {tugasColumns.length > 0 ? `Σ Nilai ÷ ${tugasColumns.length} Tugas` : 'Belum Ada Tugas'}
+                    </div>
+                    <div className="text-[9px] text-slate-500 dark:text-slate-400 font-normal">
+                      (Kosong dihitung 0)
+                    </div>
+                  </div>
+                </th>
 
                 {/* Nilai Akhir Otomatis */}
-                <th className="py-3 px-4 font-bold text-center text-indigo-700 dark:text-indigo-300 min-w-[120px] bg-indigo-50/70 dark:bg-indigo-950/40">
-                  <div className="leading-tight">Nilai Akhir</div>
-                  <div className="text-[10px] text-indigo-500 font-normal">Bobot Aktif</div>
+                <th className="py-3 px-4 font-bold text-center text-indigo-700 dark:text-indigo-300 min-w-[125px] bg-indigo-50/70 dark:bg-indigo-950/40">
+                  <div className="leading-tight font-extrabold text-sm">Nilai Akhir</div>
+                  <div className="text-[10px] text-indigo-500 font-normal">Bobot Aktif (Termasuk Tugas)</div>
                 </th>
 
                 {/* Predikat & Ketercapaian */}
@@ -1477,7 +1440,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
               {filteredStudents.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={displayColumns.length + (shouldShowAvgTugasCol ? 1 : 0) + 6}
+                    colSpan={displayColumns.length + 7}
                     className="py-12 text-center text-slate-400 dark:text-slate-500"
                   >
                     Tidak ada siswa yang ditemukan untuk kelas ini.
@@ -1525,84 +1488,63 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                           </div>
                         </td>
 
-                        {/* Jika belum ada tugas dibuat tapi filter tugas aktif */}
-                        {shouldShowAvgTugasCol && tugasColumns.length === 0 && (
-                          <td
-                            key="cell-avg-tugas-empty"
-                            className="py-2.5 px-3 text-center bg-sky-50/30 dark:bg-sky-950/20 text-slate-400 italic text-[11px]"
-                          >
-                            —
-                          </td>
-                        )}
-
                         {/* Input Nilai Komponen Asesmen */}
-                        {displayColumns.map((col, idx) => {
+                        {displayColumns.map((col) => {
                           const currentScore = studentScores[col.key] ?? '';
                           const isFilled = typeof currentScore === 'number' && !isNaN(currentScore);
                           const isWarning = isFilled && currentScore < 75;
-                          const isLastTugas =
-                            shouldShowAvgTugasCol &&
-                            col.type === 'Tugas' &&
-                            (idx === displayColumns.length - 1 || displayColumns[idx + 1].type !== 'Tugas');
 
                           return (
-                            <React.Fragment key={col.key}>
-                              <td className="py-2 px-2.5">
-                                <div className="relative">
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    max="100"
-                                    placeholder="—"
-                                    value={currentScore}
-                                    onChange={(e) =>
-                                      handleScoreChange(student.id, col.key, e.target.value)
-                                    }
-                                    className={`w-full text-center text-xs font-bold rounded-lg px-2 py-1.5 border transition-all ${
-                                      isFilled
-                                        ? isWarning
-                                          ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300'
-                                          : 'bg-slate-50 dark:bg-slate-800/90 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:bg-white'
-                                        : 'bg-slate-50/40 dark:bg-slate-800/30 border-dashed border-slate-200 dark:border-slate-700 text-slate-400'
-                                    } focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
-                                  />
-                                </div>
-                              </td>
-
-                              {/* CELL KHUSUS RATA-RATA TUGAS SETELAH TUGAS */}
-                              {isLastTugas && (
-                                <td
-                                  key="cell-rata-rata-tugas"
-                                  className="py-2.5 px-3 text-center bg-sky-50/60 dark:bg-sky-950/30 border-x-2 border-sky-200 dark:border-sky-900/60"
-                                >
-                                  {evalItem.rataRataTugas !== null ? (
-                                    <div className="space-y-0.5">
-                                      <div className="inline-flex items-center justify-center">
-                                        <span
-                                          className={`px-2.5 py-1 rounded-lg text-xs font-black shadow-xs ${
-                                            evalItem.rataRataTugas >= 75
-                                              ? 'bg-sky-100 dark:bg-sky-900/80 text-sky-900 dark:text-sky-200 border border-sky-300 dark:border-sky-700'
-                                              : 'bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800'
-                                          }`}
-                                          title={`Total Nilai: ${evalItem.sumTugasWithZero} dari ${evalItem.totalTugasCount} tugas (Nilai kosong dihitung 0)`}
-                                        >
-                                          {evalItem.rataRataTugas.toFixed(1)}
-                                        </span>
-                                      </div>
-                                      <div className="text-[10px] text-slate-500 dark:text-slate-400 font-sans font-medium">
-                                        {evalItem.submittedTugasCount}/{evalItem.totalTugasCount} tugas kumpul
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <span className="text-slate-400 italic text-[11px]">—</span>
-                                  )}
-                                </td>
-                              )}
-                            </React.Fragment>
+                            <td key={col.key} className="py-2 px-2.5">
+                              <div className="relative">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  placeholder="—"
+                                  value={currentScore}
+                                  onChange={(e) =>
+                                    handleScoreChange(student.id, col.key, e.target.value)
+                                  }
+                                  className={`w-full text-center text-xs font-bold rounded-lg px-2 py-1.5 border transition-all ${
+                                    isFilled
+                                      ? isWarning
+                                        ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300'
+                                        : 'bg-slate-50 dark:bg-slate-800/90 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:bg-white'
+                                      : 'bg-slate-50/40 dark:bg-slate-800/30 border-dashed border-slate-200 dark:border-slate-700 text-slate-400'
+                                  } focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
+                                />
+                              </div>
+                            </td>
                           );
                         })}
 
-                        {/* Nilai Akhir Otomatis (Tanpa Penalti Nol) */}
+                        {/* Kolom Khusus RATA-RATA TUGAS (Samping Kiri / Sebelum Nilai Akhir) */}
+                        <td className="py-2.5 px-3 text-center bg-sky-50/60 dark:bg-sky-950/30 border-x-2 border-sky-200 dark:border-sky-900/60 font-mono">
+                          {evalItem.rataRataTugas !== null ? (
+                            <div className="space-y-0.5">
+                              <div className="inline-flex items-center justify-center">
+                                <span
+                                  className={`px-2.5 py-1 rounded-lg text-xs font-black shadow-xs ${
+                                    evalItem.rataRataTugas >= 75
+                                      ? 'bg-sky-100 dark:bg-sky-900/80 text-sky-900 dark:text-sky-200 border border-sky-300 dark:border-sky-700'
+                                      : 'bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800'
+                                  }`}
+                                  title={`Total Nilai: ${evalItem.sumTugasWithZero} dari ${evalItem.totalTugasCount} tugas (Nilai kosong dihitung 0, Masuk ke Bobot Nilai Akhir: ${weights.Tugas}%)`}
+                                >
+                                  {evalItem.rataRataTugas.toFixed(1)}
+                                </span>
+                              </div>
+                              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-sans font-medium">
+                                {evalItem.submittedTugasCount}/{evalItem.totalTugasCount} tugas kumpul
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 italic text-[11px]">—</span>
+                          )}
+                        </td>
+
+                        {/* Nilai Akhir Otomatis (Menggunakan Rata-Rata Tugas Sebagai Bobot Tugas) */}
                         <td className="py-2.5 px-4 text-center bg-indigo-50/30 dark:bg-indigo-950/20 font-bold">
                           {evalItem.finalScore !== null ? (
                             <div className="space-y-0.5">
@@ -1672,10 +1614,8 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
         <div className="bg-slate-50 dark:bg-slate-800/60 p-4 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
           <div>
             Menampilkan <span className="font-bold text-slate-800 dark:text-slate-200">{filteredStudents.length}</span> siswa,{' '}
-            <span className="font-bold text-slate-800 dark:text-slate-200">{displayColumns.length}</span> kolom komponen penilaian
-            {shouldShowAvgTugasCol && (
-              <> (<span className="font-bold text-sky-600 dark:text-sky-400">+ 1 Kolom Rata-Rata Tugas Akumulasi</span>)</>
-            )}.
+            <span className="font-bold text-slate-800 dark:text-slate-200">{displayColumns.length}</span> kolom komponen penilaian{' '}
+            (<span className="font-bold text-sky-600 dark:text-sky-400">+ Kolom Khusus Rata-Rata Tugas sebelum Nilai Akhir</span>).
           </div>
 
           <div className="flex items-center gap-2">
