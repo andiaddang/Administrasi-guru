@@ -42,6 +42,7 @@ import {
 } from 'lucide-react';
 import { PrintDocumentModal } from './PrintDocumentModal';
 import { GradeTrendAnalytics } from './GradeTrendAnalytics';
+import { SinglePageGradeTable } from './SinglePageGradeTable';
 
 interface GradeManagementProps {
   students: Student[];
@@ -75,7 +76,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
   school,
   currentUser,
 }) => {
-  const [activeTab, setActiveTab] = useState<'ledger' | 'mass' | 'history' | 'analytics'>('ledger');
+  const [activeTab, setActiveTab] = useState<'unified' | 'ledger' | 'mass' | 'history' | 'analytics'>('unified');
 
   // Ledger configuration states
   const [ledgerClassId, setLedgerClassId] = useState<string>(classes[0]?.id || '');
@@ -938,7 +939,29 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
         </div>
 
         {/* Tab switch */}
-        <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg self-start sm:self-auto border border-slate-200 dark:border-slate-700">
+        <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg self-start sm:self-auto border border-slate-200 dark:border-slate-700 flex-wrap">
+          <button
+            onClick={() => setActiveTab('unified')}
+            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'unified'
+                ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Table className="w-3.5 h-3.5" />
+            <span>Tabel Nilai Terpadu & Analisis</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'analytics'
+                ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>Grafik Tren Nilai</span>
+          </button>
           <button
             onClick={() => setActiveTab('ledger')}
             className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
@@ -947,19 +970,8 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                 : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <Table className="w-3.5 h-3.5" />
+            <Layers className="w-3.5 h-3.5" />
             <span>Matriks & Leger Nilai</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('mass')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'mass'
-                ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
-                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Input Nilai Massal</span>
           </button>
           <button
             onClick={() => setActiveTab('history')}
@@ -972,21 +984,24 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
             <ListChecks className="w-3.5 h-3.5" />
             <span>Riwayat & Edit Nilai ({grades.length})</span>
           </button>
-          <button
-            onClick={() => setActiveTab('analytics')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'analytics'
-                ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
-                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>Visualisasi & Tren Nilai</span>
-          </button>
         </div>
       </div>
 
-      {activeTab === 'ledger' ? (
+      {activeTab === 'unified' ? (
+        /* TAB 0: TABEL INPUT NILAI TERPADU & ANALISIS HASIL BELAJAR DALAM SATU HALAMAN */
+        <SinglePageGradeTable
+          students={students}
+          classes={classes}
+          grades={grades}
+          onSaveBatchGrades={onSaveBatchGrades}
+          onDeleteGrade={onDeleteGrade}
+          onDeleteBatchGrades={onDeleteBatchGrades}
+          school={school}
+          currentUser={currentUser}
+          onOpenPrintModal={() => setIsPrintModalOpen(true)}
+          onOpenAnalytics={() => setActiveTab('analytics')}
+        />
+      ) : activeTab === 'ledger' ? (
         /* TAB 1: MATRIKS PENILAIAN LENGKAP SEMUA KOMPONEN DENGAN FITUR EDIT & AUTO-SAVE */
         <div className="space-y-4">
           {/* Controls Bar */}
