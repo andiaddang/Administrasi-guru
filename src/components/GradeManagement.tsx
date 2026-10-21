@@ -33,6 +33,11 @@ import {
   ChevronDown,
   RefreshCw,
   Award,
+  AlertCircle,
+  Scale,
+  TrendingDown,
+  HelpCircle,
+  CheckCheck,
 } from 'lucide-react';
 import { PrintDocumentModal } from './PrintDocumentModal';
 
@@ -76,6 +81,13 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
   const [ledgerTypeFilter, setLedgerTypeFilter] = useState<string>('all');
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [printViewMode, setPrintViewMode] = useState<'matrix' | 'detailed' | 'summary'>('matrix');
+
+  // Penyesuaian Nilai Berdasarkan Kelengkapan & Jumlah Tugas Siswa
+  const [isTugasAdjustmentEnabled, setIsTugasAdjustmentEnabled] = useState<boolean>(true);
+  const [tugasAdjustmentMethod, setTugasAdjustmentMethod] = useState<'proporsional' | 'rasio' | 'pinalti' | 'murni'>('proporsional');
+  const [penaltyPerMissingTugas, setPenaltyPerMissingTugas] = useState<number>(10);
+  const [tugasFilterStatus, setTugasFilterStatus] = useState<'all' | 'complete' | 'incomplete'>('all');
+  const [isAdjustmentSettingsOpen, setIsAdjustmentSettingsOpen] = useState<boolean>(false);
 
   // Inline table editing state
   const [isInlineEditMode, setIsInlineEditMode] = useState<boolean>(false);
@@ -245,6 +257,13 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
     return uniqueAssessments.filter((a) => a.type === ledgerTypeFilter);
   }, [uniqueAssessments, ledgerTypeFilter]);
 
+  // Total Tugas yang diberikan di kelas terpilih
+  const classTugasCols = useMemo(() => {
+    return uniqueAssessments.filter((a) => a.type === 'Tugas');
+  }, [uniqueAssessments]);
+
+  const totalClassTugas = classTugasCols.length;
+
   // Comprehensive Detailed Ledger dataset containing individual assessment scores and component aggregates
   const detailedLedgerData = useMemo(() => {
     return ledgerStudents.map((student, idx) => {
@@ -262,21 +281,78 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
         scoresMap[col.key] = found !== undefined ? found.score : null;
       });
 
-      const tugasList = studentGrades.filter((g) => g.type === 'Tugas').map((g) => g.score);
+      // Assignment (Tugas) Submission & Completion Metrics
+      const studentTugasGrades = studentGrades.filter((g) => g.type === 'Tugas');
+      const submittedTugasCount = studentTugasGrades.length;
+      const missingTugasCount = Math.max(0, totalClassTugas - submittedTugasCount);
+      const completionRate = totalClassTugas > 0 ? (submittedTugasCount / totalClassTugas) : 1;
+      const completionPercent = Math.round(completionRate * 100);
+
+      const tugasScores = studentTugasGrades.map((g) => g.score);
+      const rawAvgTugas = tugasScores.length
+        ? Math.round(tugasScores.reduce((a, b) => a + b, 0) / tugasScores.length)
+        : null;
+
+      // Calculate Adjusted Tugas Score based on submission count
+      let adjustedAvgTugas: number | null = rawAvgTugas;
+      if (totalClassTugas > 1 && isTugasAdjustmentEnabled && rawAvgTugas !== null) {
+        if (tugasAdjustmentMethod === 'proporsional') {
+          // Total of submitted scores divided by total assignments given to class (unsubmitted = 0)
+          const sumTugas = tugasScores.reduce((a, b) => a + b, 0);
+          adjustedAvgTugas = totalClassTugas > 0 ? Math.round(sumTugas / totalClassTugas) : rawAvgTugas;
+        } else if (tugasAdjustmentMethod === 'rasio') {
+          // Raw average scaled by percentage of completion
+          adjustedAvgTugas = Math.round(rawAvgTugas * completionRate);
+        } else if (tugasAdjustmentMethod === 'pinalti') {
+          // Deduct penalty points per unsubmitted assignment
+          adjustedAvgTugas = Math.max(0, Math.round(rawAvgTugas - (missingTugasCount * penaltyPerMissingTugas)));
+        } else if (tugasAdjustmentMethod === 'murni') {
+          adjustedAvgTugas = rawAvgTugas;
+        }
+      }
+
+      const isTugasAdjusted =
+        totalClassTugas > 1 &&
+        isTugasAdjustmentEnabled &&
+        missingTugasCount > 0 &&
+        rawAvgTugas !== null &&
+        adjustedAvgTugas !== rawAvgTugas;
+
+      const tugasAdjustmentDiff =
+        isTugasAdjusted && rawAvgTugas !== null && adjustedAvgTugas !== null
+          ? adjustedAvgTugas - rawAvgTugas
+          : 0;
+
+      // Status and badge color for Tugas
+      let statusTugas = 'Lengkap';
+      let statusTugasColor: 'emerald' | 'amber' | 'rose' | 'slate' = 'emerald';
+      if (totalClassTugas === 0) {
+        statusTugas = 'Belum Ada Tugas';
+        statusTugasColor = 'slate';
+      } else if (submittedTugasCount === 0) {
+        statusTugas = '0 Tugas Terkumpul';
+        statusTugasColor = 'rose';
+      } else if (missingTugasCount > 0) {
+        statusTugas = `Kurang ${missingTugasCount} Tugas`;
+        statusTugasColor = missingTugasCount === 1 ? 'amber' : 'rose';
+      } else {
+        statusTugas = 'Lengkap (100%)';
+        statusTugasColor = 'emerald';
+      }
+
       const harianList = studentGrades.filter((g) => g.type === 'Harian').map((g) => g.score);
       const sumatifList = studentGrades.filter((g) => g.type === 'Sumatif').map((g) => g.score);
       const stsList = studentGrades.filter((g) => g.type === 'STS').map((g) => g.score);
       const sasList = studentGrades.filter((g) => g.type === 'SAS').map((g) => g.score);
 
-      const avgTugas = tugasList.length ? Math.round(tugasList.reduce((a, b) => a + b, 0) / tugasList.length) : null;
       const avgHarian = harianList.length ? Math.round(harianList.reduce((a, b) => a + b, 0) / harianList.length) : null;
       const avgSumatif = sumatifList.length ? Math.round(sumatifList.reduce((a, b) => a + b, 0) / sumatifList.length) : null;
       const valSTS = stsList.length ? stsList[stsList.length - 1] : null;
       const valSAS = sasList.length ? sasList[sasList.length - 1] : null;
 
-      // Calculate Final Grade (Rata-rata berbobot Kurikulum Merdeka)
+      // Calculate Final Grade with Adjusted Tugas Average
       const validScores: number[] = [];
-      if (avgTugas !== null) validScores.push(avgTugas);
+      if (adjustedAvgTugas !== null) validScores.push(adjustedAvgTugas);
       if (avgHarian !== null) validScores.push(avgHarian);
       if (avgSumatif !== null) validScores.push(avgSumatif);
       if (valSTS !== null) validScores.push(valSTS);
@@ -286,6 +362,21 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
         validScores.length > 0
           ? Math.round(validScores.reduce((a, b) => a + b, 0) / validScores.length)
           : 0;
+
+      // Calculate Unadjusted Final Grade for comparison
+      const unadjustedScores: number[] = [];
+      if (rawAvgTugas !== null) unadjustedScores.push(rawAvgTugas);
+      if (avgHarian !== null) unadjustedScores.push(avgHarian);
+      if (avgSumatif !== null) unadjustedScores.push(avgSumatif);
+      if (valSTS !== null) unadjustedScores.push(valSTS);
+      if (valSAS !== null) unadjustedScores.push(valSAS);
+
+      const unadjustedFinalGrade =
+        unadjustedScores.length > 0
+          ? Math.round(unadjustedScores.reduce((a, b) => a + b, 0) / unadjustedScores.length)
+          : 0;
+
+      const finalGradeDiff = isTugasAdjusted ? finalGrade - unadjustedFinalGrade : 0;
 
       // Predikat & Status Ketercapaian
       let predikat = 'D';
@@ -309,17 +400,69 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
         name: student.name,
         gender: student.gender,
         scoresMap,
-        avgTugas: avgTugas ?? '-',
+        totalClassTugas,
+        submittedTugasCount,
+        missingTugasCount,
+        completionRate,
+        completionPercent,
+        statusTugas,
+        statusTugasColor,
+        rawAvgTugas: rawAvgTugas ?? '-',
+        avgTugas: adjustedAvgTugas ?? '-',
+        isTugasAdjusted,
+        tugasAdjustmentDiff,
         avgHarian: avgHarian ?? '-',
         avgSumatif: avgSumatif ?? '-',
         sts: valSTS ?? '-',
         sas: valSAS ?? '-',
         finalGrade: validScores.length > 0 ? finalGrade : '-',
+        unadjustedFinalGrade: unadjustedScores.length > 0 ? unadjustedFinalGrade : '-',
+        finalGradeDiff,
         predikat: validScores.length > 0 ? predikat : '-',
         statusKetercapaian: validScores.length > 0 ? statusKetercapaian : 'Belum Ada Nilai',
       };
     });
-  }, [ledgerStudents, grades, ledgerClassId, uniqueAssessments]);
+  }, [
+    ledgerStudents,
+    grades,
+    ledgerClassId,
+    uniqueAssessments,
+    totalClassTugas,
+    isTugasAdjustmentEnabled,
+    tugasAdjustmentMethod,
+    penaltyPerMissingTugas,
+  ]);
+
+  // Filtered ledger data by assignment status (Semua / Lengkap / Kurang)
+  const filteredLedgerData = useMemo(() => {
+    if (tugasFilterStatus === 'complete') {
+      return detailedLedgerData.filter((r) => r.totalClassTugas > 0 && r.missingTugasCount === 0);
+    }
+    if (tugasFilterStatus === 'incomplete') {
+      return detailedLedgerData.filter((r) => r.totalClassTugas > 0 && r.missingTugasCount > 0);
+    }
+    return detailedLedgerData;
+  }, [detailedLedgerData, tugasFilterStatus]);
+
+  // Overall class assignment completion overview
+  const tugasOverview = useMemo(() => {
+    const totalStudents = detailedLedgerData.length;
+    const completeCount = detailedLedgerData.filter((r) => r.totalClassTugas > 0 && r.missingTugasCount === 0).length;
+    const incompleteCount = detailedLedgerData.filter((r) => r.totalClassTugas > 0 && r.missingTugasCount > 0).length;
+    const zeroCount = detailedLedgerData.filter((r) => r.totalClassTugas > 0 && r.submittedTugasCount === 0).length;
+    const totalSubmissions = detailedLedgerData.reduce((acc, r) => acc + r.submittedTugasCount, 0);
+    const possibleSubmissions = totalStudents * totalClassTugas;
+    const overallRate = possibleSubmissions > 0 ? Math.round((totalSubmissions / possibleSubmissions) * 100) : 100;
+
+    return {
+      totalClassTugas,
+      totalStudents,
+      completeCount,
+      incompleteCount,
+      zeroCount,
+      overallRate,
+    };
+  }, [detailedLedgerData, totalClassTugas]);
 
   // Statistics per assessment column (average, min, max, count)
   const colStats = useMemo(() => {
@@ -966,6 +1109,228 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
               </button>
             </div>
           )}
+
+          {/* PANEL PENYESUAIAN NILAI AKHIR BERDASARKAN KELENGKAPAN TUGAS */}
+          <div className="bg-gradient-to-r from-sky-50 via-indigo-50/50 to-emerald-50/40 dark:from-slate-900 dark:via-indigo-950/40 dark:to-slate-900 p-4 rounded-xl border border-sky-200 dark:border-indigo-900 shadow-xs space-y-3 transition-colors">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-sky-600 dark:bg-sky-500 text-white shadow-2xs shrink-0">
+                  <Scale className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <span>Penyesuaian Nilai Akhir Berdasarkan Jumlah Tugas Terkumpul</span>
+                    </h2>
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border ${
+                        isTugasAdjustmentEnabled
+                          ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                          : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700'
+                      }`}
+                    >
+                      {isTugasAdjustmentEnabled ? '● Penyesuaian Aktif' : '○ Mode Rata-rata Murni'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
+                    {isTugasAdjustmentEnabled
+                      ? tugasAdjustmentMethod === 'proporsional'
+                        ? 'Metode Proporsional e-Rapor: Rata-rata tugas dihitung dari pembagi seluruh tugas kelas (tugas yang belum dikumpulkan dinilai 0).'
+                        : tugasAdjustmentMethod === 'rasio'
+                        ? 'Metode Rasio: Nilai rata-rata tugas dikalikan persentase kelengkapan tugas yang dikumpulkan siswa.'
+                        : tugasAdjustmentMethod === 'pinalti'
+                        ? `Metode Pinalti: Nilai rata-rata tugas dikurangi ${penaltyPerMissingTugas} poin per tugas yang belum dikumpulkan.`
+                        : 'Metode Murni: Menghitung rata-rata hanya dari tugas yang terkumpul saja.'
+                      : 'Nilai tugas dihitung murni dari tugas yang terkumpul tanpa memperhitungkan tugas yang belum dikumpulkan.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Setting toggle & trigger button */}
+              <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsTugasAdjustmentEnabled(!isTugasAdjustmentEnabled)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    isTugasAdjustmentEnabled
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                      : 'bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                  }`}
+                  title="Klik untuk mengaktifkan/menonaktifkan penyesuaian nilai akhir tugas"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>{isTugasAdjustmentEnabled ? 'Penyesuaian Aktif' : 'Aktifkan Penyesuaian'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsAdjustmentSettingsOpen(!isAdjustmentSettingsOpen)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg cursor-pointer transition-colors shadow-2xs"
+                  title="Buka pengaturan rumus & bobot penyesuaian nilai tugas"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-500" />
+                  <span>Atur Rumus</span>
+                  <ChevronDown
+                    className={`w-3 h-3 text-slate-400 transition-transform ${
+                      isAdjustmentSettingsOpen ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            {/* Metric Chips & Quick Filter Buttons */}
+            <div className="pt-2.5 border-t border-slate-200/70 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+              {/* Summary Statistics */}
+              <div className="flex items-center gap-2 flex-wrap text-[11px]">
+                <span className="font-semibold text-slate-600 dark:text-slate-400">Statistik Kelas:</span>
+                <span className="px-2 py-0.5 rounded-md font-bold bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
+                  Total {tugasOverview.totalClassTugas} Tugas Ditugaskan
+                </span>
+                <span className="px-2 py-0.5 rounded-md font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                  {tugasOverview.completeCount} Siswa Lengkap (100%)
+                </span>
+                <span className="px-2 py-0.5 rounded-md font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                  {tugasOverview.incompleteCount} Siswa Tugas Kurang
+                </span>
+                <span className="px-2 py-0.5 rounded-md font-bold bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+                  Keterkumpulan Kelas: {tugasOverview.overallRate}%
+                </span>
+              </div>
+
+              {/* Filter Buttons: Semua / Lengkap / Kurang */}
+              <div className="flex items-center gap-1.5 self-start sm:self-auto">
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 mr-0.5">Filter Siswa:</span>
+                <button
+                  type="button"
+                  onClick={() => setTugasFilterStatus('all')}
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition-colors cursor-pointer ${
+                    tugasFilterStatus === 'all'
+                      ? 'bg-indigo-600 text-white shadow-2xs'
+                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  Semua ({detailedLedgerData.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTugasFilterStatus('complete')}
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition-colors cursor-pointer ${
+                    tugasFilterStatus === 'complete'
+                      ? 'bg-emerald-600 text-white shadow-2xs'
+                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  Tugas Lengkap ({tugasOverview.completeCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTugasFilterStatus('incomplete')}
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition-colors cursor-pointer ${
+                    tugasFilterStatus === 'incomplete'
+                      ? 'bg-rose-600 text-white shadow-2xs'
+                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  Tugas Kurang ({tugasOverview.incompleteCount})
+                </button>
+              </div>
+            </div>
+
+            {/* Expandable Formula Settings Drawer */}
+            {isAdjustmentSettingsOpen && (
+              <div className="p-3.5 bg-white dark:bg-slate-800/90 rounded-xl border border-indigo-200 dark:border-indigo-800 space-y-3 animate-in fade-in">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-500" />
+                    <span>Pilih Metode &amp; Rumus Penyesuaian Nilai Tugas</span>
+                  </h3>
+                  <span className="text-[10px] text-slate-400">Kurikulum Merdeka</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {/* Option 1: Proporsional */}
+                  <div
+                    onClick={() => setTugasAdjustmentMethod('proporsional')}
+                    className={`p-3 rounded-lg border text-left cursor-pointer transition-all ${
+                      tugasAdjustmentMethod === 'proporsional'
+                        ? 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-500 ring-2 ring-indigo-500/20'
+                        : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-xs text-indigo-950 dark:text-indigo-200">
+                        1. Proporsional e-Rapor
+                      </span>
+                      <span className="px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[9px] font-extrabold rounded">
+                        Rekomendasi
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                      Pembagi adalah total tugas kelas. Tugas yang belum dikumpulkan dihitung bernilai 0.
+                    </p>
+                    <div className="mt-2 text-[10px] font-mono text-indigo-600 dark:text-indigo-400 font-semibold bg-white dark:bg-slate-900 p-1.5 rounded border border-indigo-100 dark:border-indigo-900">
+                      Nilai = Total Skor Tugas / Total Tugas Kelas
+                    </div>
+                  </div>
+
+                  {/* Option 2: Rasio Keterkumpulan */}
+                  <div
+                    onClick={() => setTugasAdjustmentMethod('rasio')}
+                    className={`p-3 rounded-lg border text-left cursor-pointer transition-all ${
+                      tugasAdjustmentMethod === 'rasio'
+                        ? 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-500 ring-2 ring-indigo-500/20'
+                        : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-xs text-indigo-950 dark:text-indigo-200">
+                        2. Faktor Rasio Keterkumpulan
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                      Rata-rata tugas terkumpul dikalikan persentase kelengkapan pengumpulan tugas (contoh: 2/3 tugas = 67%).
+                    </p>
+                    <div className="mt-2 text-[10px] font-mono text-indigo-600 dark:text-indigo-400 font-semibold bg-white dark:bg-slate-900 p-1.5 rounded border border-indigo-100 dark:border-indigo-900">
+                      Nilai = Rerata Terkumpul × (% Kelengkapan)
+                    </div>
+                  </div>
+
+                  {/* Option 3: Pinalti Poin */}
+                  <div
+                    onClick={() => setTugasAdjustmentMethod('pinalti')}
+                    className={`p-3 rounded-lg border text-left cursor-pointer transition-all ${
+                      tugasAdjustmentMethod === 'pinalti'
+                        ? 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-500 ring-2 ring-indigo-500/20'
+                        : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-xs text-indigo-950 dark:text-indigo-200">
+                        3. Pengurangan Poin (Pinalti)
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                      Nilai rata-rata tugas dikurangi sejumlah poin tetap untuk setiap tugas yang tidak dikumpulkan.
+                    </p>
+                    <div className="mt-2 flex items-center gap-1.5 text-[10px]">
+                      <span className="text-slate-600 dark:text-slate-300">Poin pinalti per tugas:</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="50"
+                        value={penaltyPerMissingTugas}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => setPenaltyPerMissingTugas(Math.max(1, Number(e.target.value)))}
+                        className="w-14 px-1.5 py-0.5 text-center font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white"
+                      />
+                      <span className="font-semibold text-rose-600">poin / tugas bolong</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* ASSESSMENT SESSIONS SUMMARY STRIP (WITH QUICK EDIT BUTTON PER ASSESSMENT) */}
           {uniqueAssessments.length > 0 ? (

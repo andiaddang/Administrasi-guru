@@ -176,49 +176,66 @@ export const DEFAULT_JOURNALS: TeachingJournal[] = [
 // Seed realistic grades
 export const DEFAULT_GRADES: GradeRecord[] = [
   // Kelas X.1
+  // Siswa std-101 (Lengkap 3/3 Tugas)
   { id: 'grd-101-1', studentId: 'std-101', classId: 'cls-1', subject: 'Matematika', type: 'Tugas', title: 'Tugas 1: Eksponen', score: 92, maxScore: 100, date: '2026-09-10', semester: 'Ganjil' },
+  { id: 'grd-101-t2', studentId: 'std-101', classId: 'cls-1', subject: 'Matematika', type: 'Tugas', title: 'Tugas 2: Logaritma', score: 94, maxScore: 100, date: '2026-09-18', semester: 'Ganjil' },
+  { id: 'grd-101-t3', studentId: 'std-101', classId: 'cls-1', subject: 'Matematika', type: 'Tugas', title: 'Tugas 3: Barisan & Deret', score: 90, maxScore: 100, date: '2026-09-25', semester: 'Ganjil' },
   { id: 'grd-101-h', studentId: 'std-101', classId: 'cls-1', subject: 'Matematika', type: 'Harian', title: 'Formatif: Konsep Eksponensial', score: 90, maxScore: 100, date: '2026-09-16', semester: 'Ganjil' },
   { id: 'grd-101-2', studentId: 'std-101', classId: 'cls-1', subject: 'Matematika', type: 'Sumatif', title: 'Sumatif Lingkup Materi 1', score: 95, maxScore: 100, date: '2026-09-22', semester: 'Ganjil' },
   { id: 'grd-101-3', studentId: 'std-101', classId: 'cls-1', subject: 'Matematika', type: 'STS', title: 'Sumatif Tengah Semester', score: 94, maxScore: 100, date: '2026-10-05', semester: 'Ganjil' },
   { id: 'grd-101-4', studentId: 'std-101', classId: 'cls-1', subject: 'Matematika', type: 'SAS', title: 'Sumatif Akhir Semester', score: 96, maxScore: 100, date: '2026-10-15', semester: 'Ganjil' },
 
+  // Siswa std-102 (Kurang 1 Tugas: 2/3 Tugas)
   { id: 'grd-102-1', studentId: 'std-102', classId: 'cls-1', subject: 'Matematika', type: 'Tugas', title: 'Tugas 1: Eksponen', score: 85, maxScore: 100, date: '2026-09-10', semester: 'Ganjil' },
+  { id: 'grd-102-t2', studentId: 'std-102', classId: 'cls-1', subject: 'Matematika', type: 'Tugas', title: 'Tugas 2: Logaritma', score: 88, maxScore: 100, date: '2026-09-18', semester: 'Ganjil' },
   { id: 'grd-102-h', studentId: 'std-102', classId: 'cls-1', subject: 'Matematika', type: 'Harian', title: 'Formatif: Konsep Eksponensial', score: 84, maxScore: 100, date: '2026-09-16', semester: 'Ganjil' },
   { id: 'grd-102-2', studentId: 'std-102', classId: 'cls-1', subject: 'Matematika', type: 'Sumatif', title: 'Sumatif Lingkup Materi 1', score: 82, maxScore: 100, date: '2026-09-22', semester: 'Ganjil' },
   { id: 'grd-102-3', studentId: 'std-102', classId: 'cls-1', subject: 'Matematika', type: 'STS', title: 'Sumatif Tengah Semester', score: 88, maxScore: 100, date: '2026-10-05', semester: 'Ganjil' },
   { id: 'grd-102-4', studentId: 'std-102', classId: 'cls-1', subject: 'Matematika', type: 'SAS', title: 'Sumatif Akhir Semester', score: 86, maxScore: 100, date: '2026-10-15', semester: 'Ganjil' },
 
+  // Siswa std-103 (Lengkap 3/3 Tugas)
   { id: 'grd-103-1', studentId: 'std-103', classId: 'cls-1', subject: 'Matematika', type: 'Tugas', title: 'Tugas 1: Eksponen', score: 90, maxScore: 100, date: '2026-09-10', semester: 'Ganjil' },
+  { id: 'grd-103-t2', studentId: 'std-103', classId: 'cls-1', subject: 'Matematika', type: 'Tugas', title: 'Tugas 2: Logaritma', score: 92, maxScore: 100, date: '2026-09-18', semester: 'Ganjil' },
+  { id: 'grd-103-t3', studentId: 'std-103', classId: 'cls-1', subject: 'Matematika', type: 'Tugas', title: 'Tugas 3: Barisan & Deret', score: 88, maxScore: 100, date: '2026-09-25', semester: 'Ganjil' },
   { id: 'grd-103-h', studentId: 'std-103', classId: 'cls-1', subject: 'Matematika', type: 'Harian', title: 'Formatif: Konsep Eksponensial', score: 88, maxScore: 100, date: '2026-09-16', semester: 'Ganjil' },
   { id: 'grd-103-2', studentId: 'std-103', classId: 'cls-1', subject: 'Matematika', type: 'Sumatif', title: 'Sumatif Lingkup Materi 1', score: 88, maxScore: 100, date: '2026-09-22', semester: 'Ganjil' },
   { id: 'grd-103-3', studentId: 'std-103', classId: 'cls-1', subject: 'Matematika', type: 'STS', title: 'Sumatif Tengah Semester', score: 91, maxScore: 100, date: '2026-10-05', semester: 'Ganjil' },
   { id: 'grd-103-4', studentId: 'std-103', classId: 'cls-1', subject: 'Matematika', type: 'SAS', title: 'Sumatif Akhir Semester', score: 89, maxScore: 100, date: '2026-10-15', semester: 'Ganjil' },
 
-  { id: 'grd-104-1', studentId: 'std-104', classId: 'cls-1', subject: 'Matematika', type: 'Tugas', title: 'Tugas 1: Eksponen', score: 68, maxScore: 100, date: '2026-09-10', semester: 'Ganjil' },
+  // Siswa std-104 (Hanya 1 Tugas: 1/3 Tugas, Kurang 2 Tugas)
+  { id: 'grd-104-1', studentId: 'std-104', classId: 'cls-1', subject: 'Matematika', type: 'Tugas', title: 'Tugas 1: Eksponen', score: 75, maxScore: 100, date: '2026-09-10', semester: 'Ganjil' },
   { id: 'grd-104-h', studentId: 'std-104', classId: 'cls-1', subject: 'Matematika', type: 'Harian', title: 'Formatif: Konsep Eksponensial', score: 72, maxScore: 100, date: '2026-09-16', semester: 'Ganjil' },
   { id: 'grd-104-2', studentId: 'std-104', classId: 'cls-1', subject: 'Matematika', type: 'Sumatif', title: 'Sumatif Lingkup Materi 1', score: 65, maxScore: 100, date: '2026-09-22', semester: 'Ganjil' },
   { id: 'grd-104-3', studentId: 'std-104', classId: 'cls-1', subject: 'Matematika', type: 'STS', title: 'Sumatif Tengah Semester', score: 70, maxScore: 100, date: '2026-10-05', semester: 'Ganjil' },
   { id: 'grd-104-4', studentId: 'std-104', classId: 'cls-1', subject: 'Matematika', type: 'SAS', title: 'Sumatif Akhir Semester', score: 67, maxScore: 100, date: '2026-10-15', semester: 'Ganjil' },
 
+  // Siswa std-105 (Kurang 1 Tugas: 2/3 Tugas)
   { id: 'grd-105-1', studentId: 'std-105', classId: 'cls-1', subject: 'Matematika', type: 'Tugas', title: 'Tugas 1: Eksponen', score: 88, maxScore: 100, date: '2026-09-10', semester: 'Ganjil' },
+  { id: 'grd-105-t3', studentId: 'std-105', classId: 'cls-1', subject: 'Matematika', type: 'Tugas', title: 'Tugas 3: Barisan & Deret', score: 85, maxScore: 100, date: '2026-09-25', semester: 'Ganjil' },
   { id: 'grd-105-h', studentId: 'std-105', classId: 'cls-1', subject: 'Matematika', type: 'Harian', title: 'Formatif: Konsep Eksponensial', score: 86, maxScore: 100, date: '2026-09-16', semester: 'Ganjil' },
   { id: 'grd-105-2', studentId: 'std-105', classId: 'cls-1', subject: 'Matematika', type: 'Sumatif', title: 'Sumatif Lingkup Materi 1', score: 85, maxScore: 100, date: '2026-09-22', semester: 'Ganjil' },
   { id: 'grd-105-3', studentId: 'std-105', classId: 'cls-1', subject: 'Matematika', type: 'STS', title: 'Sumatif Tengah Semester', score: 87, maxScore: 100, date: '2026-10-05', semester: 'Ganjil' },
   { id: 'grd-105-4', studentId: 'std-105', classId: 'cls-1', subject: 'Matematika', type: 'SAS', title: 'Sumatif Akhir Semester', score: 90, maxScore: 100, date: '2026-10-15', semester: 'Ganjil' },
 
+  // Siswa std-106 (Lengkap 3/3 Tugas)
   { id: 'grd-106-1', studentId: 'std-106', classId: 'cls-1', subject: 'Matematika', type: 'Tugas', title: 'Tugas 1: Eksponen', score: 96, maxScore: 100, date: '2026-09-10', semester: 'Ganjil' },
+  { id: 'grd-106-t2', studentId: 'std-106', classId: 'cls-1', subject: 'Matematika', type: 'Tugas', title: 'Tugas 2: Logaritma', score: 98, maxScore: 100, date: '2026-09-18', semester: 'Ganjil' },
+  { id: 'grd-106-t3', studentId: 'std-106', classId: 'cls-1', subject: 'Matematika', type: 'Tugas', title: 'Tugas 3: Barisan & Deret', score: 95, maxScore: 100, date: '2026-09-25', semester: 'Ganjil' },
   { id: 'grd-106-h', studentId: 'std-106', classId: 'cls-1', subject: 'Matematika', type: 'Harian', title: 'Formatif: Konsep Eksponensial', score: 95, maxScore: 100, date: '2026-09-16', semester: 'Ganjil' },
   { id: 'grd-106-2', studentId: 'std-106', classId: 'cls-1', subject: 'Matematika', type: 'Sumatif', title: 'Sumatif Lingkup Materi 1', score: 98, maxScore: 100, date: '2026-09-22', semester: 'Ganjil' },
   { id: 'grd-106-3', studentId: 'std-106', classId: 'cls-1', subject: 'Matematika', type: 'STS', title: 'Sumatif Tengah Semester', score: 97, maxScore: 100, date: '2026-10-05', semester: 'Ganjil' },
   { id: 'grd-106-4', studentId: 'std-106', classId: 'cls-1', subject: 'Matematika', type: 'SAS', title: 'Sumatif Akhir Semester', score: 99, maxScore: 100, date: '2026-10-15', semester: 'Ganjil' },
 
+  // Siswa std-107 (Kurang 1 Tugas: 2/3 Tugas)
   { id: 'grd-107-1', studentId: 'std-107', classId: 'cls-1', subject: 'Matematika', type: 'Tugas', title: 'Tugas 1: Eksponen', score: 78, maxScore: 100, date: '2026-09-10', semester: 'Ganjil' },
+  { id: 'grd-107-t2', studentId: 'std-107', classId: 'cls-1', subject: 'Matematika', type: 'Tugas', title: 'Tugas 2: Logaritma', score: 75, maxScore: 100, date: '2026-09-18', semester: 'Ganjil' },
   { id: 'grd-107-h', studentId: 'std-107', classId: 'cls-1', subject: 'Matematika', type: 'Harian', title: 'Formatif: Konsep Eksponensial', score: 76, maxScore: 100, date: '2026-09-16', semester: 'Ganjil' },
   { id: 'grd-107-2', studentId: 'std-107', classId: 'cls-1', subject: 'Matematika', type: 'Sumatif', title: 'Sumatif Lingkup Materi 1', score: 75, maxScore: 100, date: '2026-09-22', semester: 'Ganjil' },
   { id: 'grd-107-3', studentId: 'std-107', classId: 'cls-1', subject: 'Matematika', type: 'STS', title: 'Sumatif Tengah Semester', score: 80, maxScore: 100, date: '2026-10-05', semester: 'Ganjil' },
   { id: 'grd-107-4', studentId: 'std-107', classId: 'cls-1', subject: 'Matematika', type: 'SAS', title: 'Sumatif Akhir Semester', score: 78, maxScore: 100, date: '2026-10-15', semester: 'Ganjil' },
 
-  { id: 'grd-108-1', studentId: 'std-108', classId: 'cls-1', subject: 'Matematika', type: 'Tugas', title: 'Tugas 1: Eksponen', score: 58, maxScore: 100, date: '2026-09-10', semester: 'Ganjil' },
+  // Siswa std-108 (Hanya 1 Tugas: 1/3 Tugas, Kurang 2 Tugas)
+  { id: 'grd-108-1', studentId: 'std-108', classId: 'cls-1', subject: 'Matematika', type: 'Tugas', title: 'Tugas 1: Eksponen', score: 65, maxScore: 100, date: '2026-09-10', semester: 'Ganjil' },
   { id: 'grd-108-h', studentId: 'std-108', classId: 'cls-1', subject: 'Matematika', type: 'Harian', title: 'Formatif: Konsep Eksponensial', score: 64, maxScore: 100, date: '2026-09-16', semester: 'Ganjil' },
   { id: 'grd-108-2', studentId: 'std-108', classId: 'cls-1', subject: 'Matematika', type: 'Sumatif', title: 'Sumatif Lingkup Materi 1', score: 60, maxScore: 100, date: '2026-09-22', semester: 'Ganjil' },
   { id: 'grd-108-3', studentId: 'std-108', classId: 'cls-1', subject: 'Matematika', type: 'STS', title: 'Sumatif Tengah Semester', score: 62, maxScore: 100, date: '2026-10-05', semester: 'Ganjil' },
