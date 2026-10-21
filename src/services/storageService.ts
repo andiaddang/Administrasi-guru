@@ -133,7 +133,18 @@ export const StorageService = {
   },
 
   getGrades(): GradeRecord[] {
-    return safeGet<GradeRecord[]>(KEYS.GRADES, DEFAULT_GRADES);
+    const stored = safeGet<GradeRecord[]>(KEYS.GRADES, DEFAULT_GRADES);
+    if (stored && stored.length > 0) {
+      const storedIds = new Set(stored.map((g) => g.id));
+      const missingDefaults = DEFAULT_GRADES.filter((g) => !storedIds.has(g.id));
+      if (missingDefaults.length > 0) {
+        const merged = [...stored, ...missingDefaults];
+        safeSet(KEYS.GRADES, merged);
+        return merged;
+      }
+      return stored;
+    }
+    return DEFAULT_GRADES;
   },
   saveGrades(grades: GradeRecord[]): void {
     safeSet(KEYS.GRADES, grades);

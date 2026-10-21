@@ -293,34 +293,39 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
         ? Math.round(tugasScores.reduce((a, b) => a + b, 0) / tugasScores.length)
         : null;
 
-      // Calculate Adjusted Tugas Score based on submission count
+      // Calculate Adjusted Tugas Score based on submission count (berlaku untuk semua kelas)
       let adjustedAvgTugas: number | null = rawAvgTugas;
-      if (totalClassTugas > 1 && isTugasAdjustmentEnabled && rawAvgTugas !== null) {
-        if (tugasAdjustmentMethod === 'proporsional') {
-          // Total of submitted scores divided by total assignments given to class (unsubmitted = 0)
+      if (totalClassTugas > 0 && isTugasAdjustmentEnabled) {
+        if (submittedTugasCount === 0) {
+          // Siswa belum mengumpulkan satupun tugas: nilai tugas menjadi 0
+          adjustedAvgTugas = 0;
+        } else if (tugasAdjustmentMethod === 'proporsional') {
+          // Total skor tugas terkumpul dibagi total tugas kelas (tugas yang belum dikumpul dinilai 0)
           const sumTugas = tugasScores.reduce((a, b) => a + b, 0);
-          adjustedAvgTugas = totalClassTugas > 0 ? Math.round(sumTugas / totalClassTugas) : rawAvgTugas;
+          adjustedAvgTugas = Math.round(sumTugas / totalClassTugas);
         } else if (tugasAdjustmentMethod === 'rasio') {
-          // Raw average scaled by percentage of completion
-          adjustedAvgTugas = Math.round(rawAvgTugas * completionRate);
+          // Rata-rata murni tugas terkumpul diskalakan persentase keterkumpulan tugas
+          adjustedAvgTugas = rawAvgTugas !== null ? Math.round(rawAvgTugas * completionRate) : 0;
         } else if (tugasAdjustmentMethod === 'pinalti') {
-          // Deduct penalty points per unsubmitted assignment
-          adjustedAvgTugas = Math.max(0, Math.round(rawAvgTugas - (missingTugasCount * penaltyPerMissingTugas)));
+          // Rata-rata murni dikurangi pinalti poin per tugas yang belum dikumpulkan
+          adjustedAvgTugas = rawAvgTugas !== null
+            ? Math.max(0, Math.round(rawAvgTugas - (missingTugasCount * penaltyPerMissingTugas)))
+            : 0;
         } else if (tugasAdjustmentMethod === 'murni') {
           adjustedAvgTugas = rawAvgTugas;
         }
       }
 
       const isTugasAdjusted =
-        totalClassTugas > 1 &&
+        totalClassTugas > 0 &&
         isTugasAdjustmentEnabled &&
         missingTugasCount > 0 &&
-        rawAvgTugas !== null &&
-        adjustedAvgTugas !== rawAvgTugas;
+        adjustedAvgTugas !== null &&
+        (rawAvgTugas === null || adjustedAvgTugas !== rawAvgTugas);
 
       const tugasAdjustmentDiff =
-        isTugasAdjusted && rawAvgTugas !== null && adjustedAvgTugas !== null
-          ? adjustedAvgTugas - rawAvgTugas
+        isTugasAdjusted && adjustedAvgTugas !== null
+          ? (rawAvgTugas !== null ? adjustedAvgTugas - rawAvgTugas : adjustedAvgTugas)
           : 0;
 
       // Status and badge color for Tugas
@@ -330,13 +335,13 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
         statusTugas = 'Belum Ada Tugas';
         statusTugasColor = 'slate';
       } else if (submittedTugasCount === 0) {
-        statusTugas = '0 Tugas Terkumpul';
+        statusTugas = `0/${totalClassTugas} Tugas Terkumpul`;
         statusTugasColor = 'rose';
       } else if (missingTugasCount > 0) {
-        statusTugas = `Kurang ${missingTugasCount} Tugas`;
+        statusTugas = `Kurang ${missingTugasCount} Tugas (${submittedTugasCount}/${totalClassTugas})`;
         statusTugasColor = missingTugasCount === 1 ? 'amber' : 'rose';
       } else {
-        statusTugas = 'Lengkap (100%)';
+        statusTugas = `Lengkap (${submittedTugasCount}/${totalClassTugas})`;
         statusTugasColor = 'emerald';
       }
 
@@ -352,7 +357,11 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
 
       // Calculate Final Grade with Adjusted Tugas Average
       const validScores: number[] = [];
-      if (adjustedAvgTugas !== null) validScores.push(adjustedAvgTugas);
+      if (adjustedAvgTugas !== null) {
+        validScores.push(adjustedAvgTugas);
+      } else if (totalClassTugas > 0 && isTugasAdjustmentEnabled) {
+        validScores.push(0);
+      }
       if (avgHarian !== null) validScores.push(avgHarian);
       if (avgSumatif !== null) validScores.push(avgSumatif);
       if (valSTS !== null) validScores.push(valSTS);
@@ -363,7 +372,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
           ? Math.round(validScores.reduce((a, b) => a + b, 0) / validScores.length)
           : 0;
 
-      // Calculate Unadjusted Final Grade for comparison
+      // Calculate Unadjusted Final Grade for comparison (Murni)
       const unadjustedScores: number[] = [];
       if (rawAvgTugas !== null) unadjustedScores.push(rawAvgTugas);
       if (avgHarian !== null) unadjustedScores.push(avgHarian);
@@ -407,8 +416,8 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
         completionPercent,
         statusTugas,
         statusTugasColor,
-        rawAvgTugas: rawAvgTugas ?? '-',
-        avgTugas: adjustedAvgTugas ?? '-',
+        rawAvgTugas: rawAvgTugas !== null ? rawAvgTugas : (totalClassTugas > 0 && submittedTugasCount === 0 ? 0 : '-'),
+        avgTugas: adjustedAvgTugas !== null ? adjustedAvgTugas : (totalClassTugas > 0 && isTugasAdjustmentEnabled ? 0 : '-'),
         isTugasAdjusted,
         tugasAdjustmentDiff,
         avgHarian: avgHarian ?? '-',
@@ -971,7 +980,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs transition-colors">
             <div className="flex flex-wrap items-center gap-3">
               {/* Class Selector */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <label className="text-xs font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">
                   Pilih Kelas:
                 </label>
@@ -989,6 +998,28 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                     </option>
                   ))}
                 </select>
+
+                {/* Quick Class Switcher Pills */}
+                <div className="hidden sm:flex items-center gap-1">
+                  {classes.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => {
+                        setLedgerClassId(c.id);
+                        setEditingCell(null);
+                      }}
+                      className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-colors cursor-pointer ${
+                        ledgerClassId === c.id
+                          ? 'bg-indigo-600 text-white shadow-2xs'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+                      }`}
+                      title={`Beralih ke kelas ${c.name}`}
+                    >
+                      {c.name}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* View Mode Toggle: Matrix (All components + details), Detailed, Summary */}
@@ -1624,8 +1655,8 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
 
                 {/* TABLE BODY */}
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-200">
-                  {detailedLedgerData.length > 0 ? (
-                    detailedLedgerData.map((row) => (
+                  {filteredLedgerData.length > 0 ? (
+                    filteredLedgerData.map((row) => (
                       <tr
                         key={row.id}
                         className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors"
@@ -1637,7 +1668,38 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                           {row.nisnNis}
                         </td>
                         <td className="p-3 font-bold text-slate-900 dark:text-white sticky left-46 bg-white dark:bg-slate-900 z-10">
-                          {row.name}
+                          <div className="flex flex-col gap-1">
+                            <span className="truncate">{row.name}</span>
+                            {/* Status Kelengkapan Tugas Siswa */}
+                            {row.totalClassTugas > 0 && (
+                              <div className="flex items-center gap-1">
+                                <span
+                                  className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md border ${
+                                    row.missingTugasCount === 0
+                                      ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                                      : row.submittedTugasCount === 0
+                                      ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+                                      : 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                                  }`}
+                                  title={`${row.statusTugas}: ${row.submittedTugasCount} dari ${row.totalClassTugas} tugas terkumpul (${row.completionPercent}%)`}
+                                >
+                                  {row.missingTugasCount === 0 ? (
+                                    <CheckCircle2 className="w-2.5 h-2.5 shrink-0" />
+                                  ) : (
+                                    <AlertCircle className="w-2.5 h-2.5 shrink-0" />
+                                  )}
+                                  <span>
+                                    {row.submittedTugasCount}/{row.totalClassTugas} Tugas
+                                  </span>
+                                  {row.missingTugasCount > 0 && (
+                                    <span className="opacity-90 font-normal">
+                                      ({row.completionPercent}%)
+                                    </span>
+                                  )}
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td className="p-3 text-center font-semibold text-slate-600 dark:text-slate-300">
                           {row.gender}
@@ -1723,6 +1785,14 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                                       >
                                         {scoreVal}
                                       </span>
+                                    ) : col.type === 'Tugas' ? (
+                                      <span
+                                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-bold rounded bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/60 group-hover:border-rose-400"
+                                        title="Tugas belum dikumpulkan. Klik untuk memasukkan nilai tugas ini."
+                                      >
+                                        <AlertCircle className="w-2.5 h-2.5" />
+                                        Belum Kumpul
+                                      </span>
                                     ) : (
                                       <span className="text-slate-300 dark:text-slate-600 font-normal px-2">
                                         -
@@ -1738,8 +1808,39 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                         {/* COMPONENT SUMMARY COLUMNS (IN MATRIX OR SUMMARY MODE) */}
                         {legerViewMode !== 'detailed' && (
                           <>
-                            <td className="p-3 text-center font-mono font-medium border-l border-slate-100 dark:border-slate-800 bg-emerald-50/20 dark:bg-emerald-950/10">
-                              {row.avgTugas}
+                            {/* RATA-RATA TUGAS DENGAN PENYESUAIAN */}
+                            <td className="p-3 text-center font-mono border-l border-slate-100 dark:border-slate-800 bg-emerald-50/20 dark:bg-emerald-950/10">
+                              <div className="flex flex-col items-center justify-center">
+                                <div className="flex items-center gap-1">
+                                  <span
+                                    className={`font-bold ${
+                                      row.isTugasAdjusted
+                                        ? 'text-amber-600 dark:text-amber-400'
+                                        : 'text-slate-800 dark:text-slate-200'
+                                    }`}
+                                  >
+                                    {row.avgTugas}
+                                  </span>
+                                  {row.isTugasAdjusted && (
+                                    <span
+                                      className="text-[9px] font-extrabold px-1 rounded bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800"
+                                      title={`Penyesuaian Tugas: Dari rata murni ${row.rawAvgTugas} disesuaikan menjadi ${row.avgTugas} karena mengumpulkan ${row.submittedTugasCount}/${row.totalClassTugas} tugas (${row.tugasAdjustmentDiff > 0 ? `+${row.tugasAdjustmentDiff}` : row.tugasAdjustmentDiff} poin)`}
+                                    >
+                                      {row.tugasAdjustmentDiff > 0
+                                        ? `+${row.tugasAdjustmentDiff}`
+                                        : row.tugasAdjustmentDiff}
+                                    </span>
+                                  )}
+                                </div>
+                                {row.isTugasAdjusted && (
+                                  <span
+                                    className="text-[9px] text-slate-400 line-through font-normal"
+                                    title="Nilai rata-rata tugas murni (hanya tugas yang dikumpulkan)"
+                                  >
+                                    Murni: {row.rawAvgTugas}
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className="p-3 text-center font-mono font-medium bg-emerald-50/20 dark:bg-emerald-950/10">
                               {row.avgHarian}
@@ -1756,9 +1857,39 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                           </>
                         )}
 
-                        {/* FINAL GRADE */}
-                        <td className="p-3 text-center font-mono font-extrabold text-sm border-l border-slate-200 dark:border-slate-700 bg-indigo-50/40 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300">
-                          {row.finalGrade}
+                        {/* NILAI AKHIR (NA) DENGAN PENYESUAIAN BERDASARKAN JUMLAH TUGAS */}
+                        <td className="p-3 text-center font-mono border-l border-slate-200 dark:border-slate-700 bg-indigo-50/40 dark:bg-indigo-950/30">
+                          <div className="flex flex-col items-center justify-center">
+                            <div className="flex items-center gap-1">
+                              <span
+                                className={`font-extrabold text-sm ${
+                                  row.isTugasAdjusted
+                                    ? 'text-amber-600 dark:text-amber-400'
+                                    : 'text-indigo-700 dark:text-indigo-300'
+                                }`}
+                              >
+                                {row.finalGrade}
+                              </span>
+                              {row.isTugasAdjusted && (
+                                <span
+                                  className="px-1 py-0.2 rounded text-[9px] font-extrabold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
+                                  title={`Nilai Akhir disesuaikan karena mengumpulkan ${row.submittedTugasCount}/${row.totalClassTugas} tugas. Nilai murni sebelum penyesuaian: ${row.unadjustedFinalGrade}`}
+                                >
+                                  {row.finalGradeDiff > 0
+                                    ? `+${row.finalGradeDiff}`
+                                    : row.finalGradeDiff}
+                                </span>
+                              )}
+                            </div>
+                            {row.isTugasAdjusted && (
+                              <span
+                                className="text-[9px] text-slate-400 line-through font-normal"
+                                title="Nilai akhir jika tugas tidak disesuaikan"
+                              >
+                                Murni: {row.unadjustedFinalGrade}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="p-3 text-center font-mono font-extrabold text-slate-900 dark:text-white bg-indigo-50/20 dark:bg-indigo-950/20">
                           <span
@@ -1795,8 +1926,12 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={20} className="p-8 text-center text-slate-400">
-                        Tidak ada data siswa pada kelas ini.
+                      <td colSpan={25} className="p-8 text-center text-slate-400">
+                        {tugasFilterStatus === 'incomplete'
+                          ? 'Semua siswa di kelas ini telah mengumpulkan seluruh tugas dengan lengkap (100%).'
+                          : tugasFilterStatus === 'complete'
+                          ? 'Belum ada siswa dengan pengumpulan tugas lengkap pada kelas ini.'
+                          : 'Tidak ada data siswa pada kelas ini.'}
                       </td>
                     </tr>
                   )}

@@ -241,20 +241,142 @@ export const DEFAULT_GRADES: GradeRecord[] = [
   { id: 'grd-108-3', studentId: 'std-108', classId: 'cls-1', subject: 'Matematika', type: 'STS', title: 'Sumatif Tengah Semester', score: 62, maxScore: 100, date: '2026-10-05', semester: 'Ganjil' },
   { id: 'grd-108-4', studentId: 'std-108', classId: 'cls-1', subject: 'Matematika', type: 'SAS', title: 'Sumatif Akhir Semester', score: 65, maxScore: 100, date: '2026-10-15', semester: 'Ganjil' },
 
-  // Kelas XI.F-1
-  { id: 'grd-201-1', studentId: 'std-201', classId: 'cls-2', subject: 'Matematika TL', type: 'Tugas', title: 'Tugas Polinomial', score: 93, maxScore: 100, date: '2026-09-15', semester: 'Ganjil' },
-  { id: 'grd-201-2', studentId: 'std-201', classId: 'cls-2', subject: 'Matematika TL', type: 'Sumatif', title: 'Sumatif Polinomial', score: 90, maxScore: 100, date: '2026-09-28', semester: 'Ganjil' },
-  { id: 'grd-201-3', studentId: 'std-201', classId: 'cls-2', subject: 'Matematika TL', type: 'STS', title: 'Sumatif Tengah Semester', score: 92, maxScore: 100, date: '2026-10-06', semester: 'Ganjil' },
+  // Kelas XI.F-1 (Matematika Tingkat Lanjut)
+  // Siswa std-201 (Lengkap 3/3 Tugas)
+  { id: 'grd-201-t1', studentId: 'std-201', classId: 'cls-2', subject: 'Matematika TL', type: 'Tugas', title: 'Tugas 1: Operasi Polinomial', score: 93, maxScore: 100, date: '2026-09-12', semester: 'Ganjil' },
+  { id: 'grd-201-t2', studentId: 'std-201', classId: 'cls-2', subject: 'Matematika TL', type: 'Tugas', title: 'Tugas 2: Teorema Sisa & Faktor', score: 91, maxScore: 100, date: '2026-09-22', semester: 'Ganjil' },
+  { id: 'grd-201-t3', studentId: 'std-201', classId: 'cls-2', subject: 'Matematika TL', type: 'Tugas', title: 'Tugas 3: Irisan Kerucut & Lingkaran', score: 95, maxScore: 100, date: '2026-10-02', semester: 'Ganjil' },
+  { id: 'grd-201-h', studentId: 'std-201', classId: 'cls-2', subject: 'Matematika TL', type: 'Harian', title: 'Formatif: Suku Banyak', score: 90, maxScore: 100, date: '2026-09-18', semester: 'Ganjil' },
+  { id: 'grd-201-s', studentId: 'std-201', classId: 'cls-2', subject: 'Matematika TL', type: 'Sumatif', title: 'Sumatif: Teorema Polinomial', score: 92, maxScore: 100, date: '2026-09-28', semester: 'Ganjil' },
+  { id: 'grd-201-sts', studentId: 'std-201', classId: 'cls-2', subject: 'Matematika TL', type: 'STS', title: 'Sumatif Tengah Semester', score: 94, maxScore: 100, date: '2026-10-06', semester: 'Ganjil' },
+  { id: 'grd-201-sas', studentId: 'std-201', classId: 'cls-2', subject: 'Matematika TL', type: 'SAS', title: 'Sumatif Akhir Semester', score: 95, maxScore: 100, date: '2026-10-16', semester: 'Ganjil' },
 
-  { id: 'grd-202-1', studentId: 'std-202', classId: 'cls-2', subject: 'Matematika TL', type: 'Tugas', title: 'Tugas Polinomial', score: 97, maxScore: 100, date: '2026-09-15', semester: 'Ganjil' },
-  { id: 'grd-202-2', studentId: 'std-202', classId: 'cls-2', subject: 'Matematika TL', type: 'Sumatif', title: 'Sumatif Polinomial', score: 95, maxScore: 100, date: '2026-09-28', semester: 'Ganjil' },
-  { id: 'grd-202-3', studentId: 'std-202', classId: 'cls-2', subject: 'Matematika TL', type: 'STS', title: 'Sumatif Tengah Semester', score: 96, maxScore: 100, date: '2026-10-06', semester: 'Ganjil' },
+  // Siswa std-202 (Lengkap 3/3 Tugas)
+  { id: 'grd-202-t1', studentId: 'std-202', classId: 'cls-2', subject: 'Matematika TL', type: 'Tugas', title: 'Tugas 1: Operasi Polinomial', score: 97, maxScore: 100, date: '2026-09-12', semester: 'Ganjil' },
+  { id: 'grd-202-t2', studentId: 'std-202', classId: 'cls-2', subject: 'Matematika TL', type: 'Tugas', title: 'Tugas 2: Teorema Sisa & Faktor', score: 94, maxScore: 100, date: '2026-09-22', semester: 'Ganjil' },
+  { id: 'grd-202-t3', studentId: 'std-202', classId: 'cls-2', subject: 'Matematika TL', type: 'Tugas', title: 'Tugas 3: Irisan Kerucut & Lingkaran', score: 98, maxScore: 100, date: '2026-10-02', semester: 'Ganjil' },
+  { id: 'grd-202-h', studentId: 'std-202', classId: 'cls-2', subject: 'Matematika TL', type: 'Harian', title: 'Formatif: Suku Banyak', score: 95, maxScore: 100, date: '2026-09-18', semester: 'Ganjil' },
+  { id: 'grd-202-s', studentId: 'std-202', classId: 'cls-2', subject: 'Matematika TL', type: 'Sumatif', title: 'Sumatif: Teorema Polinomial', score: 96, maxScore: 100, date: '2026-09-28', semester: 'Ganjil' },
+  { id: 'grd-202-sts', studentId: 'std-202', classId: 'cls-2', subject: 'Matematika TL', type: 'STS', title: 'Sumatif Tengah Semester', score: 96, maxScore: 100, date: '2026-10-06', semester: 'Ganjil' },
+  { id: 'grd-202-sas', studentId: 'std-202', classId: 'cls-2', subject: 'Matematika TL', type: 'SAS', title: 'Sumatif Akhir Semester', score: 97, maxScore: 100, date: '2026-10-16', semester: 'Ganjil' },
 
-  { id: 'grd-203-1', studentId: 'std-203', classId: 'cls-2', subject: 'Matematika TL', type: 'Tugas', title: 'Tugas Polinomial', score: 84, maxScore: 100, date: '2026-09-15', semester: 'Ganjil' },
-  { id: 'grd-203-2', studentId: 'std-203', classId: 'cls-2', subject: 'Matematika TL', type: 'Sumatif', title: 'Sumatif Polinomial', score: 80, maxScore: 100, date: '2026-09-28', semester: 'Ganjil' },
+  // Siswa std-203 (Kurang 1 Tugas: 2/3 Tugas)
+  { id: 'grd-203-t1', studentId: 'std-203', classId: 'cls-2', subject: 'Matematika TL', type: 'Tugas', title: 'Tugas 1: Operasi Polinomial', score: 84, maxScore: 100, date: '2026-09-12', semester: 'Ganjil' },
+  { id: 'grd-203-t2', studentId: 'std-203', classId: 'cls-2', subject: 'Matematika TL', type: 'Tugas', title: 'Tugas 2: Teorema Sisa & Faktor', score: 86, maxScore: 100, date: '2026-09-22', semester: 'Ganjil' },
+  { id: 'grd-203-h', studentId: 'std-203', classId: 'cls-2', subject: 'Matematika TL', type: 'Harian', title: 'Formatif: Suku Banyak', score: 82, maxScore: 100, date: '2026-09-18', semester: 'Ganjil' },
+  { id: 'grd-203-s', studentId: 'std-203', classId: 'cls-2', subject: 'Matematika TL', type: 'Sumatif', title: 'Sumatif: Teorema Polinomial', score: 80, maxScore: 100, date: '2026-09-28', semester: 'Ganjil' },
+  { id: 'grd-203-sts', studentId: 'std-203', classId: 'cls-2', subject: 'Matematika TL', type: 'STS', title: 'Sumatif Tengah Semester', score: 85, maxScore: 100, date: '2026-10-06', semester: 'Ganjil' },
+  { id: 'grd-203-sas', studentId: 'std-203', classId: 'cls-2', subject: 'Matematika TL', type: 'SAS', title: 'Sumatif Akhir Semester', score: 84, maxScore: 100, date: '2026-10-16', semester: 'Ganjil' },
 
-  { id: 'grd-204-1', studentId: 'std-204', classId: 'cls-2', subject: 'Matematika TL', type: 'Tugas', title: 'Tugas Polinomial', score: 72, maxScore: 100, date: '2026-09-15', semester: 'Ganjil' },
-  { id: 'grd-204-2', studentId: 'std-204', classId: 'cls-2', subject: 'Matematika TL', type: 'Sumatif', title: 'Sumatif Polinomial', score: 70, maxScore: 100, date: '2026-09-28', semester: 'Ganjil' },
+  // Siswa std-204 (Kurang 2 Tugas: 1/3 Tugas)
+  { id: 'grd-204-t1', studentId: 'std-204', classId: 'cls-2', subject: 'Matematika TL', type: 'Tugas', title: 'Tugas 1: Operasi Polinomial', score: 72, maxScore: 100, date: '2026-09-12', semester: 'Ganjil' },
+  { id: 'grd-204-h', studentId: 'std-204', classId: 'cls-2', subject: 'Matematika TL', type: 'Harian', title: 'Formatif: Suku Banyak', score: 74, maxScore: 100, date: '2026-09-18', semester: 'Ganjil' },
+  { id: 'grd-204-s', studentId: 'std-204', classId: 'cls-2', subject: 'Matematika TL', type: 'Sumatif', title: 'Sumatif: Teorema Polinomial', score: 70, maxScore: 100, date: '2026-09-28', semester: 'Ganjil' },
+  { id: 'grd-204-sts', studentId: 'std-204', classId: 'cls-2', subject: 'Matematika TL', type: 'STS', title: 'Sumatif Tengah Semester', score: 75, maxScore: 100, date: '2026-10-06', semester: 'Ganjil' },
+  { id: 'grd-204-sas', studentId: 'std-204', classId: 'cls-2', subject: 'Matematika TL', type: 'SAS', title: 'Sumatif Akhir Semester', score: 73, maxScore: 100, date: '2026-10-16', semester: 'Ganjil' },
+
+  // Siswa std-205 (Lengkap 3/3 Tugas)
+  { id: 'grd-205-t1', studentId: 'std-205', classId: 'cls-2', subject: 'Matematika TL', type: 'Tugas', title: 'Tugas 1: Operasi Polinomial', score: 88, maxScore: 100, date: '2026-09-12', semester: 'Ganjil' },
+  { id: 'grd-205-t2', studentId: 'std-205', classId: 'cls-2', subject: 'Matematika TL', type: 'Tugas', title: 'Tugas 2: Teorema Sisa & Faktor', score: 85, maxScore: 100, date: '2026-09-22', semester: 'Ganjil' },
+  { id: 'grd-205-t3', studentId: 'std-205', classId: 'cls-2', subject: 'Matematika TL', type: 'Tugas', title: 'Tugas 3: Irisan Kerucut & Lingkaran', score: 90, maxScore: 100, date: '2026-10-02', semester: 'Ganjil' },
+  { id: 'grd-205-h', studentId: 'std-205', classId: 'cls-2', subject: 'Matematika TL', type: 'Harian', title: 'Formatif: Suku Banyak', score: 86, maxScore: 100, date: '2026-09-18', semester: 'Ganjil' },
+  { id: 'grd-205-s', studentId: 'std-205', classId: 'cls-2', subject: 'Matematika TL', type: 'Sumatif', title: 'Sumatif: Teorema Polinomial', score: 87, maxScore: 100, date: '2026-09-28', semester: 'Ganjil' },
+  { id: 'grd-205-sts', studentId: 'std-205', classId: 'cls-2', subject: 'Matematika TL', type: 'STS', title: 'Sumatif Tengah Semester', score: 89, maxScore: 100, date: '2026-10-06', semester: 'Ganjil' },
+  { id: 'grd-205-sas', studentId: 'std-205', classId: 'cls-2', subject: 'Matematika TL', type: 'SAS', title: 'Sumatif Akhir Semester', score: 88, maxScore: 100, date: '2026-10-16', semester: 'Ganjil' },
+
+  // Siswa std-206 (Kurang 1 Tugas: 2/3 Tugas)
+  { id: 'grd-206-t1', studentId: 'std-206', classId: 'cls-2', subject: 'Matematika TL', type: 'Tugas', title: 'Tugas 1: Operasi Polinomial', score: 90, maxScore: 100, date: '2026-09-12', semester: 'Ganjil' },
+  { id: 'grd-206-t3', studentId: 'std-206', classId: 'cls-2', subject: 'Matematika TL', type: 'Tugas', title: 'Tugas 3: Irisan Kerucut & Lingkaran', score: 87, maxScore: 100, date: '2026-10-02', semester: 'Ganjil' },
+  { id: 'grd-206-h', studentId: 'std-206', classId: 'cls-2', subject: 'Matematika TL', type: 'Harian', title: 'Formatif: Suku Banyak', score: 88, maxScore: 100, date: '2026-09-18', semester: 'Ganjil' },
+  { id: 'grd-206-s', studentId: 'std-206', classId: 'cls-2', subject: 'Matematika TL', type: 'Sumatif', title: 'Sumatif: Teorema Polinomial', score: 89, maxScore: 100, date: '2026-09-28', semester: 'Ganjil' },
+  { id: 'grd-206-sts', studentId: 'std-206', classId: 'cls-2', subject: 'Matematika TL', type: 'STS', title: 'Sumatif Tengah Semester', score: 91, maxScore: 100, date: '2026-10-06', semester: 'Ganjil' },
+  { id: 'grd-206-sas', studentId: 'std-206', classId: 'cls-2', subject: 'Matematika TL', type: 'SAS', title: 'Sumatif Akhir Semester', score: 90, maxScore: 100, date: '2026-10-16', semester: 'Ganjil' },
+
+  // Siswa std-207 (0/3 Tugas Terkumpul - Belum Kumpul Sama Sekali)
+  { id: 'grd-207-h', studentId: 'std-207', classId: 'cls-2', subject: 'Matematika TL', type: 'Harian', title: 'Formatif: Suku Banyak', score: 75, maxScore: 100, date: '2026-09-18', semester: 'Ganjil' },
+  { id: 'grd-207-s', studentId: 'std-207', classId: 'cls-2', subject: 'Matematika TL', type: 'Sumatif', title: 'Sumatif: Teorema Polinomial', score: 72, maxScore: 100, date: '2026-09-28', semester: 'Ganjil' },
+  { id: 'grd-207-sts', studentId: 'std-207', classId: 'cls-2', subject: 'Matematika TL', type: 'STS', title: 'Sumatif Tengah Semester', score: 74, maxScore: 100, date: '2026-10-06', semester: 'Ganjil' },
+  { id: 'grd-207-sas', studentId: 'std-207', classId: 'cls-2', subject: 'Matematika TL', type: 'SAS', title: 'Sumatif Akhir Semester', score: 70, maxScore: 100, date: '2026-10-16', semester: 'Ganjil' },
+
+  // Siswa std-208 (Kurang 1 Tugas: 2/3 Tugas)
+  { id: 'grd-208-t1', studentId: 'std-208', classId: 'cls-2', subject: 'Matematika TL', type: 'Tugas', title: 'Tugas 1: Operasi Polinomial', score: 79, maxScore: 100, date: '2026-09-12', semester: 'Ganjil' },
+  { id: 'grd-208-t2', studentId: 'std-208', classId: 'cls-2', subject: 'Matematika TL', type: 'Tugas', title: 'Tugas 2: Teorema Sisa & Faktor', score: 82, maxScore: 100, date: '2026-09-22', semester: 'Ganjil' },
+  { id: 'grd-208-h', studentId: 'std-208', classId: 'cls-2', subject: 'Matematika TL', type: 'Harian', title: 'Formatif: Suku Banyak', score: 80, maxScore: 100, date: '2026-09-18', semester: 'Ganjil' },
+  { id: 'grd-208-s', studentId: 'std-208', classId: 'cls-2', subject: 'Matematika TL', type: 'Sumatif', title: 'Sumatif: Teorema Polinomial', score: 81, maxScore: 100, date: '2026-09-28', semester: 'Ganjil' },
+  { id: 'grd-208-sts', studentId: 'std-208', classId: 'cls-2', subject: 'Matematika TL', type: 'STS', title: 'Sumatif Tengah Semester', score: 83, maxScore: 100, date: '2026-10-06', semester: 'Ganjil' },
+  { id: 'grd-208-sas', studentId: 'std-208', classId: 'cls-2', subject: 'Matematika TL', type: 'SAS', title: 'Sumatif Akhir Semester', score: 82, maxScore: 100, date: '2026-10-16', semester: 'Ganjil' },
+
+  // Kelas XI.F-2 (Informatika)
+  // Siswa std-301 (Lengkap 3/3 Tugas)
+  { id: 'grd-301-t1', studentId: 'std-301', classId: 'cls-3', subject: 'Informatika', type: 'Tugas', title: 'Tugas 1: Analisis Data & Spreadsheet', score: 88, maxScore: 100, date: '2026-09-14', semester: 'Ganjil' },
+  { id: 'grd-301-t2', studentId: 'std-301', classId: 'cls-3', subject: 'Informatika', type: 'Tugas', title: 'Tugas 2: Algoritma Python', score: 90, maxScore: 100, date: '2026-09-26', semester: 'Ganjil' },
+  { id: 'grd-301-t3', studentId: 'std-301', classId: 'cls-3', subject: 'Informatika', type: 'Tugas', title: 'Tugas 3: Basis Data Relasional', score: 92, maxScore: 100, date: '2026-10-04', semester: 'Ganjil' },
+  { id: 'grd-301-h', studentId: 'std-301', classId: 'cls-3', subject: 'Informatika', type: 'Harian', title: 'Formatif: Logika Kontrol Program', score: 87, maxScore: 100, date: '2026-09-20', semester: 'Ganjil' },
+  { id: 'grd-301-s', studentId: 'std-301', classId: 'cls-3', subject: 'Informatika', type: 'Sumatif', title: 'Sumatif: Pemikiran Komputasional', score: 89, maxScore: 100, date: '2026-09-30', semester: 'Ganjil' },
+  { id: 'grd-301-sts', studentId: 'std-301', classId: 'cls-3', subject: 'Informatika', type: 'STS', title: 'Sumatif Tengah Semester', score: 91, maxScore: 100, date: '2026-10-08', semester: 'Ganjil' },
+
+  // Siswa std-302 (Lengkap 3/3 Tugas)
+  { id: 'grd-302-t1', studentId: 'std-302', classId: 'cls-3', subject: 'Informatika', type: 'Tugas', title: 'Tugas 1: Analisis Data & Spreadsheet', score: 92, maxScore: 100, date: '2026-09-14', semester: 'Ganjil' },
+  { id: 'grd-302-t2', studentId: 'std-302', classId: 'cls-3', subject: 'Informatika', type: 'Tugas', title: 'Tugas 2: Algoritma Python', score: 95, maxScore: 100, date: '2026-09-26', semester: 'Ganjil' },
+  { id: 'grd-302-t3', studentId: 'std-302', classId: 'cls-3', subject: 'Informatika', type: 'Tugas', title: 'Tugas 3: Basis Data Relasional', score: 94, maxScore: 100, date: '2026-10-04', semester: 'Ganjil' },
+  { id: 'grd-302-h', studentId: 'std-302', classId: 'cls-3', subject: 'Informatika', type: 'Harian', title: 'Formatif: Logika Kontrol Program', score: 93, maxScore: 100, date: '2026-09-20', semester: 'Ganjil' },
+  { id: 'grd-302-s', studentId: 'std-302', classId: 'cls-3', subject: 'Informatika', type: 'Sumatif', title: 'Sumatif: Pemikiran Komputasional', score: 94, maxScore: 100, date: '2026-09-30', semester: 'Ganjil' },
+  { id: 'grd-302-sts', studentId: 'std-302', classId: 'cls-3', subject: 'Informatika', type: 'STS', title: 'Sumatif Tengah Semester', score: 95, maxScore: 100, date: '2026-10-08', semester: 'Ganjil' },
+
+  // Siswa std-303 (Kurang 1 Tugas: 2/3 Tugas)
+  { id: 'grd-303-t1', studentId: 'std-303', classId: 'cls-3', subject: 'Informatika', type: 'Tugas', title: 'Tugas 1: Analisis Data & Spreadsheet', score: 80, maxScore: 100, date: '2026-09-14', semester: 'Ganjil' },
+  { id: 'grd-303-t2', studentId: 'std-303', classId: 'cls-3', subject: 'Informatika', type: 'Tugas', title: 'Tugas 2: Algoritma Python', score: 82, maxScore: 100, date: '2026-09-26', semester: 'Ganjil' },
+  { id: 'grd-303-h', studentId: 'std-303', classId: 'cls-3', subject: 'Informatika', type: 'Harian', title: 'Formatif: Logika Kontrol Program', score: 78, maxScore: 100, date: '2026-09-20', semester: 'Ganjil' },
+  { id: 'grd-303-s', studentId: 'std-303', classId: 'cls-3', subject: 'Informatika', type: 'Sumatif', title: 'Sumatif: Pemikiran Komputasional', score: 80, maxScore: 100, date: '2026-09-30', semester: 'Ganjil' },
+  { id: 'grd-303-sts', studentId: 'std-303', classId: 'cls-3', subject: 'Informatika', type: 'STS', title: 'Sumatif Tengah Semester', score: 82, maxScore: 100, date: '2026-10-08', semester: 'Ganjil' },
+
+  // Siswa std-304 (Kurang 2 Tugas: 1/3 Tugas)
+  { id: 'grd-304-t1', studentId: 'std-304', classId: 'cls-3', subject: 'Informatika', type: 'Tugas', title: 'Tugas 1: Analisis Data & Spreadsheet', score: 70, maxScore: 100, date: '2026-09-14', semester: 'Ganjil' },
+  { id: 'grd-304-h', studentId: 'std-304', classId: 'cls-3', subject: 'Informatika', type: 'Harian', title: 'Formatif: Logika Kontrol Program', score: 72, maxScore: 100, date: '2026-09-20', semester: 'Ganjil' },
+  { id: 'grd-304-s', studentId: 'std-304', classId: 'cls-3', subject: 'Informatika', type: 'Sumatif', title: 'Sumatif: Pemikiran Komputasional', score: 68, maxScore: 100, date: '2026-09-30', semester: 'Ganjil' },
+  { id: 'grd-304-sts', studentId: 'std-304', classId: 'cls-3', subject: 'Informatika', type: 'STS', title: 'Sumatif Tengah Semester', score: 71, maxScore: 100, date: '2026-10-08', semester: 'Ganjil' },
+
+  // Siswa std-305 (Kurang 1 Tugas: 2/3 Tugas)
+  { id: 'grd-305-t1', studentId: 'std-305', classId: 'cls-3', subject: 'Informatika', type: 'Tugas', title: 'Tugas 1: Analisis Data & Spreadsheet', score: 85, maxScore: 100, date: '2026-09-14', semester: 'Ganjil' },
+  { id: 'grd-305-t3', studentId: 'std-305', classId: 'cls-3', subject: 'Informatika', type: 'Tugas', title: 'Tugas 3: Basis Data Relasional', score: 83, maxScore: 100, date: '2026-10-04', semester: 'Ganjil' },
+  { id: 'grd-305-h', studentId: 'std-305', classId: 'cls-3', subject: 'Informatika', type: 'Harian', title: 'Formatif: Logika Kontrol Program', score: 84, maxScore: 100, date: '2026-09-20', semester: 'Ganjil' },
+  { id: 'grd-305-s', studentId: 'std-305', classId: 'cls-3', subject: 'Informatika', type: 'Sumatif', title: 'Sumatif: Pemikiran Komputasional', score: 86, maxScore: 100, date: '2026-09-30', semester: 'Ganjil' },
+  { id: 'grd-305-sts', studentId: 'std-305', classId: 'cls-3', subject: 'Informatika', type: 'STS', title: 'Sumatif Tengah Semester', score: 85, maxScore: 100, date: '2026-10-08', semester: 'Ganjil' },
+
+  // Kelas XII.MIPA-1 (Matematika Peminatan)
+  // Siswa std-401 (Lengkap 3/3 Tugas)
+  { id: 'grd-401-t1', studentId: 'std-401', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'Tugas', title: 'Tugas 1: Limit Trigonometri', score: 95, maxScore: 100, date: '2026-09-11', semester: 'Ganjil' },
+  { id: 'grd-401-t2', studentId: 'std-401', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'Tugas', title: 'Tugas 2: Turunan Trigonometri', score: 96, maxScore: 100, date: '2026-09-24', semester: 'Ganjil' },
+  { id: 'grd-401-t3', studentId: 'std-401', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'Tugas', title: 'Tugas 3: Penerapan Garis Singgung', score: 94, maxScore: 100, date: '2026-10-06', semester: 'Ganjil' },
+  { id: 'grd-401-h', studentId: 'std-401', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'Harian', title: 'Formatif: Konsep Limit', score: 93, maxScore: 100, date: '2026-09-17', semester: 'Ganjil' },
+  { id: 'grd-401-s', studentId: 'std-401', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'Sumatif', title: 'Sumatif: Kalkulus Lanjut', score: 95, maxScore: 100, date: '2026-09-29', semester: 'Ganjil' },
+  { id: 'grd-401-sts', studentId: 'std-401', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'STS', title: 'Sumatif Tengah Semester', score: 96, maxScore: 100, date: '2026-10-07', semester: 'Ganjil' },
+  { id: 'grd-401-sas', studentId: 'std-401', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'SAS', title: 'Sumatif Akhir Semester', score: 97, maxScore: 100, date: '2026-10-17', semester: 'Ganjil' },
+
+  // Siswa std-402 (Kurang 1 Tugas: 2/3 Tugas)
+  { id: 'grd-402-t1', studentId: 'std-402', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'Tugas', title: 'Tugas 1: Limit Trigonometri', score: 86, maxScore: 100, date: '2026-09-11', semester: 'Ganjil' },
+  { id: 'grd-402-t2', studentId: 'std-402', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'Tugas', title: 'Tugas 2: Turunan Trigonometri', score: 88, maxScore: 100, date: '2026-09-24', semester: 'Ganjil' },
+  { id: 'grd-402-h', studentId: 'std-402', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'Harian', title: 'Formatif: Konsep Limit', score: 84, maxScore: 100, date: '2026-09-17', semester: 'Ganjil' },
+  { id: 'grd-402-s', studentId: 'std-402', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'Sumatif', title: 'Sumatif: Kalkulus Lanjut', score: 85, maxScore: 100, date: '2026-09-29', semester: 'Ganjil' },
+  { id: 'grd-402-sts', studentId: 'std-402', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'STS', title: 'Sumatif Tengah Semester', score: 87, maxScore: 100, date: '2026-10-07', semester: 'Ganjil' },
+  { id: 'grd-402-sas', studentId: 'std-402', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'SAS', title: 'Sumatif Akhir Semester', score: 86, maxScore: 100, date: '2026-10-17', semester: 'Ganjil' },
+
+  // Siswa std-403 (Kurang 1 Tugas: 2/3 Tugas)
+  { id: 'grd-403-t1', studentId: 'std-403', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'Tugas', title: 'Tugas 1: Limit Trigonometri', score: 80, maxScore: 100, date: '2026-09-11', semester: 'Ganjil' },
+  { id: 'grd-403-t3', studentId: 'std-403', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'Tugas', title: 'Tugas 3: Penerapan Garis Singgung', score: 82, maxScore: 100, date: '2026-10-06', semester: 'Ganjil' },
+  { id: 'grd-403-h', studentId: 'std-403', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'Harian', title: 'Formatif: Konsep Limit', score: 79, maxScore: 100, date: '2026-09-17', semester: 'Ganjil' },
+  { id: 'grd-403-s', studentId: 'std-403', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'Sumatif', title: 'Sumatif: Kalkulus Lanjut', score: 81, maxScore: 100, date: '2026-09-29', semester: 'Ganjil' },
+  { id: 'grd-403-sts', studentId: 'std-403', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'STS', title: 'Sumatif Tengah Semester', score: 83, maxScore: 100, date: '2026-10-07', semester: 'Ganjil' },
+  { id: 'grd-403-sas', studentId: 'std-403', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'SAS', title: 'Sumatif Akhir Semester', score: 82, maxScore: 100, date: '2026-10-17', semester: 'Ganjil' },
+
+  // Siswa std-404 (Lengkap 3/3 Tugas)
+  { id: 'grd-401-t1-404', studentId: 'std-404', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'Tugas', title: 'Tugas 1: Limit Trigonometri', score: 90, maxScore: 100, date: '2026-09-11', semester: 'Ganjil' },
+  { id: 'grd-401-t2-404', studentId: 'std-404', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'Tugas', title: 'Tugas 2: Turunan Trigonometri', score: 92, maxScore: 100, date: '2026-09-24', semester: 'Ganjil' },
+  { id: 'grd-401-t3-404', studentId: 'std-404', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'Tugas', title: 'Tugas 3: Penerapan Garis Singgung', score: 89, maxScore: 100, date: '2026-10-06', semester: 'Ganjil' },
+  { id: 'grd-404-h', studentId: 'std-404', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'Harian', title: 'Formatif: Konsep Limit', score: 89, maxScore: 100, date: '2026-09-17', semester: 'Ganjil' },
+  { id: 'grd-404-s', studentId: 'std-404', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'Sumatif', title: 'Sumatif: Kalkulus Lanjut', score: 91, maxScore: 100, date: '2026-09-29', semester: 'Ganjil' },
+  { id: 'grd-404-sts', studentId: 'std-404', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'STS', title: 'Sumatif Tengah Semester', score: 92, maxScore: 100, date: '2026-10-07', semester: 'Ganjil' },
+  { id: 'grd-404-sas', studentId: 'std-404', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'SAS', title: 'Sumatif Akhir Semester', score: 93, maxScore: 100, date: '2026-10-17', semester: 'Ganjil' },
 ];
 
 // Seed realistic Attendance records for analysis
