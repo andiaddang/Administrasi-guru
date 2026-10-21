@@ -8,41 +8,64 @@ import {
   User,
 } from '../types';
 import {
-  GraduationCap,
-  Save,
-  Printer,
+  Table,
   Plus,
   Trash2,
-  Edit2,
-  FileText,
-  Search,
-  CheckCircle,
-  Table,
-  Calendar,
-  BookOpen,
-  Filter,
+  Save,
   CheckCircle2,
-  Layers,
+  AlertCircle,
+  SlidersHorizontal,
+  RotateCcw,
   Sparkles,
-  BarChart2,
-  Info,
-  ListChecks,
+  TrendingUp,
+  Award,
+  Users,
   Check,
   X,
-  SlidersHorizontal,
+  FileSpreadsheet,
+  Clock,
+  Printer,
+  BarChart3,
+  Search,
+  Filter,
   ChevronDown,
-  RefreshCw,
-  Award,
-  AlertCircle,
-  Scale,
-  TrendingDown,
-  HelpCircle,
-  CheckCheck,
-  TrendingUp,
+  ChevronUp,
 } from 'lucide-react';
 import { PrintDocumentModal } from './PrintDocumentModal';
 import { GradeTrendAnalytics } from './GradeTrendAnalytics';
-import { SinglePageGradeTable } from './SinglePageGradeTable';
+
+export interface AssessmentColumn {
+  key: string;
+  type: GradeType;
+  title: string;
+  date: string;
+  maxScore: number;
+  subject: string;
+}
+
+export const GRADE_TYPE_LABELS: Record<GradeType, string> = {
+  Tugas: 'Tugas Mandiri / Kelompok',
+  Harian: 'Formatif / Ulangan Harian',
+  Sumatif: 'Sumatif Lingkup Materi (TP)',
+  STS: 'Sumatif Tengah Semester (STS)',
+  SAS: 'Sumatif Akhir Semester (SAS)',
+};
+
+export const GRADE_TYPE_SHORT: Record<GradeType, string> = {
+  Tugas: 'Tugas',
+  Harian: 'Formatif',
+  Sumatif: 'Sumatif TP',
+  STS: 'STS',
+  SAS: 'SAS',
+};
+
+const DEFAULT_WEIGHTS: Record<GradeType, number> = {
+  Tugas: 20,
+  Harian: 20,
+  Sumatif: 25,
+  STS: 15,
+  SAS: 20,
+};
 
 interface GradeManagementProps {
   students: Student[];
@@ -56,182 +79,81 @@ interface GradeManagementProps {
   currentUser: User | null;
 }
 
-export interface AssessmentColumn {
-  key: string;
-  title: string;
-  date: string;
-  type: GradeType;
-  subject: string;
-  maxScore: number;
-}
-
 export const GradeManagement: React.FC<GradeManagementProps> = ({
   students,
   classes,
   grades,
   onSaveBatchGrades,
-  onUpdateSingleGrade,
   onDeleteGrade,
   onDeleteBatchGrades,
   school,
   currentUser,
 }) => {
-  const [activeTab, setActiveTab] = useState<'unified' | 'ledger' | 'mass' | 'history' | 'analytics'>('unified');
-
-  // Ledger configuration states
-  const [ledgerClassId, setLedgerClassId] = useState<string>(classes[0]?.id || '');
-  const [legerViewMode, setLegerViewMode] = useState<'matrix' | 'detailed' | 'summary'>('matrix');
-  const [ledgerTypeFilter, setLedgerTypeFilter] = useState<string>('all');
-  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
-  const [printViewMode, setPrintViewMode] = useState<'matrix' | 'detailed' | 'summary'>('matrix');
-
-  // Penyesuaian Nilai Berdasarkan Kelengkapan & Jumlah Tugas Siswa
-  const [isTugasAdjustmentEnabled, setIsTugasAdjustmentEnabled] = useState<boolean>(true);
-  const [tugasAdjustmentMethod, setTugasAdjustmentMethod] = useState<'proporsional' | 'rasio' | 'pinalti' | 'murni'>('proporsional');
-  const [penaltyPerMissingTugas, setPenaltyPerMissingTugas] = useState<number>(10);
-  const [tugasFilterStatus, setTugasFilterStatus] = useState<'all' | 'complete' | 'incomplete'>('all');
-  const [isAdjustmentSettingsOpen, setIsAdjustmentSettingsOpen] = useState<boolean>(false);
-
-  // Inline table editing state
-  const [isInlineEditMode, setIsInlineEditMode] = useState<boolean>(false);
-  const [editingCell, setEditingCell] = useState<{ studentId: string; assessmentKey: string } | null>(null);
-  const [cellEditValue, setCellEditValue] = useState<string>('');
-
-  // Edit modals state
-  const [editingStudentGrades, setEditingStudentGrades] = useState<Student | null>(null);
-  const [studentModalScores, setStudentModalScores] = useState<Record<string, number | ''>>({});
-  const [studentModalNotes, setStudentModalNotes] = useState<Record<string, string>>({});
-
-  const [editingRecord, setEditingRecord] = useState<GradeRecord | null>(null);
-  const [editRecordForm, setEditRecordForm] = useState<{
-    score: number | '';
-    title: string;
-    type: GradeType;
-    date: string;
-    notes: string;
-  }>({
-    score: '',
-    title: '',
-    type: 'Sumatif',
-    date: '',
-    notes: '',
-  });
-
-  // Success toast
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  // Mass input states
+  // 1. FILTER SEBELUM INPUT
   const [selectedClassId, setSelectedClassId] = useState<string>(classes[0]?.id || '');
-  const [subject, setSubject] = useState<string>(currentUser?.subject?.split('&')[0]?.trim() || 'Matematika');
-  const [gradeType, setGradeType] = useState<GradeType>('Sumatif');
-  const [assessmentTitle, setAssessmentTitle] = useState<string>('Sumatif Lingkup Materi 1');
-  const [assessmentDate, setAssessmentDate] = useState<string>(
-    new Date().toISOString().slice(0, 10)
-  );
-  const [massScores, setMassScores] = useState<Record<string, number | ''>>({});
-  const [massNotes, setMassNotes] = useState<Record<string, string>>({});
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [selectedExistingSessionKey, setSelectedExistingSessionKey] = useState<string>('');
+  const [assessmentTypeFilter, setAssessmentTypeFilter] = useState<string>('all');
+  const [searchStudent, setSearchStudent] = useState<string>('');
 
-  // Auto-save states
+  // Mata Pelajaran Pengampu
+  const defaultSubject = currentUser?.subject?.split('&')[0]?.trim() || 'Matematika';
+  const [selectedSubject] = useState<string>(defaultSubject);
+
+  // 2. BOBOT KOMPONEN PENILAIAN (HARUS 100%)
+  const [weights, setWeights] = useState<Record<GradeType, number>>(DEFAULT_WEIGHTS);
+  const [isWeightSettingsOpen, setIsWeightSettingsOpen] = useState<boolean>(false);
+
+  // 3. KOLOM PENILAIAN DINAMIS (TAMBAH & HAPUS TUGAS)
+  const [customColumns, setCustomColumns] = useState<AssessmentColumn[]>([]);
+
+  // 4. DATA NILAI SISWA (studentId -> colKey -> score)
+  const [tableScores, setTableScores] = useState<Record<string, Record<string, number | ''>>>({});
+
+  // 5. STATUS SIMPAN & AUTO-SAVE
+  const [isDirty, setIsDirty] = useState<boolean>(false);
+  const [isAutoSaveEnabled, setIsAutoSaveEnabled] = useState<boolean>(true);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
-  const [lastAutoSavedTime, setLastAutoSavedTime] = useState<string>('');
-  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const isInternalAutoSavingRef = useRef<boolean>(false);
+  const [lastSavedTime, setLastSavedTime] = useState<string>('');
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // History state
-  const [historySearch, setHistorySearch] = useState('');
+  // 6. MODAL & VIEW EKSTRA
+  const [isAddColumnModalOpen, setIsAddColumnModalOpen] = useState<boolean>(false);
+  const [newColType, setNewColType] = useState<GradeType>('Tugas');
+  const [newColTitle, setNewColTitle] = useState<string>('');
+  const [newColDate, setNewColDate] = useState<string>(new Date().toISOString().slice(0, 10));
 
-  const triggerToast = (msg: string) => {
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
+  const [showTrendChart, setShowTrendChart] = useState<boolean>(false);
+
+  // Toast Notifikasi
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 3500);
+    setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // Helpers
-  const formatDateId = (dateStr: string) => {
-    if (!dateStr) return '-';
-    try {
-      const parts = dateStr.split('-');
-      if (parts.length === 3) {
-        return `${parts[2]}/${parts[1]}/${parts[0]}`;
-      }
-      return dateStr;
-    } catch {
-      return dateStr;
-    }
-  };
+  // Kelas Terpilih
+  const currentClass = useMemo(() => {
+    return classes.find((c) => c.id === selectedClassId) || classes[0];
+  }, [classes, selectedClassId]);
 
-  const getTypeBadgeStyle = (type: GradeType) => {
-    switch (type) {
-      case 'Tugas':
-        return 'bg-sky-50 dark:bg-sky-950/70 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800';
-      case 'Harian':
-        return 'bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800';
-      case 'Sumatif':
-        return 'bg-purple-50 dark:bg-purple-950/70 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800';
-      case 'STS':
-        return 'bg-amber-50 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800';
-      case 'SAS':
-        return 'bg-rose-50 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800';
-      default:
-        return 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700';
-    }
-  };
-
-  // Students in selected classes
+  // Daftar Siswa Kelas Terpilih
   const classStudents = useMemo(() => {
     return students.filter((s) => s.classId === selectedClassId);
   }, [students, selectedClassId]);
 
-  const ledgerStudents = useMemo(() => {
-    return students.filter((s) => s.classId === ledgerClassId);
-  }, [students, ledgerClassId]);
+  // Siswa Hasil Filter Pencarian
+  const filteredStudents = useMemo(() => {
+    if (!searchStudent.trim()) return classStudents;
+    const q = searchStudent.toLowerCase();
+    return classStudents.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        (s.nisnNis && s.nisnNis.toLowerCase().includes(q))
+    );
+  }, [classStudents, searchStudent]);
 
-  // Extract all distinct assessment sessions for selected class (with Date & Title)
-  const uniqueAssessments = useMemo<AssessmentColumn[]>(() => {
-    const map = new Map<string, AssessmentColumn>();
-    const classGrades = grades.filter((g) => g.classId === ledgerClassId);
-
-    classGrades.forEach((g) => {
-      const cleanTitle = (g.title || 'Penilaian').trim();
-      const cleanDate = (g.date || '').trim();
-      const key = `${g.type}__${cleanTitle.toLowerCase()}__${cleanDate}`;
-      if (!map.has(key)) {
-        map.set(key, {
-          key,
-          title: cleanTitle,
-          date: cleanDate,
-          type: g.type,
-          subject: g.subject || 'Matematika',
-          maxScore: g.maxScore || 100,
-        });
-      }
-    });
-
-    // Sort: Tugas -> Harian -> Sumatif -> STS -> SAS, then chronologically
-    const typeOrder: Record<GradeType, number> = {
-      Tugas: 1,
-      Harian: 2,
-      Sumatif: 3,
-      STS: 4,
-      SAS: 5,
-    };
-
-    return Array.from(map.values()).sort((a, b) => {
-      const orderA = typeOrder[a.type] || 99;
-      const orderB = typeOrder[b.type] || 99;
-      if (orderA !== orderB) return orderA - orderB;
-      if (a.date && b.date && a.date !== b.date) {
-        return a.date.localeCompare(b.date);
-      }
-      return a.title.localeCompare(b.title);
-    });
-  }, [grades, ledgerClassId]);
-
-  // Distinct assessment sessions for Mass Input class
-  const massUniqueAssessments = useMemo<AssessmentColumn[]>(() => {
+  // Kolom Penilaian dari Database
+  const savedColumns = useMemo<AssessmentColumn[]>(() => {
     const map = new Map<string, AssessmentColumn>();
     const classGrades = grades.filter((g) => g.classId === selectedClassId);
 
@@ -242,2735 +164,1528 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
       if (!map.has(key)) {
         map.set(key, {
           key,
+          type: g.type,
           title: cleanTitle,
           date: cleanDate,
-          type: g.type,
-          subject: g.subject || 'Matematika',
           maxScore: g.maxScore || 100,
+          subject: g.subject || selectedSubject,
         });
       }
     });
 
-    return Array.from(map.values());
-  }, [grades, selectedClassId]);
+    const typeOrder: Record<GradeType, number> = {
+      Tugas: 1,
+      Harian: 2,
+      Sumatif: 3,
+      STS: 4,
+      SAS: 5,
+    };
 
-  // Filtered assessment columns by type if user chooses
-  const displayedAssessments = useMemo(() => {
-    if (ledgerTypeFilter === 'all') return uniqueAssessments;
-    return uniqueAssessments.filter((a) => a.type === ledgerTypeFilter);
-  }, [uniqueAssessments, ledgerTypeFilter]);
+    return Array.from(map.values()).sort((a, b) => {
+      const diff = (typeOrder[a.type] || 99) - (typeOrder[b.type] || 99);
+      if (diff !== 0) return diff;
+      return a.date.localeCompare(b.date);
+    });
+  }, [grades, selectedClassId, selectedSubject]);
 
-  // Total Tugas yang diberikan di kelas terpilih
-  const classTugasCols = useMemo(() => {
-    return uniqueAssessments.filter((a) => a.type === 'Tugas');
-  }, [uniqueAssessments]);
+  // Gabungan Kolom Tersimpan + Kolom Baru Ditambahkan
+  const allColumns = useMemo<AssessmentColumn[]>(() => {
+    const list = [...savedColumns];
+    customColumns.forEach((custom) => {
+      if (!list.some((existing) => existing.key === custom.key)) {
+        list.push(custom);
+      }
+    });
+    return list;
+  }, [savedColumns, customColumns]);
 
-  const totalClassTugas = classTugasCols.length;
+  // Kolom yang Ditampilkan Berdasarkan Filter Jenis Penilaian
+  const displayColumns = useMemo<AssessmentColumn[]>(() => {
+    if (assessmentTypeFilter === 'all') {
+      return allColumns;
+    }
+    return allColumns.filter((col) => col.type === assessmentTypeFilter);
+  }, [allColumns, assessmentTypeFilter]);
 
-  // Comprehensive Detailed Ledger dataset containing individual assessment scores and component aggregates
-  const detailedLedgerData = useMemo(() => {
-    return ledgerStudents.map((student, idx) => {
-      const studentGrades = grades.filter(
-        (g) => g.studentId === student.id && g.classId === ledgerClassId
-      );
+  // Inisialisasi Nilai ke State Lokal
+  useEffect(() => {
+    const initialMap: Record<string, Record<string, number | ''>> = {};
 
-      // Map scores per unique assessment column
-      const scoresMap: Record<string, number | null> = {};
-      uniqueAssessments.forEach((col) => {
-        const found = studentGrades.find(
+    classStudents.forEach((student) => {
+      initialMap[student.id] = {};
+      allColumns.forEach((col) => {
+        const matchingRecord = grades.find(
           (g) =>
-            `${g.type}__${(g.title || '').trim().toLowerCase()}__${(g.date || '').trim()}` === col.key
+            g.classId === selectedClassId &&
+            g.studentId === student.id &&
+            g.type === col.type &&
+            (g.title || '').trim().toLowerCase() === col.title.trim().toLowerCase() &&
+            (g.date || '').trim() === col.date.trim()
         );
-        scoresMap[col.key] = found !== undefined ? found.score : null;
+        initialMap[student.id][col.key] =
+          matchingRecord && typeof matchingRecord.score === 'number'
+            ? matchingRecord.score
+            : '';
+      });
+    });
+
+    setTableScores(initialMap);
+    setIsDirty(false);
+  }, [selectedClassId, allColumns.length, classStudents.length, grades]);
+
+  // Validasi Total Bobot (Harus Tepat 100%)
+  const totalWeight = useMemo(() => {
+    return (
+      (Number(weights.Tugas) || 0) +
+      (Number(weights.Harian) || 0) +
+      (Number(weights.Sumatif) || 0) +
+      (Number(weights.STS) || 0) +
+      (Number(weights.SAS) || 0)
+    );
+  }, [weights]);
+
+  const isWeightValid = totalWeight === 100;
+
+  // PERHITUNGAN NILAI AKHIR OTOMATIS & OBJEKTIF
+  // Ketentuan Utama: "Nilai yang belum diinput tidak boleh otomatis dianggap nol."
+  const studentEvaluations = useMemo(() => {
+    return classStudents.map((student, idx) => {
+      const studentScores = tableScores[student.id] || {};
+
+      const typeScores: Record<GradeType, number[]> = {
+        Tugas: [],
+        Harian: [],
+        Sumatif: [],
+        STS: [],
+        SAS: [],
+      };
+
+      let filledCount = 0;
+      allColumns.forEach((col) => {
+        const val = studentScores[col.key];
+        if (typeof val === 'number' && !isNaN(val)) {
+          typeScores[col.type].push(val);
+          filledCount++;
+        }
       });
 
-      // Assignment (Tugas) Submission & Completion Metrics
-      const studentTugasGrades = studentGrades.filter((g) => g.type === 'Tugas');
-      const submittedTugasCount = studentTugasGrades.length;
-      const missingTugasCount = Math.max(0, totalClassTugas - submittedTugasCount);
-      const completionRate = totalClassTugas > 0 ? (submittedTugasCount / totalClassTugas) : 1;
-      const completionPercent = Math.round(completionRate * 100);
+      // Rata-rata per jenis penilaian hanya untuk komponen yang sudah dikerjakan
+      const typeAverages: Record<GradeType, number | null> = {
+        Tugas: typeScores.Tugas.length > 0
+          ? typeScores.Tugas.reduce((a, b) => a + b, 0) / typeScores.Tugas.length
+          : null,
+        Harian: typeScores.Harian.length > 0
+          ? typeScores.Harian.reduce((a, b) => a + b, 0) / typeScores.Harian.length
+          : null,
+        Sumatif: typeScores.Sumatif.length > 0
+          ? typeScores.Sumatif.reduce((a, b) => a + b, 0) / typeScores.Sumatif.length
+          : null,
+        STS: typeScores.STS.length > 0
+          ? typeScores.STS[typeScores.STS.length - 1]
+          : null,
+        SAS: typeScores.SAS.length > 0
+          ? typeScores.SAS[typeScores.SAS.length - 1]
+          : null,
+      };
 
-      const tugasScores = studentTugasGrades.map((g) => g.score);
-      const rawAvgTugas = tugasScores.length
-        ? Math.round(tugasScores.reduce((a, b) => a + b, 0) / tugasScores.length)
-        : null;
+      // Hitung nilai akhir dengan bobot komponen yang aktif
+      let weightedSum = 0;
+      let activeWeightsSum = 0;
 
-      // Calculate Adjusted Tugas Score based on submission count (berlaku untuk semua kelas)
-      let adjustedAvgTugas: number | null = rawAvgTugas;
-      if (totalClassTugas > 0 && isTugasAdjustmentEnabled) {
-        if (submittedTugasCount === 0) {
-          // Siswa belum mengumpulkan satupun tugas: nilai tugas menjadi 0
-          adjustedAvgTugas = 0;
-        } else if (tugasAdjustmentMethod === 'proporsional') {
-          // Total skor tugas terkumpul dibagi total tugas kelas (tugas yang belum dikumpul dinilai 0)
-          const sumTugas = tugasScores.reduce((a, b) => a + b, 0);
-          adjustedAvgTugas = Math.round(sumTugas / totalClassTugas);
-        } else if (tugasAdjustmentMethod === 'rasio') {
-          // Rata-rata murni tugas terkumpul diskalakan persentase keterkumpulan tugas
-          adjustedAvgTugas = rawAvgTugas !== null ? Math.round(rawAvgTugas * completionRate) : 0;
-        } else if (tugasAdjustmentMethod === 'pinalti') {
-          // Rata-rata murni dikurangi pinalti poin per tugas yang belum dikumpulkan
-          adjustedAvgTugas = rawAvgTugas !== null
-            ? Math.max(0, Math.round(rawAvgTugas - (missingTugasCount * penaltyPerMissingTugas)))
-            : 0;
-        } else if (tugasAdjustmentMethod === 'murni') {
-          adjustedAvgTugas = rawAvgTugas;
+      (Object.keys(typeAverages) as GradeType[]).forEach((type) => {
+        const avg = typeAverages[type];
+        if (avg !== null) {
+          const w = weights[type] || 0;
+          weightedSum += avg * w;
+          activeWeightsSum += w;
         }
+      });
+
+      let finalScore: number | null = null;
+      if (activeWeightsSum > 0) {
+        // Dinormalisasi ke bobot aktif sehingga komponen belum terbit TIDAK menjadi nol!
+        finalScore = Math.round((weightedSum / activeWeightsSum) * 10) / 10;
       }
 
-      const isTugasAdjusted =
-        totalClassTugas > 0 &&
-        isTugasAdjustmentEnabled &&
-        missingTugasCount > 0 &&
-        adjustedAvgTugas !== null &&
-        (rawAvgTugas === null || adjustedAvgTugas !== rawAvgTugas);
+      const isComplete = allColumns.length > 0 && filledCount === allColumns.length;
+      const isPassing = finalScore !== null ? finalScore >= 75 : false;
 
-      const tugasAdjustmentDiff =
-        isTugasAdjusted && adjustedAvgTugas !== null
-          ? (rawAvgTugas !== null ? adjustedAvgTugas - rawAvgTugas : adjustedAvgTugas)
-          : 0;
-
-      // Status and badge color for Tugas
-      let statusTugas = 'Lengkap';
-      let statusTugasColor: 'emerald' | 'amber' | 'rose' | 'slate' = 'emerald';
-      if (totalClassTugas === 0) {
-        statusTugas = 'Belum Ada Tugas';
-        statusTugasColor = 'slate';
-      } else if (submittedTugasCount === 0) {
-        statusTugas = `0/${totalClassTugas} Tugas Terkumpul`;
-        statusTugasColor = 'rose';
-      } else if (missingTugasCount > 0) {
-        statusTugas = `Kurang ${missingTugasCount} Tugas (${submittedTugasCount}/${totalClassTugas})`;
-        statusTugasColor = missingTugasCount === 1 ? 'amber' : 'rose';
-      } else {
-        statusTugas = `Lengkap (${submittedTugasCount}/${totalClassTugas})`;
-        statusTugasColor = 'emerald';
-      }
-
-      const harianList = studentGrades.filter((g) => g.type === 'Harian').map((g) => g.score);
-      const sumatifList = studentGrades.filter((g) => g.type === 'Sumatif').map((g) => g.score);
-      const stsList = studentGrades.filter((g) => g.type === 'STS').map((g) => g.score);
-      const sasList = studentGrades.filter((g) => g.type === 'SAS').map((g) => g.score);
-
-      const avgHarian = harianList.length ? Math.round(harianList.reduce((a, b) => a + b, 0) / harianList.length) : null;
-      const avgSumatif = sumatifList.length ? Math.round(sumatifList.reduce((a, b) => a + b, 0) / sumatifList.length) : null;
-      const valSTS = stsList.length ? stsList[stsList.length - 1] : null;
-      const valSAS = sasList.length ? sasList[sasList.length - 1] : null;
-
-      // Calculate Final Grade with Adjusted Tugas Average
-      const validScores: number[] = [];
-      if (adjustedAvgTugas !== null) {
-        validScores.push(adjustedAvgTugas);
-      } else if (totalClassTugas > 0 && isTugasAdjustmentEnabled) {
-        validScores.push(0);
-      }
-      if (avgHarian !== null) validScores.push(avgHarian);
-      if (avgSumatif !== null) validScores.push(avgSumatif);
-      if (valSTS !== null) validScores.push(valSTS);
-      if (valSAS !== null) validScores.push(valSAS);
-
-      const finalGrade =
-        validScores.length > 0
-          ? Math.round(validScores.reduce((a, b) => a + b, 0) / validScores.length)
-          : 0;
-
-      // Calculate Unadjusted Final Grade for comparison (Murni)
-      const unadjustedScores: number[] = [];
-      if (rawAvgTugas !== null) unadjustedScores.push(rawAvgTugas);
-      if (avgHarian !== null) unadjustedScores.push(avgHarian);
-      if (avgSumatif !== null) unadjustedScores.push(avgSumatif);
-      if (valSTS !== null) unadjustedScores.push(valSTS);
-      if (valSAS !== null) unadjustedScores.push(valSAS);
-
-      const unadjustedFinalGrade =
-        unadjustedScores.length > 0
-          ? Math.round(unadjustedScores.reduce((a, b) => a + b, 0) / unadjustedScores.length)
-          : 0;
-
-      const finalGradeDiff = isTugasAdjusted ? finalGrade - unadjustedFinalGrade : 0;
-
-      // Predikat & Status Ketercapaian
-      let predikat = 'D';
-      let statusKetercapaian = 'Perlu Bimbingan';
-      if (finalGrade >= 90) {
-        predikat = 'A';
-        statusKetercapaian = 'Tercapai Sangat Baik';
-      } else if (finalGrade >= 80) {
-        predikat = 'B';
-        statusKetercapaian = 'Tercapai Baik';
-      } else if (finalGrade >= 70) {
-        predikat = 'C';
-        statusKetercapaian = 'Tercapai Cukup';
+      let predikat = '-';
+      if (finalScore !== null) {
+        if (finalScore >= 90) predikat = 'A';
+        else if (finalScore >= 80) predikat = 'B';
+        else if (finalScore >= 70) predikat = 'C';
+        else predikat = 'D';
       }
 
       return {
+        student,
         no: idx + 1,
-        id: student.id,
-        studentObj: student,
-        nisnNis: student.nisnNis || student.nisn || student.nis || '-',
-        name: student.name,
-        gender: student.gender,
-        scoresMap,
-        totalClassTugas,
-        submittedTugasCount,
-        missingTugasCount,
-        completionRate,
-        completionPercent,
-        statusTugas,
-        statusTugasColor,
-        rawAvgTugas: rawAvgTugas !== null ? rawAvgTugas : (totalClassTugas > 0 && submittedTugasCount === 0 ? 0 : '-'),
-        avgTugas: adjustedAvgTugas !== null ? adjustedAvgTugas : (totalClassTugas > 0 && isTugasAdjustmentEnabled ? 0 : '-'),
-        isTugasAdjusted,
-        tugasAdjustmentDiff,
-        avgHarian: avgHarian ?? '-',
-        avgSumatif: avgSumatif ?? '-',
-        sts: valSTS ?? '-',
-        sas: valSAS ?? '-',
-        finalGrade: validScores.length > 0 ? finalGrade : '-',
-        unadjustedFinalGrade: unadjustedScores.length > 0 ? unadjustedFinalGrade : '-',
-        finalGradeDiff,
-        predikat: validScores.length > 0 ? predikat : '-',
-        statusKetercapaian: validScores.length > 0 ? statusKetercapaian : 'Belum Ada Nilai',
+        studentScores,
+        filledCount,
+        totalCols: allColumns.length,
+        missingCount: Math.max(0, allColumns.length - filledCount),
+        isComplete,
+        finalScore,
+        predikat,
+        isPassing,
+        typeAverages,
       };
     });
-  }, [
-    ledgerStudents,
-    grades,
-    ledgerClassId,
-    uniqueAssessments,
-    totalClassTugas,
-    isTugasAdjustmentEnabled,
-    tugasAdjustmentMethod,
-    penaltyPerMissingTugas,
-  ]);
+  }, [classStudents, tableScores, allColumns, weights]);
 
-  // Filtered ledger data by assignment status (Semua / Lengkap / Kurang)
-  const filteredLedgerData = useMemo(() => {
-    if (tugasFilterStatus === 'complete') {
-      return detailedLedgerData.filter((r) => r.totalClassTugas > 0 && r.missingTugasCount === 0);
-    }
-    if (tugasFilterStatus === 'incomplete') {
-      return detailedLedgerData.filter((r) => r.totalClassTugas > 0 && r.missingTugasCount > 0);
-    }
-    return detailedLedgerData;
-  }, [detailedLedgerData, tugasFilterStatus]);
+  // FITUR ANALISIS HASIL BELAJAR OBJEKTIF KELAS
+  const classAnalytics = useMemo(() => {
+    const scoredStudents = studentEvaluations.filter((s) => s.finalScore !== null);
+    const totalCount = studentEvaluations.length;
 
-  // Overall class assignment completion overview
-  const tugasOverview = useMemo(() => {
-    const totalStudents = detailedLedgerData.length;
-    const completeCount = detailedLedgerData.filter((r) => r.totalClassTugas > 0 && r.missingTugasCount === 0).length;
-    const incompleteCount = detailedLedgerData.filter((r) => r.totalClassTugas > 0 && r.missingTugasCount > 0).length;
-    const zeroCount = detailedLedgerData.filter((r) => r.totalClassTugas > 0 && r.submittedTugasCount === 0).length;
-    const totalSubmissions = detailedLedgerData.reduce((acc, r) => acc + r.submittedTugasCount, 0);
-    const possibleSubmissions = totalStudents * totalClassTugas;
-    const overallRate = possibleSubmissions > 0 ? Math.round((totalSubmissions / possibleSubmissions) * 100) : 100;
+    if (scoredStudents.length === 0) {
+      return {
+        hasData: false,
+        totalStudents: totalCount,
+        evaluatedCount: 0,
+        average: 0,
+        highest: 0,
+        highestStudent: '-',
+        lowest: 0,
+        lowestStudent: '-',
+        passingCount: 0,
+        failingCount: 0,
+        passingRate: 0,
+      };
+    }
+
+    const scores = scoredStudents.map((s) => s.finalScore as number);
+    const sum = scores.reduce((a, b) => a + b, 0);
+    const average = Math.round((sum / scores.length) * 10) / 10;
+
+    let highest = -Infinity;
+    let highestStudent = '';
+    let lowest = Infinity;
+    let lowestStudent = '';
+
+    scoredStudents.forEach((s) => {
+      const score = s.finalScore as number;
+      if (score > highest) {
+        highest = score;
+        highestStudent = s.student.name;
+      }
+      if (score < lowest) {
+        lowest = score;
+        lowestStudent = s.student.name;
+      }
+    });
+
+    const passingCount = scoredStudents.filter((s) => s.isPassing).length;
+    const failingCount = scoredStudents.length - passingCount;
+    const passingRate = Math.round((passingCount / scoredStudents.length) * 100);
 
     return {
-      totalClassTugas,
-      totalStudents,
-      completeCount,
-      incompleteCount,
-      zeroCount,
-      overallRate,
+      hasData: true,
+      totalStudents: totalCount,
+      evaluatedCount: scoredStudents.length,
+      average,
+      highest,
+      highestStudent,
+      lowest,
+      lowestStudent,
+      passingCount,
+      failingCount,
+      passingRate,
     };
-  }, [detailedLedgerData, totalClassTugas]);
+  }, [studentEvaluations]);
 
-  // Statistics per assessment column (average, min, max, count)
-  const colStats = useMemo(() => {
-    const stats: Record<
-      string,
-      { avg: number | null; min: number | null; max: number | null; count: number }
-    > = {};
+  // Handle Perubahan Nilai Input (0-100)
+  const handleScoreChange = (studentId: string, colKey: string, rawVal: string) => {
+    let sanitizedVal: number | '' = '';
+    if (rawVal.trim() !== '') {
+      const num = Number(rawVal);
+      if (!isNaN(num)) {
+        sanitizedVal = Math.min(100, Math.max(0, num));
+      }
+    }
 
-    uniqueAssessments.forEach((col) => {
-      const scores: number[] = [];
-      detailedLedgerData.forEach((row) => {
-        const val = row.scoresMap[col.key];
-        if (typeof val === 'number') {
-          scores.push(val);
+    setTableScores((prev) => ({
+      ...prev,
+      [studentId]: {
+        ...(prev[studentId] || {}),
+        [colKey]: sanitizedVal,
+      },
+    }));
+
+    setIsDirty(true);
+
+    if (isAutoSaveEnabled && isWeightValid) {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+      setAutoSaveStatus('saving');
+      autoSaveTimeoutRef.current = setTimeout(() => {
+        executeAutoSave(studentId, colKey, sanitizedVal);
+      }, 1500);
+    }
+  };
+
+  // Eksekusi Simpan Otomatis (Auto-Save)
+  const executeAutoSave = (lastStudentId: string, lastColKey: string, lastVal: number | '') => {
+    const recordsToSave: GradeRecord[] = [];
+    const now = new Date().toISOString().slice(0, 10);
+
+    classStudents.forEach((student) => {
+      const sScores = tableScores[student.id] || {};
+      allColumns.forEach((col) => {
+        const val = student.id === lastStudentId && col.key === lastColKey ? lastVal : sScores[col.key];
+        if (typeof val === 'number' && !isNaN(val)) {
+          recordsToSave.push({
+            id: `grd-${student.id}-${col.type}-${col.title.toLowerCase().replace(/[^a-z0-9]/g, '_')}-${col.date}`,
+            studentId: student.id,
+            classId: selectedClassId,
+            subject: selectedSubject,
+            type: col.type,
+            title: col.title,
+            score: val,
+            maxScore: 100,
+            date: col.date || now,
+            semester: school.semester,
+          });
         }
       });
-
-      if (scores.length > 0) {
-        const avg = Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10;
-        const min = Math.min(...scores);
-        const max = Math.max(...scores);
-        stats[col.key] = { avg, min, max, count: scores.length };
-      } else {
-        stats[col.key] = { avg: null, min: null, max: null, count: 0 };
-      }
     });
 
-    return stats;
-  }, [uniqueAssessments, detailedLedgerData]);
-
-  // Prepopulate mass scores when editing or switching (skips if triggered by internal auto-save)
-  useEffect(() => {
-    if (isInternalAutoSavingRef.current) {
-      return;
-    }
-
-    const existing = grades.filter(
-      (g) =>
-        g.classId === selectedClassId &&
-        g.type === gradeType &&
-        g.title.toLowerCase() === assessmentTitle.trim().toLowerCase()
-    );
-    const scoreMap: Record<string, number | ''> = {};
-    const notesMap: Record<string, string> = {};
-
-    classStudents.forEach((s) => {
-      const found = existing.find((g) => g.studentId === s.id);
-      if (found) {
-        scoreMap[s.id] = found.score;
-        notesMap[s.id] = found.notes || '';
-      } else {
-        scoreMap[s.id] = '';
-        notesMap[s.id] = '';
-      }
-    });
-
-    setMassScores(scoreMap);
-    setMassNotes(notesMap);
-  }, [selectedClassId, gradeType, assessmentTitle, classStudents, grades]);
-
-  // Direct single student auto-save in Mass Input
-  const handleAutoSaveStudentScore = (
-    studentId: string,
-    score: number | '',
-    note: string
-  ) => {
-    if (!assessmentTitle.trim()) return;
-    if (score === '' || typeof score !== 'number') return;
-
-    isInternalAutoSavingRef.current = true;
-    setAutoSaveStatus('saving');
-
-    const newRecord: GradeRecord = {
-      id: `grd-${Date.now()}-${studentId}`,
-      studentId,
-      classId: selectedClassId,
-      subject: subject.trim(),
-      type: gradeType,
-      title: assessmentTitle.trim(),
-      score,
-      maxScore: 100,
-      date: assessmentDate,
-      semester: school.semester,
-      notes: note || '',
-    };
-
-    if (onUpdateSingleGrade) {
-      onUpdateSingleGrade(newRecord);
-    } else {
-      onSaveBatchGrades([newRecord]);
-    }
-
-    setTimeout(() => {
+    if (recordsToSave.length > 0) {
+      onSaveBatchGrades(recordsToSave);
       setAutoSaveStatus('saved');
-      setLastAutoSavedTime(
+      setIsDirty(false);
+      setLastSavedTime(
         new Date().toLocaleTimeString('id-ID', {
           hour: '2-digit',
           minute: '2-digit',
           second: '2-digit',
         })
       );
-      isInternalAutoSavingRef.current = false;
-    }, 250);
-  };
-
-  // Mass score change handler with debounced auto-save
-  const handleScoreChange = (studentId: string, val: string) => {
-    const num = val === '' ? '' : Math.min(100, Math.max(0, Number(val)));
-    setMassScores((prev) => ({
-      ...prev,
-      [studentId]: num,
-    }));
-
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current);
+    } else {
+      setAutoSaveStatus('idle');
     }
-    autoSaveTimerRef.current = setTimeout(() => {
-      if (assessmentTitle.trim() && num !== '' && typeof num === 'number') {
-        handleAutoSaveStudentScore(studentId, num, massNotes[studentId] || '');
-      }
-    }, 700);
   };
 
-  // Mass note change handler with debounced auto-save
-  const handleNoteChange = (studentId: string, val: string) => {
-    setMassNotes((prev) => ({
-      ...prev,
-      [studentId]: val,
-    }));
-
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current);
-    }
-    autoSaveTimerRef.current = setTimeout(() => {
-      const scoreVal = massScores[studentId];
-      if (assessmentTitle.trim() && scoreVal !== '' && typeof scoreVal === 'number') {
-        handleAutoSaveStudentScore(studentId, scoreVal, val);
-      }
-    }, 900);
-  };
-
-  // Mass input save
-  const handleSaveMassInput = () => {
-    if (!assessmentTitle.trim()) {
-      alert('Harap masukkan judul asesmen penilaian.');
+  // Simpan Semua Nilai Sekaligus untuk Satu Kelas
+  const handleSaveAllClassGrades = () => {
+    if (!isWeightValid) {
+      alert(`Total bobot saat ini ${totalWeight}%. Harus bernilai tepat 100% sebelum menyimpan data.`);
       return;
     }
 
-    const newRecords: GradeRecord[] = [];
+    const recordsToSave: GradeRecord[] = [];
+    const now = new Date().toISOString().slice(0, 10);
+
     classStudents.forEach((student) => {
-      const scoreVal = massScores[student.id];
-      if (scoreVal !== '' && typeof scoreVal === 'number') {
-        newRecords.push({
-          id: `grd-${Date.now()}-${student.id}`,
-          studentId: student.id,
-          classId: selectedClassId,
-          subject: subject.trim(),
-          type: gradeType,
-          title: assessmentTitle.trim(),
-          score: scoreVal,
-          maxScore: 100,
-          date: assessmentDate,
-          semester: school.semester,
-          notes: massNotes[student.id] || '',
-        });
-      }
+      const sScores = tableScores[student.id] || {};
+      allColumns.forEach((col) => {
+        const val = sScores[col.key];
+        if (typeof val === 'number' && !isNaN(val)) {
+          recordsToSave.push({
+            id: `grd-${student.id}-${col.type}-${col.title.toLowerCase().replace(/[^a-z0-9]/g, '_')}-${col.date}`,
+            studentId: student.id,
+            classId: selectedClassId,
+            subject: selectedSubject,
+            type: col.type,
+            title: col.title,
+            score: val,
+            maxScore: 100,
+            date: col.date || now,
+            semester: school.semester,
+          });
+        }
+      });
     });
 
-    if (newRecords.length === 0) {
-      alert('Harap masukkan setidaknya satu nilai siswa.');
+    if (recordsToSave.length === 0) {
+      showToast('Belum ada nilai yang diinput untuk disimpan.');
       return;
     }
 
-    onSaveBatchGrades(newRecords);
-    setSaveSuccess(true);
+    onSaveBatchGrades(recordsToSave);
+    setIsDirty(false);
     setAutoSaveStatus('saved');
-    setLastAutoSavedTime(
+    setLastSavedTime(
       new Date().toLocaleTimeString('id-ID', {
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
       })
     );
-    triggerToast(`Nilai asesmen "${assessmentTitle}" (${newRecords.length} siswa) berhasil disimpan!`);
-    setTimeout(() => setSaveSuccess(false), 3000);
+    showToast(`Berhasil menyimpan ${recordsToSave.length} nilai untuk kelas ${currentClass?.name || ''}!`);
   };
 
-  // Load existing session into Mass Input for re-editing
-  const handleLoadExistingSession = (sessionKey: string) => {
-    setSelectedExistingSessionKey(sessionKey);
-    if (!sessionKey) return;
-    const session = massUniqueAssessments.find((a) => a.key === sessionKey);
-    if (session) {
-      setGradeType(session.type);
-      setAssessmentTitle(session.title);
-      setAssessmentDate(session.date);
-      setSubject(session.subject);
-      triggerToast(`Data sesi "${session.title}" dimuat. Anda dapat mengubah nilai dan nilainya tersimpan otomatis.`);
+  // Tambah Tugas/Komponen Penilaian Baru
+  const handleCreateNewColumn = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newColTitle.trim()) {
+      alert('Silakan isi deskripsi materi atau judul tugas.');
+      return;
     }
+
+    const cleanTitle = newColTitle.trim();
+    const cleanDate = newColDate || new Date().toISOString().slice(0, 10);
+    const key = `${newColType}__${cleanTitle.toLowerCase()}__${cleanDate}`;
+
+    if (allColumns.some((c) => c.key === key)) {
+      alert('Komponen penilaian dengan judul dan tanggal yang sama sudah ada.');
+      return;
+    }
+
+    const newCol: AssessmentColumn = {
+      key,
+      type: newColType,
+      title: cleanTitle,
+      date: cleanDate,
+      maxScore: 100,
+      subject: selectedSubject,
+    };
+
+    setCustomColumns((prev) => [...prev, newCol]);
+    setIsAddColumnModalOpen(false);
+    setNewColTitle('');
+    setIsDirty(true);
+    showToast(`Komponen [${GRADE_TYPE_SHORT[newColType]}] "${cleanTitle}" berhasil ditambahkan ke tabel.`);
   };
 
-  // Hapus seluruh nilai untuk sesi asesmen yang dipilih pada dropdown
-  const handleDeleteSelectedSession = () => {
-    if (!selectedExistingSessionKey) return;
-    const session = massUniqueAssessments.find((a) => a.key === selectedExistingSessionKey);
-    if (!session) return;
+  // Hapus Komponen Penilaian dari Tabel & Database
+  const handleDeleteColumn = (col: AssessmentColumn) => {
+    const confirmDelete = window.confirm(
+      `Apakah Anda yakin ingin menghapus komponen penilaian:\n\n` +
+      `[${GRADE_TYPE_LABELS[col.type]}]\n"${col.title}" (Tanggal: ${col.date})?\n\n` +
+      `Semua nilai siswa pada kolom ini akan dihapus.`
+    );
 
-    const matchingGrades = grades.filter(
+    if (!confirmDelete) return;
+
+    const matching = grades.filter(
       (g) =>
         g.classId === selectedClassId &&
-        g.type === session.type &&
-        (g.title || '').trim().toLowerCase() === session.title.trim().toLowerCase() &&
-        (g.date || '').trim() === session.date.trim()
-    );
-
-    const count = matchingGrades.length;
-    const confirmDelete = window.confirm(
-      `Apakah Anda yakin ingin menghapus seluruh nilai untuk asesmen:\n\n` +
-      `[${session.type}] "${session.title}" (Tanggal: ${formatDateId(session.date)})?\n\n` +
-      `Tindakan ini akan menghapus ${count} nilai siswa pada asesmen ini dari sistem.`
-    );
-
-    if (confirmDelete) {
-      const idsToDelete = matchingGrades.map((g) => g.id);
-      if (onDeleteBatchGrades) {
-        onDeleteBatchGrades(idsToDelete);
-      } else {
-        idsToDelete.forEach((id) => onDeleteGrade(id));
-      }
-
-      setSelectedExistingSessionKey('');
-      setAssessmentTitle('');
-      setMassScores({});
-      setMassNotes({});
-      triggerToast(`Asesmen "${session.title}" beserta ${count} nilai siswa berhasil dihapus.`);
-    }
-  };
-
-  // Switch to mass input with a specific assessment preloaded
-  const handleEditAssessmentSession = (col: AssessmentColumn) => {
-    setSelectedClassId(ledgerClassId);
-    setGradeType(col.type);
-    setAssessmentTitle(col.title);
-    setAssessmentDate(col.date);
-    setSubject(col.subject);
-    setSelectedExistingSessionKey(col.key);
-    setActiveTab('mass');
-    triggerToast(`Memuat asesmen "${col.title}" ke formulir pengeditan massal.`);
-  };
-
-  // INLINE EDITING LOGIC (With Auto-Save on Blur / Enter)
-  const handleStartInlineEdit = (studentId: string, col: AssessmentColumn, currentVal: number | null) => {
-    setEditingCell({ studentId, assessmentKey: col.key });
-    setCellEditValue(currentVal !== null && currentVal !== undefined ? String(currentVal) : '');
-  };
-
-  const handleSaveInlineScore = (
-    studentId: string,
-    col: AssessmentColumn,
-    valueToSave: string
-  ) => {
-    if (valueToSave.trim() === '') {
-      setEditingCell(null);
-      return;
-    }
-
-    const numVal = Math.min(100, Math.max(0, Number(valueToSave)));
-    if (isNaN(numVal)) {
-      setEditingCell(null);
-      return;
-    }
-
-    const existingGrade = grades.find(
-      (g) =>
-        g.studentId === studentId &&
-        g.classId === ledgerClassId &&
         g.type === col.type &&
         (g.title || '').trim().toLowerCase() === col.title.trim().toLowerCase() &&
         (g.date || '').trim() === col.date.trim()
     );
 
-    const studentObj = students.find((s) => s.id === studentId);
-
-    if (existingGrade) {
-      const updated: GradeRecord = {
-        ...existingGrade,
-        score: numVal,
-      };
-      if (onUpdateSingleGrade) {
-        onUpdateSingleGrade(updated);
+    if (matching.length > 0) {
+      if (onDeleteBatchGrades) {
+        onDeleteBatchGrades(matching.map((m) => m.id));
       } else {
-        onSaveBatchGrades([updated]);
-      }
-    } else {
-      const newGrade: GradeRecord = {
-        id: `grd-${Date.now()}-${studentId}`,
-        studentId,
-        classId: ledgerClassId,
-        subject: col.subject || currentUser?.subject?.split('&')[0]?.trim() || 'Matematika',
-        type: col.type,
-        title: col.title,
-        score: numVal,
-        maxScore: col.maxScore || 100,
-        date: col.date || new Date().toISOString().slice(0, 10),
-        semester: school.semester,
-        notes: '',
-      };
-      if (onUpdateSingleGrade) {
-        onUpdateSingleGrade(newGrade);
-      } else {
-        onSaveBatchGrades([newGrade]);
+        matching.forEach((m) => onDeleteGrade(m.id));
       }
     }
 
-    setEditingCell(null);
-    triggerToast(`Nilai ${studentObj?.name || 'siswa'} pada "${col.title}" tersimpan otomatis: ${numVal}`);
-  };
+    setCustomColumns((prev) => prev.filter((c) => c.key !== col.key));
 
-  // OPEN EDIT MODAL FOR A STUDENT'S ALL GRADES
-  const handleOpenStudentGradesModal = (student: Student) => {
-    setEditingStudentGrades(student);
-    const scoreMap: Record<string, number | ''> = {};
-    const notesMap: Record<string, string> = {};
-
-    uniqueAssessments.forEach((col) => {
-      const found = grades.find(
-        (g) =>
-          g.studentId === student.id &&
-          g.classId === ledgerClassId &&
-          g.type === col.type &&
-          (g.title || '').trim().toLowerCase() === col.title.trim().toLowerCase() &&
-          (g.date || '').trim() === col.date.trim()
-      );
-      if (found) {
-        scoreMap[col.key] = found.score;
-        notesMap[col.key] = found.notes || '';
-      } else {
-        scoreMap[col.key] = '';
-        notesMap[col.key] = '';
-      }
+    setTableScores((prev) => {
+      const updated = { ...prev };
+      Object.keys(updated).forEach((studentId) => {
+        const studentMap = { ...updated[studentId] };
+        delete studentMap[col.key];
+        updated[studentId] = studentMap;
+      });
+      return updated;
     });
 
-    setStudentModalScores(scoreMap);
-    setStudentModalNotes(notesMap);
+    setIsDirty(true);
+    showToast(`Komponen "${col.title}" berhasil dihapus.`);
   };
 
-  // SAVE EDITED STUDENT GRADES
-  const handleSaveStudentModalGrades = () => {
-    if (!editingStudentGrades) return;
-
-    const toSave: GradeRecord[] = [];
-    uniqueAssessments.forEach((col) => {
-      const val = studentModalScores[col.key];
-      if (val !== '' && typeof val === 'number') {
-        const existing = grades.find(
-          (g) =>
-            g.studentId === editingStudentGrades.id &&
-            g.classId === ledgerClassId &&
-            g.type === col.type &&
-            (g.title || '').trim().toLowerCase() === col.title.trim().toLowerCase() &&
-            (g.date || '').trim() === col.date.trim()
-        );
-
-        if (existing) {
-          toSave.push({
-            ...existing,
-            score: val,
-            notes: studentModalNotes[col.key] || existing.notes || '',
-          });
-        } else {
-          toSave.push({
-            id: `grd-${Date.now()}-${col.key}`,
-            studentId: editingStudentGrades.id,
-            classId: ledgerClassId,
-            subject: col.subject,
-            type: col.type,
-            title: col.title,
-            score: val,
-            maxScore: col.maxScore || 100,
-            date: col.date,
-            semester: school.semester,
-            notes: studentModalNotes[col.key] || '',
-          });
-        }
-      }
-    });
-
-    if (toSave.length > 0) {
-      onSaveBatchGrades(toSave);
-      triggerToast(`Semua nilai untuk siswa ${editingStudentGrades.name} berhasil diperbarui.`);
+  // Preset Bobot Cepat
+  const applyPresetWeights = (preset: 'standard' | 'praktikum' | 'teori') => {
+    if (preset === 'standard') {
+      setWeights(DEFAULT_WEIGHTS);
+    } else if (preset === 'praktikum') {
+      setWeights({
+        Tugas: 35,
+        Harian: 15,
+        Sumatif: 25,
+        STS: 10,
+        SAS: 15,
+      });
+    } else if (preset === 'teori') {
+      setWeights({
+        Tugas: 15,
+        Harian: 20,
+        Sumatif: 30,
+        STS: 15,
+        SAS: 20,
+      });
     }
-
-    setEditingStudentGrades(null);
+    setIsDirty(true);
+    showToast('Bobot penilaian berhasil diatur.');
   };
 
-  // OPEN SINGLE RECORD EDIT (FROM RIWAYAT)
-  const handleOpenEditRecordModal = (record: GradeRecord) => {
-    setEditingRecord(record);
-    setEditRecordForm({
-      score: record.score,
-      title: record.title,
-      type: record.type,
-      date: record.date,
-      notes: record.notes || '',
-    });
-  };
-
-  // SAVE SINGLE RECORD EDIT
-  const handleSaveSingleRecordEdit = () => {
-    if (!editingRecord) return;
-    if (editRecordForm.score === '') {
-      alert('Harap masukkan nilai siswa (0 - 100).');
-      return;
+  const getTypeBadge = (type: GradeType) => {
+    switch (type) {
+      case 'Tugas':
+        return 'bg-sky-100 dark:bg-sky-950/80 text-sky-800 dark:text-sky-300 border-sky-300 dark:border-sky-800';
+      case 'Harian':
+        return 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800';
+      case 'Sumatif':
+        return 'bg-purple-100 dark:bg-purple-950/80 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-800';
+      case 'STS':
+        return 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800';
+      case 'SAS':
+        return 'bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300 border-rose-300 dark:border-rose-800';
     }
-
-    const updated: GradeRecord = {
-      ...editingRecord,
-      score: Math.min(100, Math.max(0, Number(editRecordForm.score))),
-      title: editRecordForm.title.trim() || editingRecord.title,
-      type: editRecordForm.type,
-      date: editRecordForm.date,
-      notes: editRecordForm.notes.trim(),
-    };
-
-    if (onUpdateSingleGrade) {
-      onUpdateSingleGrade(updated);
-    } else {
-      onSaveBatchGrades([updated]);
-    }
-
-    setEditingRecord(null);
-    triggerToast(`Data penilaian "${updated.title}" berhasil diperbarui.`);
   };
-
-  const selectedClassObj = classes.find((c) => c.id === selectedClassId);
-  const ledgerClassObj = classes.find((c) => c.id === ledgerClassId);
 
   return (
     <div className="space-y-6 text-slate-800 dark:text-slate-100">
-      {/* Toast Notification */}
+      {/* Toast Notifikasi */}
       {toastMessage && (
-        <div className="fixed bottom-5 right-5 z-50 bg-slate-900 text-white dark:bg-white dark:text-slate-900 px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5 text-xs font-semibold animate-in slide-in-from-bottom-3 border border-slate-700 dark:border-slate-200">
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white dark:bg-white dark:text-slate-900 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2.5 text-xs font-semibold animate-in slide-in-from-bottom-4 border border-slate-700 dark:border-slate-200">
           <CheckCircle2 className="w-4 h-4 text-emerald-400 dark:text-emerald-600 shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* Header bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs transition-colors">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
-              Manajemen Penilaian & Rapor Siswa
-            </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
-              {grades.length} Nilai Tersimpan
-            </span>
+      {/* HEADER UTAMA & KONTROL CEPAT */}
+      <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                <Table className="w-5 h-5" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+                  Manajemen Penilaian Siswa
+                </h1>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Input nilai massal satu halaman, evaluasi hasil belajar objektif, pengaturan bobot, dan cetak leger resmi
+                </p>
+              </div>
+            </div>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Tabel matriks komponen penilaian lengkap (Tugas, Harian, Sumatif, STS, SAS), simpan otomatis nilai, dan rekap leger resmi
-          </p>
+
+          {/* Tombol Aksi Utama */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Toggle Grafik Tren */}
+            <button
+              type="button"
+              onClick={() => setShowTrendChart(!showTrendChart)}
+              className="px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+            >
+              <BarChart3 className="w-3.5 h-3.5 text-indigo-500" />
+              <span>{showTrendChart ? 'Tutup Grafik Tren' : 'Lihat Grafik Tren'}</span>
+              {showTrendChart ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+
+            {/* Tombol Cetak Leger */}
+            <button
+              type="button"
+              onClick={() => setIsPrintModalOpen(true)}
+              className="px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+            >
+              <Printer className="w-3.5 h-3.5 text-indigo-500" />
+              <span>Cetak Leger Rapor</span>
+            </button>
+
+            {/* Tombol Simpan Semua Nilai */}
+            <button
+              type="button"
+              onClick={handleSaveAllClassGrades}
+              disabled={!isWeightValid}
+              className={`px-4 py-2 text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2 ${
+                isDirty
+                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white ring-2 ring-indigo-400/50 animate-pulse'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+              } ${!isWeightValid ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <Save className="w-4 h-4" />
+              <span>Simpan Semua Nilai ({currentClass?.name || 'Kelas'})</span>
+            </button>
+          </div>
         </div>
 
-        {/* Tab switch */}
-        <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg self-start sm:self-auto border border-slate-200 dark:border-slate-700 flex-wrap">
-          <button
-            onClick={() => setActiveTab('unified')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'unified'
-                ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
-                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <Table className="w-3.5 h-3.5" />
-            <span>Tabel Nilai Terpadu & Analisis</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('analytics')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'analytics'
-                ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
-                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>Grafik Tren Nilai</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('ledger')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'ledger'
-                ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
-                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5" />
-            <span>Matriks & Leger Nilai</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('history')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'history'
-                ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
-                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <ListChecks className="w-3.5 h-3.5" />
-            <span>Riwayat & Edit Nilai ({grades.length})</span>
-          </button>
+        {/* FILTER SEBELUM INPUT */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* 1. Filter Dropdown Kelas */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5 text-indigo-500" />
+              <span>1. Filter Kelas (Dropdown)</span>
+            </label>
+            <select
+              value={selectedClassId}
+              onChange={(e) => {
+                if (isDirty) {
+                  const confirmChange = window.confirm(
+                    'Anda memiliki perubahan nilai yang belum disimpan. Apakah ingin beralih kelas dan membatalkan perubahan lokal?'
+                  );
+                  if (!confirmChange) return;
+                }
+                setSelectedClassId(e.target.value);
+              }}
+              className="w-full text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-xs"
+            >
+              {classes.map((cls) => (
+                <option key={cls.id} value={cls.id}>
+                  {cls.name} ({cls.major} - Wali: {cls.homeroomTeacher})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* 2. Filter Dropdown Jenis Penilaian */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+              <Filter className="w-3.5 h-3.5 text-indigo-500" />
+              <span>2. Jenis Penilaian</span>
+            </label>
+            <select
+              value={assessmentTypeFilter}
+              onChange={(e) => setAssessmentTypeFilter(e.target.value)}
+              className="w-full text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-xs"
+            >
+              <option value="all">Semua Komponen ({allColumns.length} Tugas & Asesmen)</option>
+              <option value="Tugas">Tugas Mandiri / Kelompok ({allColumns.filter((c) => c.type === 'Tugas').length})</option>
+              <option value="Harian">Formatif / Ulangan Harian ({allColumns.filter((c) => c.type === 'Harian').length})</option>
+              <option value="Sumatif">Sumatif Lingkup Materi TP ({allColumns.filter((c) => c.type === 'Sumatif').length})</option>
+              <option value="STS">Sumatif Tengah Semester STS ({allColumns.filter((c) => c.type === 'STS').length})</option>
+              <option value="SAS">Sumatif Akhir Semester SAS ({allColumns.filter((c) => c.type === 'SAS').length})</option>
+            </select>
+          </div>
+
+          {/* 3. Mata Pelajaran & Semester */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+              <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-500" />
+              <span>Mata Pelajaran & Semester</span>
+            </label>
+            <div className="w-full text-xs font-medium bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-xl px-3 py-2.5 text-slate-700 dark:text-slate-300 flex items-center justify-between">
+              <span className="font-semibold text-slate-900 dark:text-white truncate">{selectedSubject}</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 shrink-0">
+                Sem. {school.semester}
+              </span>
+            </div>
+          </div>
+
+          {/* 4. Pencarian Siswa */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+              <Search className="w-3.5 h-3.5 text-indigo-500" />
+              <span>Cari Siswa</span>
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={searchStudent}
+                onChange={(e) => setSearchStudent(e.target.value)}
+                placeholder="Ketik nama atau NISN..."
+                className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl pl-3 pr-8 py-2.5 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500"
+              />
+              {searchStudent && (
+                <button
+                  type="button"
+                  onClick={() => setSearchStudent('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* STATUS PENYIMPANAN & PENGATURAN BOBOT */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
+          <div className="flex items-center gap-2.5">
+            {isDirty ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                Ada nilai yang belum disimpan
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                <Check className="w-3.5 h-3.5" />
+                Semua nilai tersimpan {lastSavedTime ? `(pukul ${lastSavedTime})` : ''}
+              </span>
+            )}
+
+            {autoSaveStatus === 'saving' && (
+              <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1 text-[11px]">
+                <Clock className="w-3 h-3 animate-spin" /> Menyimpan otomatis...
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={isAutoSaveEnabled}
+                onChange={(e) => setIsAutoSaveEnabled(e.target.checked)}
+                className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer"
+              />
+              <span className="text-slate-600 dark:text-slate-300 font-medium">
+                Simpan Otomatis (Auto-Save)
+              </span>
+            </label>
+
+            <button
+              type="button"
+              onClick={() => setIsWeightSettingsOpen(!isWeightSettingsOpen)}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 cursor-pointer"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-500" />
+              <span>Atur Bobot Komponen</span>
+              <span
+                className={`px-1.5 py-0.2 rounded text-[10px] font-extrabold ${
+                  isWeightValid
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                    : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                }`}
+              >
+                {totalWeight}%
+              </span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {activeTab === 'unified' ? (
-        /* TAB 0: TABEL INPUT NILAI TERPADU & ANALISIS HASIL BELAJAR DALAM SATU HALAMAN */
-        <SinglePageGradeTable
-          students={students}
-          classes={classes}
-          grades={grades}
-          onSaveBatchGrades={onSaveBatchGrades}
-          onDeleteGrade={onDeleteGrade}
-          onDeleteBatchGrades={onDeleteBatchGrades}
-          school={school}
-          currentUser={currentUser}
-          onOpenPrintModal={() => setIsPrintModalOpen(true)}
-          onOpenAnalytics={() => setActiveTab('analytics')}
-        />
-      ) : activeTab === 'ledger' ? (
-        /* TAB 1: MATRIKS PENILAIAN LENGKAP SEMUA KOMPONEN DENGAN FITUR EDIT & AUTO-SAVE */
-        <div className="space-y-4">
-          {/* Controls Bar */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs transition-colors">
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Class Selector */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <label className="text-xs font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">
-                  Pilih Kelas:
-                </label>
-                <select
-                  value={ledgerClassId}
-                  onChange={(e) => {
-                    setLedgerClassId(e.target.value);
-                    setEditingCell(null);
-                  }}
-                  className="px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-                >
-                  {classes.map((c) => (
-                    <option key={c.id} value={c.id} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
-                      {c.name} ({students.filter((s) => s.classId === c.id).length} Siswa)
-                    </option>
-                  ))}
-                </select>
-
-                {/* Quick Class Switcher Pills */}
-                <div className="hidden sm:flex items-center gap-1">
-                  {classes.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => {
-                        setLedgerClassId(c.id);
-                        setEditingCell(null);
-                      }}
-                      className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-colors cursor-pointer ${
-                        ledgerClassId === c.id
-                          ? 'bg-indigo-600 text-white shadow-2xs'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
-                      }`}
-                      title={`Beralih ke kelas ${c.name}`}
-                    >
-                      {c.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* View Mode Toggle: Matrix (All components + details), Detailed, Summary */}
-              <div className="flex items-center p-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
-                <button
-                  type="button"
-                  onClick={() => setLegerViewMode('matrix')}
-                  className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
-                    legerViewMode === 'matrix'
-                      ? 'bg-indigo-600 text-white shadow-2xs'
-                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                  title="Menampilkan semua kolom asesmen individual (tanggal & judul) sekaligus rekap rerata per komponen nilai"
-                >
-                  <BarChart2 className="w-3.5 h-3.5" />
-                  <span>Matriks Lengkap & Komponen</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLegerViewMode('detailed')}
-                  className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
-                    legerViewMode === 'detailed'
-                      ? 'bg-indigo-600 text-white shadow-2xs'
-                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                  title="Menampilkan rincian setiap asesmen dengan tanggal dan judul"
-                >
-                  <Layers className="w-3.5 h-3.5" />
-                  <span>Rincian Asesmen Saja</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLegerViewMode('summary')}
-                  className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
-                    legerViewMode === 'summary'
-                      ? 'bg-indigo-600 text-white shadow-2xs'
-                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                  title="Menampilkan ringkasan rata-rata per komponen asesmen e-Rapor"
-                >
-                  <Table className="w-3.5 h-3.5" />
-                  <span>Ringkasan Komponen Rapor</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Right side controls: Inline Edit Mode toggle, Filter, Print */}
-            <div className="flex flex-wrap items-center gap-2 self-start lg:self-auto">
-              {/* Toggle Inline Edit Mode */}
-              <button
-                type="button"
-                onClick={() => {
-                  setIsInlineEditMode(!isInlineEditMode);
-                  if (isInlineEditMode) setEditingCell(null);
-                }}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                  isInlineEditMode
-                    ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
-                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:border-indigo-400'
-                }`}
-                title="Aktifkan untuk mengedit nilai langsung di dalam sel tabel"
-              >
-                <Edit2 className="w-3.5 h-3.5" />
-                <span>{isInlineEditMode ? 'Mode Edit Tabel: AKTIF' : 'Mode Edit Nilai Tabel'}</span>
-              </button>
-
-              {/* Filter Type in Detailed / Matrix Mode */}
-              {legerViewMode !== 'summary' && uniqueAssessments.length > 0 && (
-                <div className="flex items-center gap-1 text-xs">
-                  <Filter className="w-3.5 h-3.5 text-slate-400" />
-                  <select
-                    value={ledgerTypeFilter}
-                    onChange={(e) => setLedgerTypeFilter(e.target.value)}
-                    className="px-2.5 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-                  >
-                    <option value="all">Semua Komponen ({uniqueAssessments.length})</option>
-                    <option value="Tugas">Tugas ({uniqueAssessments.filter((a) => a.type === 'Tugas').length})</option>
-                    <option value="Harian">Formatif Harian ({uniqueAssessments.filter((a) => a.type === 'Harian').length})</option>
-                    <option value="Sumatif">Sumatif Materi ({uniqueAssessments.filter((a) => a.type === 'Sumatif').length})</option>
-                    <option value="STS">STS ({uniqueAssessments.filter((a) => a.type === 'STS').length})</option>
-                    <option value="SAS">SAS ({uniqueAssessments.filter((a) => a.type === 'SAS').length})</option>
-                  </select>
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={() => setActiveTab('analytics')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors cursor-pointer shadow-2xs"
-                title="Buka visualisasi tren nilai siswa kelas ini"
-              >
-                <TrendingUp className="w-3.5 h-3.5" />
-                <span>Visualisasi Tren</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setPrintViewMode(legerViewMode);
-                  setIsPrintModalOpen(true);
-                }}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
-              >
-                <Printer className="w-3.5 h-3.5" />
-                <span>Cetak Leger</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Quick Notice when Inline Edit is Active */}
-          {isInlineEditMode && (
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-100 rounded-xl text-xs flex items-center justify-between gap-3 shadow-xs animate-in fade-in">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <span>
-                  <strong>Mode Edit Langsung Aktif:</strong> Klik pada angka nilai atau tanda strip (<span className="font-mono font-bold">-</span>) pada kolom asesmen. Ketik nilai baru lalu <strong>klik di luar sel atau tekan Enter</strong> untuk <strong>simpan otomatis</strong>.
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsInlineEditMode(false);
-                  setEditingCell(null);
-                }}
-                className="px-2.5 py-1 bg-emerald-600 text-white font-bold text-[11px] rounded-lg hover:bg-emerald-700 transition-colors shrink-0 cursor-pointer"
-              >
-                Selesai Mengedit
-              </button>
-            </div>
-          )}
-
-          {/* PANEL PENYESUAIAN NILAI AKHIR BERDASARKAN KELENGKAPAN TUGAS */}
-          <div className="bg-gradient-to-r from-sky-50 via-indigo-50/50 to-emerald-50/40 dark:from-slate-900 dark:via-indigo-950/40 dark:to-slate-900 p-4 rounded-xl border border-sky-200 dark:border-indigo-900 shadow-xs space-y-3 transition-colors">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-              <div className="flex items-start sm:items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-sky-600 dark:bg-sky-500 text-white shadow-2xs shrink-0">
-                  <Scale className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                      <span>Penyesuaian Nilai Akhir Berdasarkan Jumlah Tugas Terkumpul</span>
-                    </h2>
-                    <span
-                      className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border ${
-                        isTugasAdjustmentEnabled
-                          ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
-                          : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700'
-                      }`}
-                    >
-                      {isTugasAdjustmentEnabled ? '● Penyesuaian Aktif' : '○ Mode Rata-rata Murni'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
-                    {isTugasAdjustmentEnabled
-                      ? tugasAdjustmentMethod === 'proporsional'
-                        ? 'Metode Proporsional e-Rapor: Rata-rata tugas dihitung dari pembagi seluruh tugas kelas (tugas yang belum dikumpulkan dinilai 0).'
-                        : tugasAdjustmentMethod === 'rasio'
-                        ? 'Metode Rasio: Nilai rata-rata tugas dikalikan persentase kelengkapan tugas yang dikumpulkan siswa.'
-                        : tugasAdjustmentMethod === 'pinalti'
-                        ? `Metode Pinalti: Nilai rata-rata tugas dikurangi ${penaltyPerMissingTugas} poin per tugas yang belum dikumpulkan.`
-                        : 'Metode Murni: Menghitung rata-rata hanya dari tugas yang terkumpul saja.'
-                      : 'Nilai tugas dihitung murni dari tugas yang terkumpul tanpa memperhitungkan tugas yang belum dikumpulkan.'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Setting toggle & trigger button */}
-              <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setIsTugasAdjustmentEnabled(!isTugasAdjustmentEnabled)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    isTugasAdjustmentEnabled
-                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
-                      : 'bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
-                  }`}
-                  title="Klik untuk mengaktifkan/menonaktifkan penyesuaian nilai akhir tugas"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>{isTugasAdjustmentEnabled ? 'Penyesuaian Aktif' : 'Aktifkan Penyesuaian'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setIsAdjustmentSettingsOpen(!isAdjustmentSettingsOpen)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg cursor-pointer transition-colors shadow-2xs"
-                  title="Buka pengaturan rumus & bobot penyesuaian nilai tugas"
-                >
-                  <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-500" />
-                  <span>Atur Rumus</span>
-                  <ChevronDown
-                    className={`w-3 h-3 text-slate-400 transition-transform ${
-                      isAdjustmentSettingsOpen ? 'rotate-180' : ''
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
-
-            {/* Metric Chips & Quick Filter Buttons */}
-            <div className="pt-2.5 border-t border-slate-200/70 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
-              {/* Summary Statistics */}
-              <div className="flex items-center gap-2 flex-wrap text-[11px]">
-                <span className="font-semibold text-slate-600 dark:text-slate-400">Statistik Kelas:</span>
-                <span className="px-2 py-0.5 rounded-md font-bold bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
-                  Total {tugasOverview.totalClassTugas} Tugas Ditugaskan
-                </span>
-                <span className="px-2 py-0.5 rounded-md font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                  {tugasOverview.completeCount} Siswa Lengkap (100%)
-                </span>
-                <span className="px-2 py-0.5 rounded-md font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                  {tugasOverview.incompleteCount} Siswa Tugas Kurang
-                </span>
-                <span className="px-2 py-0.5 rounded-md font-bold bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
-                  Keterkumpulan Kelas: {tugasOverview.overallRate}%
-                </span>
-              </div>
-
-              {/* Filter Buttons: Semua / Lengkap / Kurang */}
-              <div className="flex items-center gap-1.5 self-start sm:self-auto">
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 mr-0.5">Filter Siswa:</span>
-                <button
-                  type="button"
-                  onClick={() => setTugasFilterStatus('all')}
-                  className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition-colors cursor-pointer ${
-                    tugasFilterStatus === 'all'
-                      ? 'bg-indigo-600 text-white shadow-2xs'
-                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  Semua ({detailedLedgerData.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTugasFilterStatus('complete')}
-                  className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition-colors cursor-pointer ${
-                    tugasFilterStatus === 'complete'
-                      ? 'bg-emerald-600 text-white shadow-2xs'
-                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  Tugas Lengkap ({tugasOverview.completeCount})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTugasFilterStatus('incomplete')}
-                  className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition-colors cursor-pointer ${
-                    tugasFilterStatus === 'incomplete'
-                      ? 'bg-rose-600 text-white shadow-2xs'
-                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  Tugas Kurang ({tugasOverview.incompleteCount})
-                </button>
-              </div>
-            </div>
-
-            {/* Expandable Formula Settings Drawer */}
-            {isAdjustmentSettingsOpen && (
-              <div className="p-3.5 bg-white dark:bg-slate-800/90 rounded-xl border border-indigo-200 dark:border-indigo-800 space-y-3 animate-in fade-in">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
-                    <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-500" />
-                    <span>Pilih Metode &amp; Rumus Penyesuaian Nilai Tugas</span>
-                  </h3>
-                  <span className="text-[10px] text-slate-400">Kurikulum Merdeka</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                  {/* Option 1: Proporsional */}
-                  <div
-                    onClick={() => setTugasAdjustmentMethod('proporsional')}
-                    className={`p-3 rounded-lg border text-left cursor-pointer transition-all ${
-                      tugasAdjustmentMethod === 'proporsional'
-                        ? 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-500 ring-2 ring-indigo-500/20'
-                        : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-xs text-indigo-950 dark:text-indigo-200">
-                        1. Proporsional e-Rapor
-                      </span>
-                      <span className="px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[9px] font-extrabold rounded">
-                        Rekomendasi
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                      Pembagi adalah total tugas kelas. Tugas yang belum dikumpulkan dihitung bernilai 0.
-                    </p>
-                    <div className="mt-2 text-[10px] font-mono text-indigo-600 dark:text-indigo-400 font-semibold bg-white dark:bg-slate-900 p-1.5 rounded border border-indigo-100 dark:border-indigo-900">
-                      Nilai = Total Skor Tugas / Total Tugas Kelas
-                    </div>
-                  </div>
-
-                  {/* Option 2: Rasio Keterkumpulan */}
-                  <div
-                    onClick={() => setTugasAdjustmentMethod('rasio')}
-                    className={`p-3 rounded-lg border text-left cursor-pointer transition-all ${
-                      tugasAdjustmentMethod === 'rasio'
-                        ? 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-500 ring-2 ring-indigo-500/20'
-                        : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-xs text-indigo-950 dark:text-indigo-200">
-                        2. Faktor Rasio Keterkumpulan
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                      Rata-rata tugas terkumpul dikalikan persentase kelengkapan pengumpulan tugas (contoh: 2/3 tugas = 67%).
-                    </p>
-                    <div className="mt-2 text-[10px] font-mono text-indigo-600 dark:text-indigo-400 font-semibold bg-white dark:bg-slate-900 p-1.5 rounded border border-indigo-100 dark:border-indigo-900">
-                      Nilai = Rerata Terkumpul × (% Kelengkapan)
-                    </div>
-                  </div>
-
-                  {/* Option 3: Pinalti Poin */}
-                  <div
-                    onClick={() => setTugasAdjustmentMethod('pinalti')}
-                    className={`p-3 rounded-lg border text-left cursor-pointer transition-all ${
-                      tugasAdjustmentMethod === 'pinalti'
-                        ? 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-500 ring-2 ring-indigo-500/20'
-                        : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-xs text-indigo-950 dark:text-indigo-200">
-                        3. Pengurangan Poin (Pinalti)
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                      Nilai rata-rata tugas dikurangi sejumlah poin tetap untuk setiap tugas yang tidak dikumpulkan.
-                    </p>
-                    <div className="mt-2 flex items-center gap-1.5 text-[10px]">
-                      <span className="text-slate-600 dark:text-slate-300">Poin pinalti per tugas:</span>
-                      <input
-                        type="number"
-                        min="1"
-                        max="50"
-                        value={penaltyPerMissingTugas}
-                        onClick={(e) => e.stopPropagation()}
-                        onChange={(e) => setPenaltyPerMissingTugas(Math.max(1, Number(e.target.value)))}
-                        className="w-14 px-1.5 py-0.5 text-center font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white"
-                      />
-                      <span className="font-semibold text-rose-600">poin / tugas bolong</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* ASSESSMENT SESSIONS SUMMARY STRIP (WITH QUICK EDIT BUTTON PER ASSESSMENT) */}
-          {uniqueAssessments.length > 0 ? (
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2.5 shadow-xs transition-colors">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
-                  <span className="font-bold text-slate-800 dark:text-slate-100">
-                    Daftar {uniqueAssessments.length} Komponen Asesmen Terinput di Kelas {ledgerClassObj?.name}
-                  </span>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                    (Klik tombol pensil pada kartu untuk memuat dan mengedit nilai massal sesi ini)
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
-                    Tugas: {uniqueAssessments.filter((a) => a.type === 'Tugas').length}
-                  </span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                    Harian: {uniqueAssessments.filter((a) => a.type === 'Harian').length}
-                  </span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                    Sumatif: {uniqueAssessments.filter((a) => a.type === 'Sumatif').length}
-                  </span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                    STS: {uniqueAssessments.filter((a) => a.type === 'STS').length}
-                  </span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
-                    SAS: {uniqueAssessments.filter((a) => a.type === 'SAS').length}
-                  </span>
-                </div>
-              </div>
-
-              {/* Horizontal Scrollable Assessment Cards with Edit Action */}
-              <div className="flex items-center gap-2.5 overflow-x-auto pb-1 text-xs">
-                {uniqueAssessments.map((item, idx) => {
-                  const stat = colStats[item.key];
-                  const isFiltered = ledgerTypeFilter !== 'all' && item.type !== ledgerTypeFilter;
-                  return (
-                    <div
-                      key={idx}
-                      className={`min-w-[210px] max-w-[250px] p-2.5 rounded-xl border transition-all relative group ${
-                        isFiltered
-                          ? 'opacity-40 bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700'
-                          : 'bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 hover:border-indigo-400'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-1 mb-1">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${getTypeBadgeStyle(item.type)}`}>
-                          {item.type}
-                        </span>
-                        <div className="flex items-center gap-1">
-                          <span className="inline-flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                            <Calendar className="w-3 h-3 text-slate-400" />
-                            {formatDateId(item.date)}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleEditAssessmentSession(item)}
-                            className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded transition-colors cursor-pointer"
-                            title="Edit nilai seluruh siswa untuk asesmen ini"
-                          >
-                            <Edit2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </div>
-                      <p className="font-bold text-slate-900 dark:text-white truncate text-xs" title={item.title}>
-                        {item.title}
-                      </p>
-                      <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 pt-1.5 border-t border-slate-200/60 dark:border-slate-700/60">
-                        <span>Rerata ({stat?.count || 0} Siswa):</span>
-                        <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                          {stat?.avg !== null ? stat.avg : '-'}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ) : (
-            <div className="p-6 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-center space-y-2">
-              <Info className="w-8 h-8 text-indigo-400 mx-auto" />
-              <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                Belum Ada Asesmen yang Diinput untuk Kelas {ledgerClassObj?.name}
+      {/* PANEL PENGATURAN BOBOT (COLLAPSIBLE) */}
+      {isWeightSettingsOpen && (
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 animate-in fade-in-50 duration-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <SlidersHorizontal className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <span>Pengaturan Bobot Komponen Penilaian (Total Harus 100%)</span>
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Nilai akhir dihitung secara proporsional. Komponen yang belum diinput tidak dihitung sebagai nol.
               </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-                Silakan beralih ke tab <strong>Input Nilai Massal</strong> untuk mulai memasukkan nilai tugas, formatif harian, sumatif, STS, atau SAS.
-              </p>
+            </div>
+
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className="text-slate-400 font-medium mr-1">Preset Cepat:</span>
               <button
                 type="button"
-                onClick={() => {
-                  setSelectedClassId(ledgerClassId);
-                  setActiveTab('mass');
-                }}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer mt-2"
+                onClick={() => applyPresetWeights('standard')}
+                className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 font-semibold text-slate-700 dark:text-slate-200 cursor-pointer"
               >
-                <Plus className="w-4 h-4" />
-                <span>Input Nilai untuk Kelas Ini Sekarang</span>
+                Standar (20/20/25/15/20)
+              </button>
+              <button
+                type="button"
+                onClick={() => applyPresetWeights('praktikum')}
+                className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 font-semibold text-slate-700 dark:text-slate-200 cursor-pointer"
+              >
+                Praktikum (35/15/25/10/15)
+              </button>
+              <button
+                type="button"
+                onClick={() => applyPresetWeights('teori')}
+                className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 font-semibold text-slate-700 dark:text-slate-200 cursor-pointer"
+              >
+                Teori (15/20/30/15/20)
               </button>
             </div>
-          )}
-
-          {/* MAIN MATRIKS & LEGER TABLE */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs transition-colors">
-            {/* Table Header Bar */}
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-2">
-              <div>
-                <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">
-                  {legerViewMode === 'matrix'
-                    ? '📊 Tabel Matriks Penilaian Lengkap & Komponen'
-                    : legerViewMode === 'detailed'
-                    ? '📈 Rincian Asesmen Per Tanggal & Judul'
-                    : '📋 Buku Leger Nilai Kompilasi Rapor'} · Kelas {ledgerClassObj?.name}
-                </span>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  Tahun Ajaran {school.academicYear} · Semester {school.semester} · {currentUser?.subject || 'Mata Pelajaran'} · Kurikulum Merdeka
-                </p>
-              </div>
-              <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
-                <span>Wali Kelas: <strong className="text-slate-900 dark:text-white">{ledgerClassObj?.homeroomTeacher}</strong></span>
-                <span>•</span>
-                <span>Jumlah: <strong className="text-slate-900 dark:text-white">{ledgerStudents.length} Siswa</strong></span>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                {/* TABLE HEAD */}
-                <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 font-semibold border-b border-slate-200 dark:border-slate-800">
-                  {/* TWO TIER HEADER FOR MATRIX MODE */}
-                  {legerViewMode === 'matrix' ? (
-                    <>
-                      {/* TOP TIER: Group Categorization */}
-                      <tr className="border-b border-slate-200 dark:border-slate-700 text-[11px] uppercase tracking-wider text-center">
-                        <th colSpan={4} className="p-2 bg-slate-100/70 dark:bg-slate-800 text-left pl-3 text-slate-600 dark:text-slate-300 font-bold sticky left-0 z-20">
-                          Identitas Siswa
-                        </th>
-
-                        {/* Individual Assessments Group */}
-                        {displayedAssessments.length > 0 && (
-                          <th
-                            colSpan={displayedAssessments.length}
-                            className="p-2 bg-indigo-50/80 dark:bg-indigo-950/60 text-indigo-900 dark:text-indigo-200 font-bold border-l border-r border-indigo-200 dark:border-indigo-900"
-                          >
-                            Rincian Seluruh Asesmen Terinput ({displayedAssessments.length} Asesmen) · Edit & Simpan Otomatis
-                          </th>
-                        )}
-
-                        {/* Summary Components Group */}
-                        <th
-                          colSpan={5}
-                          className="p-2 bg-emerald-50/80 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-200 font-bold border-r border-emerald-200 dark:border-emerald-900"
-                        >
-                          Rerata Komponen Penilaian (e-Rapor)
-                        </th>
-
-                        {/* Final Outcomes */}
-                        <th colSpan={3} className="p-2 bg-purple-50/80 dark:bg-purple-950/60 text-purple-900 dark:text-purple-200 font-bold border-r border-purple-200 dark:border-purple-900">
-                          Hasil Akhir
-                        </th>
-
-                        {/* Action Column */}
-                        <th className="p-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold">
-                          Aksi
-                        </th>
-                      </tr>
-
-                      {/* SECOND TIER: Specific Columns */}
-                      <tr className="border-b border-slate-200 dark:border-slate-800">
-                        <th className="p-3 w-10 text-center sticky left-0 z-10 bg-slate-50 dark:bg-slate-800">No</th>
-                        <th className="p-3 w-36 sticky left-10 z-10 bg-slate-50 dark:bg-slate-800">NISN / NIS</th>
-                        <th className="p-3 min-w-[170px] sticky left-46 z-10 bg-slate-50 dark:bg-slate-800">Nama Lengkap Siswa</th>
-                        <th className="p-3 text-center w-12">L/P</th>
-
-                        {/* Dynamic Columns for each Unique Assessment */}
-                        {displayedAssessments.map((col) => (
-                          <th
-                            key={col.key}
-                            className="p-2.5 text-center min-w-[145px] border-l border-slate-200 dark:border-slate-700/80 bg-slate-100/60 dark:bg-slate-800/90"
-                          >
-                            <div className="flex flex-col items-center gap-1">
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-wider ${getTypeBadgeStyle(col.type)}`}>
-                                {col.type}
-                              </span>
-                              <span className="font-bold text-slate-900 dark:text-white text-xs line-clamp-2 max-w-[150px] text-center" title={col.title}>
-                                {col.title}
-                              </span>
-                              <span className="inline-flex items-center gap-1 text-[10px] text-slate-600 dark:text-slate-300 font-mono font-normal">
-                                <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
-                                {formatDateId(col.date)}
-                              </span>
-                            </div>
-                          </th>
-                        ))}
-
-                        {/* Component Averages */}
-                        <th className="p-2.5 text-center min-w-[80px] border-l border-slate-200 dark:border-slate-700 bg-emerald-50/40 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-200 font-bold">
-                          Rata Tugas
-                        </th>
-                        <th className="p-2.5 text-center min-w-[80px] bg-emerald-50/40 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-200 font-bold">
-                          Rata Harian
-                        </th>
-                        <th className="p-2.5 text-center min-w-[80px] bg-emerald-50/40 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-200 font-bold">
-                          Rata Sumatif
-                        </th>
-                        <th className="p-2.5 text-center min-w-[70px] bg-emerald-50/40 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-200 font-bold">
-                          STS
-                        </th>
-                        <th className="p-2.5 text-center min-w-[70px] bg-emerald-50/40 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-200 font-bold">
-                          SAS
-                        </th>
-
-                        {/* Outcomes */}
-                        <th className="p-2.5 text-center min-w-[85px] border-l border-slate-200 dark:border-slate-700 bg-purple-50/50 dark:bg-purple-950/40 text-purple-900 dark:text-purple-200 font-extrabold">
-                          Nilai Akhir
-                        </th>
-                        <th className="p-2.5 text-center min-w-[65px] bg-purple-50/40 dark:bg-purple-950/30 text-purple-900 dark:text-purple-200 font-bold">
-                          Predikat
-                        </th>
-                        <th className="p-2.5 min-w-[170px] bg-purple-50/20 dark:bg-purple-950/20 text-slate-800 dark:text-slate-200 font-bold">
-                          Capaian TP
-                        </th>
-
-                        {/* Action Header */}
-                        <th className="p-2.5 text-center w-24 border-l border-slate-200 dark:border-slate-700">
-                          Aksi
-                        </th>
-                      </tr>
-                    </>
-                  ) : legerViewMode === 'detailed' ? (
-                    /* DETAILED ONLY HEADER */
-                    <tr>
-                      <th className="p-3 w-10 text-center sticky left-0 z-10 bg-slate-50 dark:bg-slate-800">No</th>
-                      <th className="p-3 w-36 sticky left-10 z-10 bg-slate-50 dark:bg-slate-800">NISN / NIS</th>
-                      <th className="p-3 min-w-[180px] sticky left-46 z-10 bg-slate-50 dark:bg-slate-800">Nama Siswa</th>
-                      <th className="p-3 text-center w-12">L/P</th>
-
-                      {displayedAssessments.map((col) => (
-                        <th
-                          key={col.key}
-                          className="p-3 text-center min-w-[150px] border-l border-slate-200 dark:border-slate-700/80 bg-slate-100/60 dark:bg-slate-800/90"
-                        >
-                          <div className="flex flex-col items-center gap-1">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-wider ${getTypeBadgeStyle(col.type)}`}>
-                              {col.type}
-                            </span>
-                            <span className="font-bold text-slate-900 dark:text-white text-xs line-clamp-2 max-w-[160px] text-center" title={col.title}>
-                              {col.title}
-                            </span>
-                            <span className="inline-flex items-center gap-1 text-[10px] text-slate-600 dark:text-slate-300 font-mono font-normal">
-                              <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
-                              {formatDateId(col.date)}
-                            </span>
-                          </div>
-                        </th>
-                      ))}
-
-                      <th className="p-3 text-center min-w-[90px] border-l border-slate-200 dark:border-slate-700 bg-indigo-50/60 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 font-bold">
-                        Nilai Akhir
-                      </th>
-                      <th className="p-3 text-center min-w-[70px] bg-indigo-50/40 dark:bg-indigo-950/30 text-indigo-900 dark:text-indigo-200 font-bold">
-                        Predikat
-                      </th>
-                      <th className="p-3 min-w-[180px] bg-indigo-50/20 dark:bg-indigo-950/20 text-slate-800 dark:text-slate-200 font-bold">
-                        Capaian TP
-                      </th>
-                      <th className="p-3 text-center w-24">Aksi</th>
-                    </tr>
-                  ) : (
-                    /* SUMMARY ONLY HEADER */
-                    <tr>
-                      <th className="p-3 w-10 text-center">No</th>
-                      <th className="p-3 w-40">NISN / NIS</th>
-                      <th className="p-3">Nama Lengkap Siswa</th>
-                      <th className="p-3 text-center w-12">L/P</th>
-                      <th className="p-3 text-center min-w-[80px]">Rata Tugas</th>
-                      <th className="p-3 text-center min-w-[80px]">Rata Harian</th>
-                      <th className="p-3 text-center min-w-[80px]">Rata Sumatif</th>
-                      <th className="p-3 text-center min-w-[80px]">STS</th>
-                      <th className="p-3 text-center min-w-[80px]">SAS</th>
-                      <th className="p-3 text-center font-bold bg-indigo-50/50 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 min-w-[90px]">
-                        Nilai Akhir
-                      </th>
-                      <th className="p-3 text-center min-w-[70px]">Predikat</th>
-                      <th className="p-3 min-w-[180px]">Capaian Kompetensi</th>
-                      <th className="p-3 text-center w-24">Aksi</th>
-                    </tr>
-                  )}
-                </thead>
-
-                {/* TABLE BODY */}
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-200">
-                  {filteredLedgerData.length > 0 ? (
-                    filteredLedgerData.map((row) => (
-                      <tr
-                        key={row.id}
-                        className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors"
-                      >
-                        <td className="p-3 text-center font-mono text-slate-500 dark:text-slate-400 sticky left-0 bg-white dark:bg-slate-900 z-10">
-                          {row.no}
-                        </td>
-                        <td className="p-3 font-mono text-slate-700 dark:text-slate-200 font-medium sticky left-10 bg-white dark:bg-slate-900 z-10">
-                          {row.nisnNis}
-                        </td>
-                        <td className="p-3 font-bold text-slate-900 dark:text-white sticky left-46 bg-white dark:bg-slate-900 z-10">
-                          <div className="flex flex-col gap-1">
-                            <span className="truncate">{row.name}</span>
-                            {/* Status Kelengkapan Tugas Siswa */}
-                            {row.totalClassTugas > 0 && (
-                              <div className="flex items-center gap-1">
-                                <span
-                                  className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md border ${
-                                    row.missingTugasCount === 0
-                                      ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                                      : row.submittedTugasCount === 0
-                                      ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
-                                      : 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
-                                  }`}
-                                  title={`${row.statusTugas}: ${row.submittedTugasCount} dari ${row.totalClassTugas} tugas terkumpul (${row.completionPercent}%)`}
-                                >
-                                  {row.missingTugasCount === 0 ? (
-                                    <CheckCircle2 className="w-2.5 h-2.5 shrink-0" />
-                                  ) : (
-                                    <AlertCircle className="w-2.5 h-2.5 shrink-0" />
-                                  )}
-                                  <span>
-                                    {row.submittedTugasCount}/{row.totalClassTugas} Tugas
-                                  </span>
-                                  {row.missingTugasCount > 0 && (
-                                    <span className="opacity-90 font-normal">
-                                      ({row.completionPercent}%)
-                                    </span>
-                                  )}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-3 text-center font-semibold text-slate-600 dark:text-slate-300">
-                          {row.gender}
-                        </td>
-
-                        {/* MATRIX & DETAILED ASSESSMENT CELLS WITH INTERACTIVE AUTO-SAVING */}
-                        {legerViewMode !== 'summary' &&
-                          displayedAssessments.map((col) => {
-                            const scoreVal = row.scoresMap[col.key];
-                            const isThisCellEditing =
-                              editingCell?.studentId === row.id && editingCell?.assessmentKey === col.key;
-
-                            return (
-                              <td
-                                key={col.key}
-                                className="p-2 text-center font-mono border-l border-slate-100 dark:border-slate-800 relative group"
-                              >
-                                {isThisCellEditing ? (
-                                  /* INLINE CELL INPUT WITH AUTO-SAVE ON BLUR */
-                                  <div className="flex items-center justify-center gap-1">
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      max="100"
-                                      autoFocus
-                                      value={cellEditValue}
-                                      onChange={(e) => setCellEditValue(e.target.value)}
-                                      onBlur={() => handleSaveInlineScore(row.id, col, cellEditValue)}
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                          handleSaveInlineScore(row.id, col, cellEditValue);
-                                        } else if (e.key === 'Escape') {
-                                          setEditingCell(null);
-                                        }
-                                      }}
-                                      className="w-16 px-1.5 py-1 text-center font-mono font-bold text-xs bg-white dark:bg-slate-800 border-2 border-indigo-500 rounded-md focus:outline-none text-slate-900 dark:text-white shadow-sm"
-                                    />
-                                    <button
-                                      type="button"
-                                      onMouseDown={(e) => {
-                                        e.preventDefault();
-                                        handleSaveInlineScore(row.id, col, cellEditValue);
-                                      }}
-                                      className="p-1 bg-emerald-600 text-white rounded hover:bg-emerald-700 cursor-pointer"
-                                      title="Simpan (Enter)"
-                                    >
-                                      <Check className="w-3 h-3" />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onMouseDown={(e) => {
-                                        e.preventDefault();
-                                        setEditingCell(null);
-                                      }}
-                                      className="p-1 bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded hover:bg-slate-400 cursor-pointer"
-                                      title="Batal (Esc)"
-                                    >
-                                      <X className="w-3 h-3" />
-                                    </button>
-                                  </div>
-                                ) : (
-                                  /* STATIC CELL WITH CLICK TO EDIT */
-                                  <div
-                                    onClick={() => handleStartInlineEdit(row.id, col, scoreVal)}
-                                    className={`inline-flex items-center justify-center gap-1 px-2 py-1 rounded text-xs transition-all cursor-pointer select-none ${
-                                      isInlineEditMode
-                                        ? 'ring-1 ring-dashed ring-indigo-400 dark:ring-indigo-600 hover:ring-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/60'
-                                        : 'hover:ring-1 hover:ring-indigo-300 dark:hover:ring-indigo-700'
-                                    }`}
-                                    title="Klik untuk mengedit nilai siswa ini (otomatis tersimpan saat klik selesai)"
-                                  >
-                                    {scoreVal !== null && scoreVal !== undefined ? (
-                                      <span
-                                        className={`font-bold inline-block px-1.5 py-0.5 rounded text-xs ${
-                                          scoreVal >= 85
-                                            ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 font-extrabold'
-                                            : scoreVal >= 75
-                                            ? 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300'
-                                            : scoreVal >= 65
-                                            ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300'
-                                            : 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300'
-                                        }`}
-                                      >
-                                        {scoreVal}
-                                      </span>
-                                    ) : col.type === 'Tugas' ? (
-                                      <span
-                                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-bold rounded bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/60 group-hover:border-rose-400"
-                                        title="Tugas belum dikumpulkan. Klik untuk memasukkan nilai tugas ini."
-                                      >
-                                        <AlertCircle className="w-2.5 h-2.5" />
-                                        Belum Kumpul
-                                      </span>
-                                    ) : (
-                                      <span className="text-slate-300 dark:text-slate-600 font-normal px-2">
-                                        -
-                                      </span>
-                                    )}
-                                    <Edit2 className="w-2.5 h-2.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                  </div>
-                                )}
-                              </td>
-                            );
-                          })}
-
-                        {/* COMPONENT SUMMARY COLUMNS (IN MATRIX OR SUMMARY MODE) */}
-                        {legerViewMode !== 'detailed' && (
-                          <>
-                            {/* RATA-RATA TUGAS DENGAN PENYESUAIAN */}
-                            <td className="p-3 text-center font-mono border-l border-slate-100 dark:border-slate-800 bg-emerald-50/20 dark:bg-emerald-950/10">
-                              <div className="flex flex-col items-center justify-center">
-                                <div className="flex items-center gap-1">
-                                  <span
-                                    className={`font-bold ${
-                                      row.isTugasAdjusted
-                                        ? 'text-amber-600 dark:text-amber-400'
-                                        : 'text-slate-800 dark:text-slate-200'
-                                    }`}
-                                  >
-                                    {row.avgTugas}
-                                  </span>
-                                  {row.isTugasAdjusted && (
-                                    <span
-                                      className="text-[9px] font-extrabold px-1 rounded bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800"
-                                      title={`Penyesuaian Tugas: Dari rata murni ${row.rawAvgTugas} disesuaikan menjadi ${row.avgTugas} karena mengumpulkan ${row.submittedTugasCount}/${row.totalClassTugas} tugas (${row.tugasAdjustmentDiff > 0 ? `+${row.tugasAdjustmentDiff}` : row.tugasAdjustmentDiff} poin)`}
-                                    >
-                                      {row.tugasAdjustmentDiff > 0
-                                        ? `+${row.tugasAdjustmentDiff}`
-                                        : row.tugasAdjustmentDiff}
-                                    </span>
-                                  )}
-                                </div>
-                                {row.isTugasAdjusted && (
-                                  <span
-                                    className="text-[9px] text-slate-400 line-through font-normal"
-                                    title="Nilai rata-rata tugas murni (hanya tugas yang dikumpulkan)"
-                                  >
-                                    Murni: {row.rawAvgTugas}
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="p-3 text-center font-mono font-medium bg-emerald-50/20 dark:bg-emerald-950/10">
-                              {row.avgHarian}
-                            </td>
-                            <td className="p-3 text-center font-mono font-medium bg-emerald-50/20 dark:bg-emerald-950/10">
-                              {row.avgSumatif}
-                            </td>
-                            <td className="p-3 text-center font-mono font-medium bg-emerald-50/20 dark:bg-emerald-950/10">
-                              {row.sts}
-                            </td>
-                            <td className="p-3 text-center font-mono font-medium bg-emerald-50/20 dark:bg-emerald-950/10">
-                              {row.sas}
-                            </td>
-                          </>
-                        )}
-
-                        {/* NILAI AKHIR (NA) DENGAN PENYESUAIAN BERDASARKAN JUMLAH TUGAS */}
-                        <td className="p-3 text-center font-mono border-l border-slate-200 dark:border-slate-700 bg-indigo-50/40 dark:bg-indigo-950/30">
-                          <div className="flex flex-col items-center justify-center">
-                            <div className="flex items-center gap-1">
-                              <span
-                                className={`font-extrabold text-sm ${
-                                  row.isTugasAdjusted
-                                    ? 'text-amber-600 dark:text-amber-400'
-                                    : 'text-indigo-700 dark:text-indigo-300'
-                                }`}
-                              >
-                                {row.finalGrade}
-                              </span>
-                              {row.isTugasAdjusted && (
-                                <span
-                                  className="px-1 py-0.2 rounded text-[9px] font-extrabold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
-                                  title={`Nilai Akhir disesuaikan karena mengumpulkan ${row.submittedTugasCount}/${row.totalClassTugas} tugas. Nilai murni sebelum penyesuaian: ${row.unadjustedFinalGrade}`}
-                                >
-                                  {row.finalGradeDiff > 0
-                                    ? `+${row.finalGradeDiff}`
-                                    : row.finalGradeDiff}
-                                </span>
-                              )}
-                            </div>
-                            {row.isTugasAdjusted && (
-                              <span
-                                className="text-[9px] text-slate-400 line-through font-normal"
-                                title="Nilai akhir jika tugas tidak disesuaikan"
-                              >
-                                Murni: {row.unadjustedFinalGrade}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-3 text-center font-mono font-extrabold text-slate-900 dark:text-white bg-indigo-50/20 dark:bg-indigo-950/20">
-                          <span
-                            className={`px-2 py-0.5 rounded text-xs ${
-                              row.predikat === 'A'
-                                ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200'
-                                : row.predikat === 'B'
-                                ? 'bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-200'
-                                : row.predikat === 'C'
-                                ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200'
-                                : 'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-200'
-                            }`}
-                          >
-                            {row.predikat}
-                          </span>
-                        </td>
-                        <td className="p-3 text-[11px] text-slate-700 dark:text-slate-200">
-                          <span className="font-medium">{row.statusKetercapaian}</span>
-                        </td>
-
-                        {/* ACTIONS COLUMN (EDIT ALL GRADES FOR THIS STUDENT) */}
-                        <td className="p-2 text-center border-l border-slate-200 dark:border-slate-700">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenStudentGradesModal(row.studentObj)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-600 hover:text-white rounded-lg border border-indigo-200 dark:border-indigo-800 transition-colors cursor-pointer"
-                            title="Edit semua nilai siswa ini dalam satu jendela modal"
-                          >
-                            <Edit2 className="w-3 h-3" />
-                            <span>Edit Nilai</span>
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={25} className="p-8 text-center text-slate-400">
-                        {tugasFilterStatus === 'incomplete'
-                          ? 'Semua siswa di kelas ini telah mengumpulkan seluruh tugas dengan lengkap (100%).'
-                          : tugasFilterStatus === 'complete'
-                          ? 'Belum ada siswa dengan pengumpulan tugas lengkap pada kelas ini.'
-                          : 'Tidak ada data siswa pada kelas ini.'}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-
-                {/* TABLE FOOTER (RERATA KELAS & STATISTIK KOMPONEN) */}
-                {detailedLedgerData.length > 0 && (
-                  <tfoot className="bg-slate-100/80 dark:bg-slate-800/90 border-t-2 border-slate-300 dark:border-slate-700 font-semibold text-slate-800 dark:text-slate-100">
-                    {/* Baris Rata-rata Kelas */}
-                    <tr>
-                      <td colSpan={4} className="p-3 text-right font-bold tracking-wide">
-                        Rata-Rata Nilai Kelas:
-                      </td>
-
-                      {/* Rata-rata Per Asesmen */}
-                      {legerViewMode !== 'summary' &&
-                        displayedAssessments.map((col) => {
-                          const stat = colStats[col.key];
-                          return (
-                            <td key={col.key} className="p-3 text-center font-mono font-bold text-xs text-indigo-700 dark:text-indigo-300 border-l border-slate-200 dark:border-slate-700">
-                              {stat?.avg !== null ? stat.avg : '-'}
-                            </td>
-                          );
-                        })}
-
-                      {/* Rata-rata Per Komponen Rapor */}
-                      {legerViewMode !== 'detailed' && (
-                        <>
-                          <td className="p-3 text-center font-mono font-bold text-xs border-l border-slate-200 dark:border-slate-700 text-emerald-700 dark:text-emerald-300">
-                            {(() => {
-                              const vals = detailedLedgerData.map((d) => d.avgTugas).filter((v): v is number => typeof v === 'number');
-                              return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : '-';
-                            })()}
-                          </td>
-                          <td className="p-3 text-center font-mono font-bold text-xs text-emerald-700 dark:text-emerald-300">
-                            {(() => {
-                              const vals = detailedLedgerData.map((d) => d.avgHarian).filter((v): v is number => typeof v === 'number');
-                              return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : '-';
-                            })()}
-                          </td>
-                          <td className="p-3 text-center font-mono font-bold text-xs text-emerald-700 dark:text-emerald-300">
-                            {(() => {
-                              const vals = detailedLedgerData.map((d) => d.avgSumatif).filter((v): v is number => typeof v === 'number');
-                              return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : '-';
-                            })()}
-                          </td>
-                          <td className="p-3 text-center font-mono font-bold text-xs text-emerald-700 dark:text-emerald-300">
-                            {(() => {
-                              const vals = detailedLedgerData.map((d) => d.sts).filter((v): v is number => typeof v === 'number');
-                              return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : '-';
-                            })()}
-                          </td>
-                          <td className="p-3 text-center font-mono font-bold text-xs text-emerald-700 dark:text-emerald-300">
-                            {(() => {
-                              const vals = detailedLedgerData.map((d) => d.sas).filter((v): v is number => typeof v === 'number');
-                              return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : '-';
-                            })()}
-                          </td>
-                        </>
-                      )}
-
-                      {/* Rata Nilai Akhir Kelas */}
-                      <td className="p-3 text-center font-mono font-extrabold text-indigo-700 dark:text-indigo-300 border-l border-slate-300 dark:border-slate-700">
-                        {(() => {
-                          const finals = detailedLedgerData.map((d) => d.finalGrade).filter((v): v is number => typeof v === 'number');
-                          return finals.length ? Math.round(finals.reduce((a, b) => a + b, 0) / finals.length) : '-';
-                        })()}
-                      </td>
-                      <td colSpan={3} className="p-3 text-xs text-slate-500 dark:text-slate-400">
-                        {ledgerStudents.length} siswa terdaftar
-                      </td>
-                    </tr>
-                  </tfoot>
-                )}
-              </table>
-            </div>
-          </div>
-        </div>
-      ) : activeTab === 'mass' ? (
-        /* TAB 2: INPUT & RE-EDIT NILAI MASSAL DENGAN SIMPAN OTOMATIS DAN TOMBOL HAPUS ASESMEN */
-        <div className="space-y-4">
-          {/* Controls Form Bar */}
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-xs transition-colors">
-            {/* Quick Picker: Muat Nilai Asesmen Yang Sudah Ada Untuk Diedit + Tombol Hapus */}
-            {massUniqueAssessments.length > 0 && (
-              <div className="p-3.5 bg-indigo-50/80 dark:bg-indigo-950/60 rounded-xl border border-indigo-200 dark:border-indigo-900 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-2.5">
-                  <RefreshCw className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                  <div>
-                    <span className="font-bold text-indigo-950 dark:text-indigo-100">
-                      Pilih Asesmen Yang Ingin Diedit atau Dihapus:
-                    </span>
-                    <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                      Pilih dari dropdown untuk memuat nilai seluruh siswa, atau klik <strong>Hapus Asesmen</strong> untuk menghapus sesi ini
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap">
-                  <select
-                    value={selectedExistingSessionKey}
-                    onChange={(e) => handleLoadExistingSession(e.target.value)}
-                    className="px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-800 border border-indigo-300 dark:border-indigo-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer min-w-[220px]"
-                  >
-                    <option value="">-- Pilih Asesmen Yang Ingin Diedit / Dihapus --</option>
-                    {massUniqueAssessments.map((a) => (
-                      <option key={a.key} value={a.key}>
-                        [{a.type}] {a.title} ({formatDateId(a.date)})
-                      </option>
-                    ))}
-                  </select>
-
-                  {/* Tombol Hapus Sesi Asesmen */}
-                  <button
-                    type="button"
-                    onClick={handleDeleteSelectedSession}
-                    disabled={!selectedExistingSessionKey}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer ${
-                      selectedExistingSessionKey
-                        ? 'bg-rose-600 hover:bg-rose-700 text-white'
-                        : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed opacity-60'
-                    }`}
-                    title={
-                      selectedExistingSessionKey
-                        ? `Hapus seluruh nilai untuk sesi asesmen yang dipilih ini`
-                        : 'Pilih salah satu asesmen pada dropdown terlebih dahulu untuk menghapus'
-                    }
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Hapus Asesmen Ini</span>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-100 mb-1">
-                  Rombel / Kelas
-                </label>
-                <select
-                  value={selectedClassId}
-                  onChange={(e) => {
-                    setSelectedClassId(e.target.value);
-                    setSelectedExistingSessionKey('');
-                  }}
-                  className="w-full px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-                >
-                  {classes.map((c) => (
-                    <option key={c.id} value={c.id} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-100 mb-1">
-                  Mata Pelajaran
-                </label>
-                <input
-                  type="text"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-medium"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-100 mb-1">
-                  Komponen Asesmen
-                </label>
-                <select
-                  value={gradeType}
-                  onChange={(e) => setGradeType(e.target.value as GradeType)}
-                  className="w-full px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-                >
-                  <option value="Tugas" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Tugas Mandiri / Kelompok</option>
-                  <option value="Harian" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Formatif / Ulangan Harian</option>
-                  <option value="Sumatif" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Sumatif Lingkup Materi (TP)</option>
-                  <option value="STS" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Sumatif Tengah Semester (STS)</option>
-                  <option value="SAS" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Sumatif Akhir Semester (SAS)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-100 mb-1">
-                  Judul Penilaian / Materi
-                </label>
-                <input
-                  type="text"
-                  value={assessmentTitle}
-                  onChange={(e) => setAssessmentTitle(e.target.value)}
-                  placeholder="Contoh: Sumatif Bab 2 Trigonometri"
-                  className="w-full px-3 py-1.5 text-xs border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 font-medium"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-100 mb-1">
-                  Tanggal Asesmen
-                </label>
-                <input
-                  type="date"
-                  value={assessmentDate}
-                  onChange={(e) => setAssessmentDate(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2.5 border-t border-slate-100 dark:border-slate-800">
-              {/* Auto-Save Indicator Status */}
-              <div className="flex items-center gap-2">
-                {autoSaveStatus === 'saving' ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 animate-pulse">
-                    <RefreshCw className="w-3 h-3 animate-spin" />
-                    <span>Menyimpan otomatis...</span>
-                  </span>
-                ) : lastAutoSavedTime ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 animate-in fade-in">
-                    <CheckCircle2 className="w-3 h-3" />
-                    <span>Tersimpan otomatis ({lastAutoSavedTime})</span>
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-                    <Sparkles className="w-3 h-3 text-indigo-500" />
-                    <span>Simpan otomatis nilai aktif</span>
-                  </span>
-                )}
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:inline">
-                  · Nilai yang Anda ketik langsung tersimpan tanpa perlu menekan tombol
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleSaveMassInput}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>Simpan Semua Sekarang</span>
-                </button>
-              </div>
-            </div>
           </div>
 
-          {saveSuccess && (
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-lg text-xs flex items-center gap-2 animate-in fade-in">
-              <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Nilai asesmen &quot;{assessmentTitle}&quot; tanggal {assessmentDate} berhasil disimpan! Data langsung terbarui di Matriks Penilaian.</span>
-            </div>
-          )}
-
-          {/* Student list for mass grading with auto-save */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs transition-colors">
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
-              <span className="font-bold text-slate-800 dark:text-slate-100">
-                Formulir Pengisian & Edit Nilai Kelas {selectedClassObj?.name}
-              </span>
-              <span className="text-slate-500 dark:text-slate-400">
-                Wali Kelas: {selectedClassObj?.homeroomTeacher}
-              </span>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-semibold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
-                  <tr>
-                    <th className="p-3.5 w-10 text-center">No</th>
-                    <th className="p-3.5 w-44">NISN / NIS</th>
-                    <th className="p-3.5">Nama Lengkap Siswa</th>
-                    <th className="p-3.5 text-center w-12">L/P</th>
-                    <th className="p-3.5 w-32 text-center">Nilai (0 - 100)</th>
-                    <th className="p-3.5">Catatan Khusus (Opsional)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-200">
-                  {classStudents.length > 0 ? (
-                    classStudents.map((student, idx) => {
-                      const scoreVal = massScores[student.id];
-                      return (
-                        <tr key={student.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors">
-                          <td className="p-3.5 text-center font-mono text-slate-500 dark:text-slate-400">{idx + 1}</td>
-                          <td className="p-3.5 font-mono text-slate-700 dark:text-slate-200 font-medium">
-                            {student.nisnNis || student.nisn || student.nis || '-'}
-                          </td>
-                          <td className="p-3.5 font-bold text-slate-900 dark:text-white">{student.name}</td>
-                          <td className="p-3.5 text-center font-semibold text-slate-600 dark:text-slate-300">{student.gender}</td>
-                          <td className="p-3.5 text-center">
-                            <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              value={scoreVal}
-                              onChange={(e) => handleScoreChange(student.id, e.target.value)}
-                              onBlur={() => {
-                                if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-                                handleAutoSaveStudentScore(student.id, scoreVal, massNotes[student.id] || '');
-                              }}
-                              placeholder="0 - 100"
-                              className="w-24 px-3 py-1.5 text-center font-mono font-bold text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white"
-                            />
-                          </td>
-                          <td className="p-3.5">
-                            <input
-                              type="text"
-                              value={massNotes[student.id] || ''}
-                              onChange={(e) => handleNoteChange(student.id, e.target.value)}
-                              onBlur={() => {
-                                if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-                                handleAutoSaveStudentScore(student.id, scoreVal, massNotes[student.id] || '');
-                              }}
-                              placeholder="Catatan kemajuan atau remedial..."
-                              className="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400"
-                            />
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan={6} className="p-8 text-center text-slate-400">
-                        Tidak ada siswa pada kelas terpilih.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      ) : activeTab === 'history' ? (
-        /* TAB 3: RIWAYAT & EDIT PENILAIAN INDIVIDUAL */
-        <div className="space-y-4">
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="relative max-w-sm flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+            {/* Tugas */}
+            <div className="p-3 rounded-xl bg-sky-50/60 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-900/50 space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-sky-900 dark:text-sky-200">
+                <span>Tugas Mandiri/Kelompok</span>
+                <span className="text-sky-700 dark:text-sky-300 font-extrabold">{weights.Tugas}%</span>
+              </div>
               <input
-                type="text"
-                value={historySearch}
-                onChange={(e) => setHistorySearch(e.target.value)}
-                placeholder="Cari judul penilaian, nama siswa, atau mata pelajaran..."
-                className="w-full pl-9 pr-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400"
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value={weights.Tugas}
+                onChange={(e) => {
+                  setWeights((w) => ({ ...w, Tugas: Number(e.target.value) }));
+                  setIsDirty(true);
+                }}
+                className="w-full accent-sky-600 cursor-pointer"
               />
-            </div>
-            <span className="text-xs text-slate-500 dark:text-slate-400">
-              Total {grades.length} entri penilaian tersimpan dalam sistem
-            </span>
-          </div>
-
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs transition-colors">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-semibold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
-                  <tr>
-                    <th className="p-3.5">Tanggal</th>
-                    <th className="p-3.5">Kelas</th>
-                    <th className="p-3.5">Mata Pelajaran</th>
-                    <th className="p-3.5">Komponen</th>
-                    <th className="p-3.5">Judul Asesmen / Materi</th>
-                    <th className="p-3.5">Nama Siswa</th>
-                    <th className="p-3.5 text-center">Nilai</th>
-                    <th className="p-3.5 text-right">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-200">
-                  {grades.length > 0 ? (
-                    grades
-                      .filter((g) => {
-                        const student = students.find((s) => s.id === g.studentId);
-                        const q = historySearch.toLowerCase();
-                        return (
-                          g.title.toLowerCase().includes(q) ||
-                          g.subject.toLowerCase().includes(q) ||
-                          (student?.name && student.name.toLowerCase().includes(q))
-                        );
-                      })
-                      .map((g) => {
-                        const student = students.find((s) => s.id === g.studentId);
-                        const cls = classes.find((c) => c.id === g.classId);
-                        return (
-                          <tr key={g.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors">
-                            <td className="p-3.5 font-mono text-slate-500 dark:text-slate-400">{formatDateId(g.date)}</td>
-                            <td className="p-3.5 font-medium">{cls?.name || '-'}</td>
-                            <td className="p-3.5">{g.subject}</td>
-                            <td className="p-3.5">
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${getTypeBadgeStyle(g.type)}`}>
-                                {g.type}
-                              </span>
-                            </td>
-                            <td className="p-3.5 font-bold text-slate-900 dark:text-white">{g.title}</td>
-                            <td className="p-3.5 font-semibold text-slate-800 dark:text-slate-100">{student?.name || '-'}</td>
-                            <td className="p-3.5 text-center font-mono font-bold text-sm text-indigo-600 dark:text-indigo-400">
-                              {g.score}
-                            </td>
-                            <td className="p-3.5 text-right">
-                              <div className="flex items-center justify-end gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenEditRecordModal(g)}
-                                  className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-md transition-colors cursor-pointer"
-                                  title="Edit Nilai & Detail"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (window.confirm(`Hapus entri nilai ${student?.name} (${g.title})?`)) {
-                                      onDeleteGrade(g.id);
-                                    }
-                                  }}
-                                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-md transition-colors cursor-pointer"
-                                  title="Hapus Nilai"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
-                  ) : (
-                    <tr>
-                      <td colSpan={8} className="p-8 text-center text-slate-400">
-                        Belum ada riwayat penilaian.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      ) : (
-        /* TAB 4: VISUALISASI DATA NILAI & TREN RECHARTS */
-        <GradeTrendAnalytics
-          grades={grades}
-          students={students}
-          classes={classes}
-          school={school}
-          initialClassId={ledgerClassId}
-          onNavigateToLedger={(classId) => {
-            setLedgerClassId(classId);
-            setActiveTab('ledger');
-          }}
-        />
-      )}
-
-      {/* MODAL 1: EDIT SEMUA NILAI SISWA */}
-      {editingStudentGrades && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
-            {/* Modal Header */}
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-slate-900 dark:text-white text-sm">
-                  Edit Nilai Siswa: {editingStudentGrades.name}
-                </h3>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  NISN/NIS: {editingStudentGrades.nisnNis || '-'} · Kelas {ledgerClassObj?.name}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditingStudentGrades(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Modal Body: List of all assessments */}
-            <div className="p-4 overflow-y-auto space-y-3 divide-y divide-slate-100 dark:divide-slate-800">
-              {uniqueAssessments.length > 0 ? (
-                uniqueAssessments.map((col) => {
-                  const val = studentModalScores[col.key];
-                  return (
-                    <div key={col.key} className="pt-3 first:pt-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${getTypeBadgeStyle(col.type)}`}>
-                            {col.type}
-                          </span>
-                          <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
-                            {formatDateId(col.date)}
-                          </span>
-                        </div>
-                        <p className="font-bold text-xs text-slate-800 dark:text-slate-100">
-                          {col.title}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1">
-                          <label className="text-[11px] font-semibold text-slate-500">Nilai:</label>
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            value={val}
-                            onChange={(e) => {
-                              const num = e.target.value === '' ? '' : Math.min(100, Math.max(0, Number(e.target.value)));
-                              setStudentModalScores((prev) => ({
-                                ...prev,
-                                [col.key]: num,
-                              }));
-                            }}
-                            placeholder="0-100"
-                            className="w-20 px-2.5 py-1 text-center font-mono font-bold text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="text-center text-xs text-slate-400 py-6">
-                  Belum ada asesmen yang dibuat untuk kelas ini.
-                </p>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
-              <span className="text-xs text-slate-500">
-                Nilai yang kosong tidak akan tersimpan.
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setEditingStudentGrades(null)}
-                  className="px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg cursor-pointer transition-colors"
-                >
-                  Batal
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveStudentModalGrades}
-                  className="px-4 py-1.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm cursor-pointer transition-colors flex items-center gap-1.5"
-                >
-                  <Save className="w-3.5 h-3.5" />
-                  <span>Simpan Perubahan</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 2: EDIT SINGLE GRADE RECORD (FROM RIWAYAT) */}
-      {editingRecord && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-slate-900 dark:text-white text-sm">
-                  Edit Data Penilaian Siswa
-                </h3>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  {students.find((s) => s.id === editingRecord.studentId)?.name || 'Siswa'}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditingRecord(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="p-5 space-y-3.5 text-xs">
-              <div>
-                <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">
-                  Skor Nilai (0 - 100) *
-                </label>
+              <div className="flex items-center justify-between text-[11px] text-sky-600 dark:text-sky-400 font-medium">
+                <span>Persentase Bobot</span>
                 <input
                   type="number"
                   min="0"
                   max="100"
-                  value={editRecordForm.score}
-                  onChange={(e) =>
-                    setEditRecordForm((prev) => ({
-                      ...prev,
-                      score: e.target.value === '' ? '' : Math.min(100, Math.max(0, Number(e.target.value))),
-                    }))
-                  }
-                  className="w-full px-3 py-2 font-mono font-bold text-base bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  autoFocus
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">
-                  Judul Penilaian / Materi
-                </label>
-                <input
-                  type="text"
-                  value={editRecordForm.title}
-                  onChange={(e) =>
-                    setEditRecordForm((prev) => ({
-                      ...prev,
-                      title: e.target.value,
-                    }))
-                  }
-                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">
-                    Jenis Asesmen
-                  </label>
-                  <select
-                    value={editRecordForm.type}
-                    onChange={(e) =>
-                      setEditRecordForm((prev) => ({
-                        ...prev,
-                        type: e.target.value as GradeType,
-                      }))
-                    }
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium cursor-pointer"
-                  >
-                    <option value="Tugas">Tugas</option>
-                    <option value="Harian">Harian</option>
-                    <option value="Sumatif">Sumatif</option>
-                    <option value="STS">STS</option>
-                    <option value="SAS">SAS</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">
-                    Tanggal
-                  </label>
-                  <input
-                    type="date"
-                    value={editRecordForm.date}
-                    onChange={(e) =>
-                      setEditRecordForm((prev) => ({
-                        ...prev,
-                        date: e.target.value,
-                      }))
-                    }
-                    className="w-full px-3 py-2 font-mono bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">
-                  Catatan Khusus (Opsional)
-                </label>
-                <input
-                  type="text"
-                  value={editRecordForm.notes}
-                  onChange={(e) =>
-                    setEditRecordForm((prev) => ({
-                      ...prev,
-                      notes: e.target.value,
-                    }))
-                  }
-                  placeholder="Catatan kemajuan atau remedial..."
-                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  value={weights.Tugas}
+                  onChange={(e) => {
+                    setWeights((w) => ({ ...w, Tugas: Math.min(100, Math.max(0, Number(e.target.value))) }));
+                    setIsDirty(true);
+                  }}
+                  className="w-14 text-center font-bold bg-white dark:bg-slate-900 border border-sky-300 dark:border-sky-800 rounded px-1 py-0.5"
                 />
               </div>
             </div>
 
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setEditingRecord(null)}
-                className="px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg cursor-pointer transition-colors"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveSingleRecordEdit}
-                className="px-4 py-1.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm cursor-pointer transition-colors flex items-center gap-1.5"
-              >
-                <Save className="w-3.5 h-3.5" />
-                <span>Simpan Perubahan</span>
-              </button>
+            {/* Harian */}
+            <div className="p-3 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                <span>Formatif / Ulangan Harian</span>
+                <span className="text-emerald-700 dark:text-emerald-300 font-extrabold">{weights.Harian}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value={weights.Harian}
+                onChange={(e) => {
+                  setWeights((w) => ({ ...w, Harian: Number(e.target.value) }));
+                  setIsDirty(true);
+                }}
+                className="w-full accent-emerald-600 cursor-pointer"
+              />
+              <div className="flex items-center justify-between text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                <span>Persentase Bobot</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={weights.Harian}
+                  onChange={(e) => {
+                    setWeights((w) => ({ ...w, Harian: Math.min(100, Math.max(0, Number(e.target.value))) }));
+                    setIsDirty(true);
+                  }}
+                  className="w-14 text-center font-bold bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 rounded px-1 py-0.5"
+                />
+              </div>
             </div>
+
+            {/* Sumatif TP */}
+            <div className="p-3 rounded-xl bg-purple-50/60 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/50 space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-purple-900 dark:text-purple-200">
+                <span>Sumatif Lingkup Materi (TP)</span>
+                <span className="text-purple-700 dark:text-purple-300 font-extrabold">{weights.Sumatif}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value={weights.Sumatif}
+                onChange={(e) => {
+                  setWeights((w) => ({ ...w, Sumatif: Number(e.target.value) }));
+                  setIsDirty(true);
+                }}
+                className="w-full accent-purple-600 cursor-pointer"
+              />
+              <div className="flex items-center justify-between text-[11px] text-purple-600 dark:text-purple-400 font-medium">
+                <span>Persentase Bobot</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={weights.Sumatif}
+                  onChange={(e) => {
+                    setWeights((w) => ({ ...w, Sumatif: Math.min(100, Math.max(0, Number(e.target.value))) }));
+                    setIsDirty(true);
+                  }}
+                  className="w-14 text-center font-bold bg-white dark:bg-slate-900 border border-purple-300 dark:border-purple-800 rounded px-1 py-0.5"
+                />
+              </div>
+            </div>
+
+            {/* STS */}
+            <div className="p-3 rounded-xl bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-amber-900 dark:text-amber-200">
+                <span>Sumatif Tengah Semester</span>
+                <span className="text-amber-700 dark:text-amber-300 font-extrabold">{weights.STS}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value={weights.STS}
+                onChange={(e) => {
+                  setWeights((w) => ({ ...w, STS: Number(e.target.value) }));
+                  setIsDirty(true);
+                }}
+                className="w-full accent-amber-600 cursor-pointer"
+              />
+              <div className="flex items-center justify-between text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                <span>Persentase Bobot</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={weights.STS}
+                  onChange={(e) => {
+                    setWeights((w) => ({ ...w, STS: Math.min(100, Math.max(0, Number(e.target.value))) }));
+                    setIsDirty(true);
+                  }}
+                  className="w-14 text-center font-bold bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-800 rounded px-1 py-0.5"
+                />
+              </div>
+            </div>
+
+            {/* SAS */}
+            <div className="p-3 rounded-xl bg-rose-50/60 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-rose-900 dark:text-rose-200">
+                <span>Sumatif Akhir Semester</span>
+                <span className="text-rose-700 dark:text-rose-300 font-extrabold">{weights.SAS}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value={weights.SAS}
+                onChange={(e) => {
+                  setWeights((w) => ({ ...w, SAS: Number(e.target.value) }));
+                  setIsDirty(true);
+                }}
+                className="w-full accent-rose-600 cursor-pointer"
+              />
+              <div className="flex items-center justify-between text-[11px] text-rose-600 dark:text-rose-400 font-medium">
+                <span>Persentase Bobot</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={weights.SAS}
+                  onChange={(e) => {
+                    setWeights((w) => ({ ...w, SAS: Math.min(100, Math.max(0, Number(e.target.value))) }));
+                    setIsDirty(true);
+                  }}
+                  className="w-14 text-center font-bold bg-white dark:bg-slate-900 border border-rose-300 dark:border-rose-800 rounded px-1 py-0.5"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-2">
+              {isWeightValid ? (
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              ) : (
+                <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400 animate-bounce" />
+              )}
+              <span
+                className={`text-xs font-bold ${
+                  isWeightValid
+                    ? 'text-emerald-700 dark:text-emerald-300'
+                    : 'text-rose-700 dark:text-rose-300'
+                }`}
+              >
+                {isWeightValid
+                  ? 'Total Bobot: Tepat 100% (Valid & Proporsional)'
+                  : `Total Bobot: ${totalWeight}% (Harus Tepat 100% — Selisih ${100 - totalWeight > 0 ? `+${100 - totalWeight}%` : `${100 - totalWeight}%`})`}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setWeights(DEFAULT_WEIGHTS);
+                setIsDirty(true);
+              }}
+              className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1 cursor-pointer font-medium"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Reset Default (100%)</span>
+            </button>
           </div>
         </div>
       )}
 
-      {/* PRINT DOKUMEN LEGER NILAI / RAPOR MODAL */}
+      {/* ANALISIS HASIL BELAJAR OBJEKTIF (RATA-RATA, TERTINGGI, TERENDAH, TUNTAS, TIDAK TUNTAS) */}
+      <div className="bg-gradient-to-br from-indigo-900 via-indigo-950 to-slate-950 text-white p-5 rounded-2xl shadow-lg border border-indigo-800/40 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-indigo-800/60 pb-3">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-indigo-500/20 text-indigo-300 rounded-lg">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold tracking-tight text-white">
+                Analisis Evaluasi Hasil Belajar Objektif — {currentClass?.name || 'Kelas'}
+              </h2>
+              <p className="text-[11px] text-indigo-200">
+                Kriteria Ketercapaian Tujuan Pembelajaran (KKTP / KKM): ≥ 75.0 · Dihitung adil tanpa penalti nol untuk tugas belum terbit
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-xs">
+            <span className="px-2.5 py-1 rounded-full bg-indigo-800/60 text-indigo-200 font-semibold border border-indigo-700/50">
+              {classAnalytics.evaluatedCount} dari {classAnalytics.totalStudents} Siswa Terisi Nilai
+            </span>
+          </div>
+        </div>
+
+        {/* 5 Kartu Metrik Analisis */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {/* 1. Nilai Rata-rata Kelas */}
+          <div className="bg-white/5 backdrop-blur-md p-3.5 rounded-xl border border-white/10 space-y-1">
+            <span className="text-[11px] text-indigo-200 uppercase tracking-wider font-semibold block">
+              Nilai Rata-rata Kelas
+            </span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-extrabold text-white">
+                {classAnalytics.hasData ? classAnalytics.average.toFixed(1) : '-'}
+              </span>
+              <span className="text-[11px] text-indigo-300 font-medium">/ 100</span>
+            </div>
+            <p className="text-[10px] text-indigo-300 truncate">
+              {classAnalytics.hasData && classAnalytics.average >= 75 ? 'Rata-rata memenuhi KKTP' : 'Perlu penguatan materi'}
+            </p>
+          </div>
+
+          {/* 2. Nilai Tertinggi */}
+          <div className="bg-white/5 backdrop-blur-md p-3.5 rounded-xl border border-white/10 space-y-1">
+            <span className="text-[11px] text-emerald-300 uppercase tracking-wider font-semibold block flex items-center gap-1">
+              <Award className="w-3.5 h-3.5" />
+              Nilai Tertinggi
+            </span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-extrabold text-emerald-300">
+                {classAnalytics.hasData ? classAnalytics.highest.toFixed(1) : '-'}
+              </span>
+              <span className="text-[11px] text-emerald-400/80 font-medium">Puncak</span>
+            </div>
+            <p className="text-[10px] text-emerald-200 truncate" title={classAnalytics.highestStudent}>
+              {classAnalytics.hasData ? classAnalytics.highestStudent : '-'}
+            </p>
+          </div>
+
+          {/* 3. Nilai Terendah */}
+          <div className="bg-white/5 backdrop-blur-md p-3.5 rounded-xl border border-white/10 space-y-1">
+            <span className="text-[11px] text-amber-300 uppercase tracking-wider font-semibold block flex items-center gap-1">
+              <TrendingUp className="w-3.5 h-3.5 rotate-180" />
+              Nilai Terendah
+            </span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-extrabold text-amber-300">
+                {classAnalytics.hasData ? classAnalytics.lowest.toFixed(1) : '-'}
+              </span>
+              <span className="text-[11px] text-amber-400/80 font-medium">Batas</span>
+            </div>
+            <p className="text-[10px] text-amber-200 truncate" title={classAnalytics.lowestStudent}>
+              {classAnalytics.hasData ? classAnalytics.lowestStudent : '-'}
+            </p>
+          </div>
+
+          {/* 4. Jumlah Siswa yang Tuntas */}
+          <div className="bg-emerald-950/40 backdrop-blur-md p-3.5 rounded-xl border border-emerald-500/30 space-y-1">
+            <span className="text-[11px] text-emerald-300 uppercase tracking-wider font-semibold block flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Siswa Tuntas
+            </span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-extrabold text-emerald-400">
+                {classAnalytics.passingCount}
+              </span>
+              <span className="text-[11px] text-emerald-300 font-semibold">
+                ({classAnalytics.passingRate}%)
+              </span>
+            </div>
+            <p className="text-[10px] text-emerald-300">Nilai Akhir ≥ 75.0</p>
+          </div>
+
+          {/* 5. Jumlah Siswa yang Tidak Tuntas */}
+          <div className="bg-rose-950/40 backdrop-blur-md p-3.5 rounded-xl border border-rose-500/30 space-y-1 col-span-2 sm:col-span-1">
+            <span className="text-[11px] text-rose-300 uppercase tracking-wider font-semibold block flex items-center gap-1">
+              <AlertCircle className="w-3.5 h-3.5" />
+              Tidak Tuntas
+            </span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-extrabold text-rose-400">
+                {classAnalytics.failingCount}
+              </span>
+              <span className="text-[11px] text-rose-300 font-semibold">
+                Siswa
+              </span>
+            </div>
+            <p className="text-[10px] text-rose-300">Perlu Bimbingan / Remedial</p>
+          </div>
+        </div>
+
+        {classAnalytics.hasData && (
+          <div className="space-y-1 pt-1">
+            <div className="flex items-center justify-between text-[11px] text-indigo-200">
+              <span>Ketuntasan Belajar Kelas: {classAnalytics.passingRate}%</span>
+              <span>Target Kelulusan: 100%</span>
+            </div>
+            <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden flex">
+              <div
+                style={{ width: `${classAnalytics.passingRate}%` }}
+                className="bg-emerald-500 h-full transition-all duration-500"
+              />
+              <div
+                style={{ width: `${100 - classAnalytics.passingRate}%` }}
+                className="bg-rose-500 h-full transition-all duration-500"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* GRAFIK TREN NILAI (OPTIONAL COLLAPSIBLE RECHARTS) */}
+      {showTrendChart && (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm space-y-4 animate-in fade-in-50 duration-200">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-indigo-600" />
+              <div>
+                <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                  Visualisasi & Tren Penilaian Semester
+                </h3>
+                <p className="text-xs text-slate-500">Pergerakan rata-rata nilai per mata pelajaran dan per semester</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowTrendChart(false)}
+              className="text-xs text-slate-400 hover:text-slate-600 font-semibold cursor-pointer"
+            >
+              Tutup Grafik
+            </button>
+          </div>
+          <GradeTrendAnalytics
+            grades={grades}
+            students={students}
+            classes={classes}
+            school={school}
+            initialClassId={selectedClassId}
+          />
+        </div>
+      )}
+
+      {/* BILAH AKSI: TAMBAH TUGAS / KOMPONEN BARU */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 px-5 py-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+            Kolom Penilaian Aktif:
+          </span>
+          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
+            {displayColumns.length} Komponen Tugas & Ujian
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsAddColumnModalOpen(true)}
+            className="px-3.5 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Tambah Komponen / Tugas Baru</span>
+          </button>
+        </div>
+      </div>
+
+      {/* TABEL INPUT NILAI MASSAL */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto max-h-[750px] relative">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead className="bg-slate-100 dark:bg-slate-800/90 sticky top-0 z-20 backdrop-blur-md shadow-xs">
+              <tr className="border-b border-slate-200 dark:border-slate-700 divide-x divide-slate-200 dark:divide-slate-700">
+                {/* 1. Nomor */}
+                <th className="py-3 px-3 text-center font-bold text-slate-700 dark:text-slate-200 w-12 sticky left-0 z-30 bg-slate-100 dark:bg-slate-800">
+                  No.
+                </th>
+
+                {/* 2. NISN / NIS */}
+                <th className="py-3 px-3 font-bold text-slate-700 dark:text-slate-200 w-32 sticky left-12 z-30 bg-slate-100 dark:bg-slate-800">
+                  NISN / NIS
+                </th>
+
+                {/* 3. Nama Siswa */}
+                <th className="py-3 px-4 font-bold text-slate-700 dark:text-slate-200 min-w-[200px] sticky left-44 z-30 bg-slate-100 dark:bg-slate-800 shadow-r">
+                  Nama Siswa ({filteredStudents.length})
+                </th>
+
+                {/* Kolom Tugas & Penilaian Dinamis */}
+                {displayColumns.map((col) => (
+                  <th
+                    key={col.key}
+                    className="py-3 px-3 min-w-[170px] max-w-[220px] font-bold text-slate-800 dark:text-slate-100 align-top group"
+                  >
+                    <div className="flex items-start justify-between gap-1.5">
+                      <div className="space-y-1">
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${getTypeBadge(
+                            col.type
+                          )}`}
+                        >
+                          {GRADE_TYPE_SHORT[col.type]}
+                        </span>
+                        <div
+                          className="font-bold text-slate-900 dark:text-white leading-tight line-clamp-2"
+                          title={col.title}
+                        >
+                          {col.title}
+                        </div>
+                        <div className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">
+                          Tgl: {col.date || '-'}
+                        </div>
+                      </div>
+
+                      {/* Tombol Hapus Tugas / Komponen */}
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteColumn(col)}
+                        className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 p-1 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer shrink-0"
+                        title={`Hapus komponen "${col.title}"`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </th>
+                ))}
+
+                {/* Nilai Akhir Otomatis */}
+                <th className="py-3 px-4 font-bold text-center text-indigo-700 dark:text-indigo-300 min-w-[120px] bg-indigo-50/70 dark:bg-indigo-950/40">
+                  <div className="leading-tight">Nilai Akhir</div>
+                  <div className="text-[10px] text-indigo-500 font-normal">Bobot Aktif</div>
+                </th>
+
+                {/* Predikat & Ketercapaian */}
+                <th className="py-3 px-3 font-bold text-center text-slate-700 dark:text-slate-200 min-w-[110px]">
+                  Ketercapaian
+                </th>
+
+                {/* Status Kelengkapan Nilai */}
+                <th className="py-3 px-4 font-bold text-center text-slate-700 dark:text-slate-200 min-w-[150px]">
+                  Kelengkapan Nilai
+                </th>
+              </tr>
+            </thead>
+
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {filteredStudents.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={displayColumns.length + 6}
+                    className="py-12 text-center text-slate-400 dark:text-slate-500"
+                  >
+                    Tidak ada siswa yang ditemukan untuk kelas ini.
+                  </td>
+                </tr>
+              ) : (
+                studentEvaluations
+                  .filter((evalItem) =>
+                    filteredStudents.some((s) => s.id === evalItem.student.id)
+                  )
+                  .map((evalItem) => {
+                    const student = evalItem.student;
+                    const studentScores = evalItem.studentScores;
+
+                    return (
+                      <tr
+                        key={student.id}
+                        className="hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 transition-colors divide-x divide-slate-100 dark:divide-slate-800"
+                      >
+                        {/* 1. Nomor */}
+                        <td className="py-2.5 px-3 text-center font-medium text-slate-500 dark:text-slate-400 sticky left-0 z-10 bg-white dark:bg-slate-900">
+                          {evalItem.no}
+                        </td>
+
+                        {/* 2. NISN / NIS */}
+                        <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600 dark:text-slate-400 sticky left-12 z-10 bg-white dark:bg-slate-900 truncate">
+                          {student.nisnNis || student.nisn || student.nis || '-'}
+                        </td>
+
+                        {/* 3. Nama Siswa */}
+                        <td className="py-2.5 px-4 sticky left-44 z-10 bg-white dark:bg-slate-900 shadow-r">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                                student.gender === 'L'
+                                  ? 'bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300'
+                                  : 'bg-pink-100 dark:bg-pink-950 text-pink-700 dark:text-pink-300'
+                              }`}
+                            >
+                              {student.gender}
+                            </span>
+                            <div className="font-semibold text-slate-900 dark:text-white truncate">
+                              {student.name}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Input Nilai Komponen Asesmen */}
+                        {displayColumns.map((col) => {
+                          const currentScore = studentScores[col.key] ?? '';
+                          const isFilled = typeof currentScore === 'number' && !isNaN(currentScore);
+                          const isWarning = isFilled && currentScore < 75;
+
+                          return (
+                            <td key={col.key} className="py-2 px-2.5">
+                              <div className="relative">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  placeholder="—"
+                                  value={currentScore}
+                                  onChange={(e) =>
+                                    handleScoreChange(student.id, col.key, e.target.value)
+                                  }
+                                  className={`w-full text-center text-xs font-bold rounded-lg px-2 py-1.5 border transition-all ${
+                                    isFilled
+                                      ? isWarning
+                                        ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300'
+                                        : 'bg-slate-50 dark:bg-slate-800/90 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:bg-white'
+                                      : 'bg-slate-50/40 dark:bg-slate-800/30 border-dashed border-slate-200 dark:border-slate-700 text-slate-400'
+                                  } focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
+                                />
+                              </div>
+                            </td>
+                          );
+                        })}
+
+                        {/* Nilai Akhir Otomatis (Tanpa Penalti Nol) */}
+                        <td className="py-2.5 px-4 text-center bg-indigo-50/30 dark:bg-indigo-950/20 font-bold">
+                          {evalItem.finalScore !== null ? (
+                            <div className="space-y-0.5">
+                              <span
+                                className={`text-sm font-extrabold ${
+                                  evalItem.isPassing
+                                    ? 'text-indigo-700 dark:text-indigo-300'
+                                    : 'text-rose-600 dark:text-rose-400'
+                                }`}
+                              >
+                                {evalItem.finalScore.toFixed(1)}
+                              </span>
+                              <div className="text-[10px] text-slate-400 font-normal">
+                                Predikat: <span className="font-bold">{evalItem.predikat}</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 font-normal italic">—</span>
+                          )}
+                        </td>
+
+                        {/* Ketercapaian */}
+                        <td className="py-2.5 px-3 text-center">
+                          {evalItem.finalScore !== null ? (
+                            <span
+                              className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                                evalItem.isPassing
+                                  ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                                  : 'bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800'
+                              }`}
+                            >
+                              {evalItem.isPassing ? 'Tuntas' : 'Belum Tuntas'}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 italic">Belum Dinilai</span>
+                          )}
+                        </td>
+
+                        {/* Status Kelengkapan Nilai */}
+                        <td className="py-2.5 px-4 text-center">
+                          {evalItem.totalCols === 0 ? (
+                            <span className="text-[10px] text-slate-400">Belum ada tugas</span>
+                          ) : evalItem.isComplete ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300">
+                              <Check className="w-3 h-3" />
+                              Lengkap ({evalItem.filledCount}/{evalItem.totalCols})
+                            </span>
+                          ) : evalItem.filledCount === 0 ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                              Belum Diisi (0/{evalItem.totalCols})
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300">
+                              Kurang {evalItem.missingCount} ({evalItem.filledCount}/{evalItem.totalCols})
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Footer Tabel & Tombol Simpan Sekaligus */}
+        <div className="bg-slate-50 dark:bg-slate-800/60 p-4 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
+          <div>
+            Menampilkan <span className="font-bold text-slate-800 dark:text-slate-200">{filteredStudents.length}</span> siswa,{' '}
+            <span className="font-bold text-slate-800 dark:text-slate-200">{displayColumns.length}</span> kolom komponen penilaian.
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleSaveAllClassGrades}
+              disabled={!isWeightValid}
+              className="px-4 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+            >
+              <Save className="w-3.5 h-3.5" />
+              <span>Simpan Sekaligus untuk Kelas {currentClass?.name}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* MODAL: TAMBAH KOMPONEN / TUGAS BARU */}
+      {isAddColumnModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in-50">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                  <Plus className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 dark:text-white text-sm">
+                    Tambah Komponen Penilaian Baru
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Untuk kelas: <span className="font-semibold text-indigo-600">{currentClass?.name}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddColumnModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateNewColumn} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Jenis Penilaian
+                </label>
+                <select
+                  value={newColType}
+                  onChange={(e) => setNewColType(e.target.value as GradeType)}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="Tugas">Tugas Mandiri / Kelompok (Bobot: {weights.Tugas}%)</option>
+                  <option value="Harian">Formatif / Ulangan Harian (Bobot: {weights.Harian}%)</option>
+                  <option value="Sumatif">Sumatif Lingkup Materi TP (Bobot: {weights.Sumatif}%)</option>
+                  <option value="STS">Sumatif Tengah Semester STS (Bobot: {weights.STS}%)</option>
+                  <option value="SAS">Sumatif Akhir Semester SAS (Bobot: {weights.SAS}%)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Deskripsi Materi / Judul Tugas
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newColTitle}
+                  onChange={(e) => setNewColTitle(e.target.value)}
+                  placeholder="Contoh: Tugas 3: SPLDV & Matriks Invers"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Tanggal Penilaian
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={newColDate}
+                  onChange={(e) => setNewColDate(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsAddColumnModalOpen(false)}
+                  className="px-3.5 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Tambahkan ke Tabel</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: CETAK DOKUMEN RESMI LEGER RAPOR */}
       <PrintDocumentModal
         isOpen={isPrintModalOpen}
         onClose={() => setIsPrintModalOpen(false)}
-        title={
-          printViewMode === 'matrix'
-            ? 'LEGER MATRIKS RINCIAN & KOMPONEN HASIL PENILAIAN'
-            : printViewMode === 'detailed'
-            ? 'LEGER RINCIAN HASIL PENILAIAN LENGKAP'
-            : 'LEGER HASIL PENILAIAN CAPAIAN KOMPETENSI'
-        }
-        subtitle={`Tahun Pelajaran ${school.academicYear} · Semester ${school.semester} · ${
-          printViewMode === 'matrix'
-            ? 'Matriks Lengkap Komponen Penilaian (Tugas, Harian, Sumatif, STS, SAS)'
-            : printViewMode === 'detailed'
-            ? 'Matriks Rincian Judul & Tanggal Asesmen'
-            : 'Kompilasi Rata-rata Kategori'
-        }`}
+        title="LEGER NILAI HASIL BELAJAR SISWA"
+        subtitle={`Kelas: ${currentClass?.name || ''} | Mata Pelajaran: ${selectedSubject} | Semester: ${school.semester} T.A ${school.academicYear}`}
         school={school}
         currentUser={currentUser}
         metaInfo={[
-          { label: 'Kelas / Rombel', value: ledgerClassObj?.name || '-' },
-          { label: 'Wali Kelas', value: ledgerClassObj?.homeroomTeacher || '-' },
-          { label: 'Mata Pelajaran', value: currentUser?.subject || 'Matematika' },
-          { label: 'Total Asesmen', value: `${uniqueAssessments.length} Sesi Penilaian` },
-          { label: 'Kurikulum', value: 'Kurikulum Merdeka' },
+          { label: 'Kelas', value: currentClass?.name || '-' },
+          { label: 'Wali Kelas', value: currentClass?.homeroomTeacher || '-' },
+          { label: 'Mata Pelajaran', value: selectedSubject },
+          { label: 'Semester', value: school.semester },
+          { label: 'Tahun Ajaran', value: school.academicYear },
         ]}
       >
-        <div className="space-y-4">
-          {/* Print format switch (hidden on actual print paper) */}
-          <div className="no-print flex items-center justify-between p-3 bg-slate-100 rounded-lg border border-slate-200 mb-4 text-xs">
-            <span className="font-semibold text-slate-700">Pilih Format Cetak Leger:</span>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setPrintViewMode('matrix')}
-                className={`px-3 py-1 font-semibold rounded-md transition-colors ${
-                  printViewMode === 'matrix'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-white text-slate-700 border border-slate-300'
-                }`}
-              >
-                Matriks Lengkap (Semua Komponen)
-              </button>
-              <button
-                type="button"
-                onClick={() => setPrintViewMode('detailed')}
-                className={`px-3 py-1 font-semibold rounded-md transition-colors ${
-                  printViewMode === 'detailed'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-white text-slate-700 border border-slate-300'
-                }`}
-              >
-                Rincian Asesmen Saja
-              </button>
-              <button
-                type="button"
-                onClick={() => setPrintViewMode('summary')}
-                className={`px-3 py-1 font-semibold rounded-md transition-colors ${
-                  printViewMode === 'summary'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-white text-slate-700 border border-slate-300'
-                }`}
-              >
-                Ringkasan Nilai Akhir
-              </button>
-            </div>
-          </div>
-
-          {printViewMode === 'matrix' && uniqueAssessments.length > 0 ? (
-            /* PRINT TABEL MATRIKS LENGKAP SEMUA KOMPONEN */
-            <div className="overflow-x-auto">
-              <table className="w-full text-[10px] border border-slate-900 border-collapse print:border-black">
-                <thead>
-                  <tr className="bg-slate-100 print:bg-slate-200 text-slate-900 font-bold border-b border-slate-900 text-center">
-                    <th colSpan={4} className="p-1 border border-slate-900 text-left pl-2">Data Siswa</th>
-                    <th colSpan={uniqueAssessments.length} className="p-1 border border-slate-900">Rincian Asesmen (Tanggal & Judul)</th>
-                    <th colSpan={5} className="p-1 border border-slate-900">Rerata Komponen</th>
-                    <th colSpan={3} className="p-1 border border-slate-900">Hasil Akhir</th>
-                  </tr>
-                  <tr className="bg-slate-100 print:bg-slate-200 text-slate-900 font-bold border-b border-slate-900">
-                    <th className="p-1 border border-slate-900 text-center w-6">No</th>
-                    <th className="p-1 border border-slate-900 text-center w-24">NISN / NIS</th>
-                    <th className="p-1 border border-slate-900 text-left min-w-[110px]">Nama Siswa</th>
-                    <th className="p-1 border border-slate-900 text-center w-6">L/P</th>
-
-                    {/* Columns for each assessment */}
-                    {uniqueAssessments.map((col) => (
-                      <th key={col.key} className="p-1 border border-slate-900 text-center min-w-[60px]">
-                        <div className="text-[8px] uppercase font-bold text-slate-700">{col.type}</div>
-                        <div className="font-bold text-[9px] leading-tight truncate max-w-[80px]" title={col.title}>{col.title}</div>
-                        <div className="font-normal font-mono text-[8px] text-slate-600">{formatDateId(col.date)}</div>
-                      </th>
-                    ))}
-
-                    {/* Component Averages */}
-                    <th className="p-1 border border-slate-900 text-center w-10">Tugas</th>
-                    <th className="p-1 border border-slate-900 text-center w-10">Harian</th>
-                    <th className="p-1 border border-slate-900 text-center w-10">Sumatif</th>
-                    <th className="p-1 border border-slate-900 text-center w-10">STS</th>
-                    <th className="p-1 border border-slate-900 text-center w-10">SAS</th>
-
-                    <th className="p-1 border border-slate-900 text-center w-10 font-extrabold bg-slate-200">NA</th>
-                    <th className="p-1 border border-slate-900 text-center w-7">Pred.</th>
-                    <th className="p-1 border border-slate-900 text-left min-w-[90px]">Capaian TP</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {detailedLedgerData.map((row) => (
-                    <tr key={row.id} className="border-b border-slate-900">
-                      <td className="p-1 border border-slate-900 text-center font-mono">{row.no}</td>
-                      <td className="p-1 border border-slate-900 text-center font-mono">{row.nisnNis}</td>
-                      <td className="p-1 border border-slate-900 font-medium">{row.name}</td>
-                      <td className="p-1 border border-slate-900 text-center">{row.gender}</td>
-
-                      {/* Scores per assessment */}
-                      {uniqueAssessments.map((col) => {
-                        const sc = row.scoresMap[col.key];
-                        return (
-                          <td key={col.key} className="p-1 border border-slate-900 text-center font-mono font-medium">
-                            {sc !== null && sc !== undefined ? sc : '-'}
-                          </td>
-                        );
-                      })}
-
-                      {/* Component Averages */}
-                      <td className="p-1 border border-slate-900 text-center font-mono">{row.avgTugas}</td>
-                      <td className="p-1 border border-slate-900 text-center font-mono">{row.avgHarian}</td>
-                      <td className="p-1 border border-slate-900 text-center font-mono">{row.avgSumatif}</td>
-                      <td className="p-1 border border-slate-900 text-center font-mono">{row.sts}</td>
-                      <td className="p-1 border border-slate-900 text-center font-mono">{row.sas}</td>
-
-                      <td className="p-1 border border-slate-900 text-center font-mono font-bold bg-slate-100">
-                        {row.finalGrade}
-                      </td>
-                      <td className="p-1 border border-slate-900 text-center font-bold">{row.predikat}</td>
-                      <td className="p-1 border border-slate-900 text-[9px] leading-tight">{row.statusKetercapaian}</td>
-                    </tr>
-                  ))}
-                  {/* Footer Rata-rata */}
-                  <tr className="bg-slate-100 font-bold border-t-2 border-slate-900">
-                    <td colSpan={4} className="p-1 border border-slate-900 text-right">Rerata Kelas:</td>
-                    {uniqueAssessments.map((col) => {
-                      const stat = colStats[col.key];
-                      return (
-                        <td key={col.key} className="p-1 border border-slate-900 text-center font-mono">
-                          {stat?.avg !== null ? stat.avg : '-'}
-                        </td>
-                      );
-                    })}
-                    <td className="p-1 border border-slate-900 text-center font-mono">
-                      {(() => {
-                        const vals = detailedLedgerData.map((d) => d.avgTugas).filter((v): v is number => typeof v === 'number');
-                        return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : '-';
-                      })()}
-                    </td>
-                    <td className="p-1 border border-slate-900 text-center font-mono">
-                      {(() => {
-                        const vals = detailedLedgerData.map((d) => d.avgHarian).filter((v): v is number => typeof v === 'number');
-                        return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : '-';
-                      })()}
-                    </td>
-                    <td className="p-1 border border-slate-900 text-center font-mono">
-                      {(() => {
-                        const vals = detailedLedgerData.map((d) => d.avgSumatif).filter((v): v is number => typeof v === 'number');
-                        return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : '-';
-                      })()}
-                    </td>
-                    <td className="p-1 border border-slate-900 text-center font-mono">
-                      {(() => {
-                        const vals = detailedLedgerData.map((d) => d.sts).filter((v): v is number => typeof v === 'number');
-                        return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : '-';
-                      })()}
-                    </td>
-                    <td className="p-1 border border-slate-900 text-center font-mono">
-                      {(() => {
-                        const vals = detailedLedgerData.map((d) => d.sas).filter((v): v is number => typeof v === 'number');
-                        return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : '-';
-                      })()}
-                    </td>
-                    <td className="p-1 border border-slate-900 text-center font-mono font-extrabold">
-                      {(() => {
-                        const finals = detailedLedgerData.map((d) => d.finalGrade).filter((v): v is number => typeof v === 'number');
-                        return finals.length ? Math.round(finals.reduce((a, b) => a + b, 0) / finals.length) : '-';
-                      })()}
-                    </td>
-                    <td colSpan={2} className="p-1 border border-slate-900 text-center text-[9px]">
-                      {ledgerStudents.length} Siswa
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          ) : printViewMode === 'detailed' && uniqueAssessments.length > 0 ? (
-            /* PRINT TABEL MATRIKS RINCI */
-            <div className="overflow-x-auto">
-              <table className="w-full text-[11px] border border-slate-900 border-collapse print:border-black">
-                <thead>
-                  <tr className="bg-slate-100 print:bg-slate-200 text-slate-900 font-bold border-b border-slate-900">
-                    <th className="p-1.5 border border-slate-900 text-center w-7">No</th>
-                    <th className="p-1.5 border border-slate-900 text-center w-28">NISN / NIS</th>
-                    <th className="p-1.5 border border-slate-900 text-left min-w-[120px]">Nama Siswa</th>
-                    <th className="p-1.5 border border-slate-900 text-center w-7">L/P</th>
-
-                    {/* Columns for each assessment with date & title */}
-                    {uniqueAssessments.map((col) => (
-                      <th key={col.key} className="p-1.5 border border-slate-900 text-center min-w-[70px]">
-                        <div className="text-[9px] uppercase font-bold text-slate-700">{col.type}</div>
-                        <div className="font-bold text-[10px] leading-tight">{col.title}</div>
-                        <div className="font-normal font-mono text-[9px] text-slate-600">{formatDateId(col.date)}</div>
-                      </th>
-                    ))}
-
-                    <th className="p-1.5 border border-slate-900 text-center w-12 font-extrabold bg-slate-200">NA</th>
-                    <th className="p-1.5 border border-slate-900 text-center w-8">Pred.</th>
-                    <th className="p-1.5 border border-slate-900 text-left min-w-[110px]">Capaian TP</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {detailedLedgerData.map((row) => (
-                    <tr key={row.id} className="border-b border-slate-900">
-                      <td className="p-1 border border-slate-900 text-center font-mono">{row.no}</td>
-                      <td className="p-1 border border-slate-900 text-center font-mono">{row.nisnNis}</td>
-                      <td className="p-1 border border-slate-900 font-medium">{row.name}</td>
-                      <td className="p-1 border border-slate-900 text-center">{row.gender}</td>
-
-                      {/* Scores per assessment */}
-                      {uniqueAssessments.map((col) => {
-                        const sc = row.scoresMap[col.key];
-                        return (
-                          <td key={col.key} className="p-1 border border-slate-900 text-center font-mono font-medium">
-                            {sc !== null && sc !== undefined ? sc : '-'}
-                          </td>
-                        );
-                      })}
-
-                      <td className="p-1 border border-slate-900 text-center font-mono font-bold bg-slate-100">
-                        {row.finalGrade}
-                      </td>
-                      <td className="p-1 border border-slate-900 text-center font-bold">{row.predikat}</td>
-                      <td className="p-1 border border-slate-900 text-[10px] leading-tight">{row.statusKetercapaian}</td>
-                    </tr>
-                  ))}
-                  {/* Footer Rata-rata */}
-                  <tr className="bg-slate-100 font-bold border-t-2 border-slate-900">
-                    <td colSpan={4} className="p-1.5 border border-slate-900 text-right">Rerata Kelas:</td>
-                    {uniqueAssessments.map((col) => {
-                      const stat = colStats[col.key];
-                      return (
-                        <td key={col.key} className="p-1.5 border border-slate-900 text-center font-mono">
-                          {stat?.avg !== null ? stat.avg : '-'}
-                        </td>
-                      );
-                    })}
-                    <td className="p-1.5 border border-slate-900 text-center font-mono font-extrabold">
-                      {(() => {
-                        const finals = detailedLedgerData.map((d) => d.finalGrade).filter((v): v is number => typeof v === 'number');
-                        return finals.length ? Math.round(finals.reduce((a, b) => a + b, 0) / finals.length) : '-';
-                      })()}
-                    </td>
-                    <td colSpan={2} className="p-1.5 border border-slate-900 text-center text-[10px]">
-                      {ledgerStudents.length} Siswa
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            /* PRINT TABEL RINGKASAN */
-            <table className="w-full text-xs border border-slate-900 border-collapse print:border-black">
-              <thead>
-                <tr className="bg-slate-100 print:bg-slate-200 text-slate-900 font-bold border-b border-slate-900">
-                  <th className="p-2 border border-slate-900 text-center w-8">No</th>
-                  <th className="p-2 border border-slate-900 text-center">NISN / NIS</th>
-                  <th className="p-2 border border-slate-900 text-left">Nama Siswa</th>
-                  <th className="p-2 border border-slate-900 text-center w-8">L/P</th>
-                  <th className="p-2 border border-slate-900 text-center w-12">Tugas</th>
-                  <th className="p-2 border border-slate-900 text-center w-12">Harian</th>
-                  <th className="p-2 border border-slate-900 text-center w-12">Sumatif</th>
-                  <th className="p-2 border border-slate-900 text-center w-12">STS</th>
-                  <th className="p-2 border border-slate-900 text-center w-12">SAS</th>
-                  <th className="p-2 border border-slate-900 text-center w-14 font-extrabold bg-slate-200">NA</th>
-                  <th className="p-2 border border-slate-900 text-center w-10">Pred.</th>
-                  <th className="p-2 border border-slate-900 text-left">Ketercapaian TP</th>
+        <div className="p-4 space-y-4">
+          <table className="w-full text-[10px] border border-slate-900 border-collapse print:border-black">
+            <thead>
+              <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-900 text-center">
+                <th className="p-1 border border-slate-900 w-8">No</th>
+                <th className="p-1 border border-slate-900 w-24">NISN / NIS</th>
+                <th className="p-1 border border-slate-900 text-left min-w-[120px]">Nama Siswa</th>
+                <th className="p-1 border border-slate-900 w-8">L/P</th>
+                <th className="p-1 border border-slate-900 w-14">Tugas ({weights.Tugas}%)</th>
+                <th className="p-1 border border-slate-900 w-14">Formatif ({weights.Harian}%)</th>
+                <th className="p-1 border border-slate-900 w-14">Sumatif ({weights.Sumatif}%)</th>
+                <th className="p-1 border border-slate-900 w-14">STS ({weights.STS}%)</th>
+                <th className="p-1 border border-slate-900 w-14">SAS ({weights.SAS}%)</th>
+                <th className="p-1 border border-slate-900 w-14 bg-slate-200 font-extrabold">NA</th>
+                <th className="p-1 border border-slate-900 w-10">Pred.</th>
+                <th className="p-1 border border-slate-900 text-center w-20">Ketercapaian</th>
+              </tr>
+            </thead>
+            <tbody>
+              {studentEvaluations.map((row) => (
+                <tr key={row.student.id} className="border-b border-slate-900">
+                  <td className="p-1 border border-slate-900 text-center font-mono">{row.no}</td>
+                  <td className="p-1 border border-slate-900 text-center font-mono">{row.student.nisnNis || '-'}</td>
+                  <td className="p-1 border border-slate-900 font-medium">{row.student.name}</td>
+                  <td className="p-1 border border-slate-900 text-center">{row.student.gender}</td>
+                  <td className="p-1 border border-slate-900 text-center font-mono">
+                    {row.typeAverages.Tugas !== null ? Math.round(row.typeAverages.Tugas) : '-'}
+                  </td>
+                  <td className="p-1 border border-slate-900 text-center font-mono">
+                    {row.typeAverages.Harian !== null ? Math.round(row.typeAverages.Harian) : '-'}
+                  </td>
+                  <td className="p-1 border border-slate-900 text-center font-mono">
+                    {row.typeAverages.Sumatif !== null ? Math.round(row.typeAverages.Sumatif) : '-'}
+                  </td>
+                  <td className="p-1 border border-slate-900 text-center font-mono">
+                    {row.typeAverages.STS !== null ? Math.round(row.typeAverages.STS) : '-'}
+                  </td>
+                  <td className="p-1 border border-slate-900 text-center font-mono">
+                    {row.typeAverages.SAS !== null ? Math.round(row.typeAverages.SAS) : '-'}
+                  </td>
+                  <td className="p-1 border border-slate-900 text-center font-mono font-bold bg-slate-100">
+                    {row.finalScore !== null ? row.finalScore.toFixed(1) : '-'}
+                  </td>
+                  <td className="p-1 border border-slate-900 text-center font-bold">{row.predikat}</td>
+                  <td className="p-1 border border-slate-900 text-center text-[9px] font-semibold">
+                    {row.finalScore !== null ? (row.isPassing ? 'Tuntas' : 'Belum Tuntas') : '-'}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {detailedLedgerData.map((row) => (
-                  <tr key={row.id} className="border-b border-slate-900">
-                    <td className="p-1.5 border border-slate-900 text-center font-mono">{row.no}</td>
-                    <td className="p-1.5 border border-slate-900 text-center font-mono font-medium">{row.nisnNis}</td>
-                    <td className="p-1.5 border border-slate-900 font-medium">{row.name}</td>
-                    <td className="p-1.5 border border-slate-900 text-center">{row.gender}</td>
-                    <td className="p-1.5 border border-slate-900 text-center font-mono">{row.avgTugas}</td>
-                    <td className="p-1.5 border border-slate-900 text-center font-mono">{row.avgHarian}</td>
-                    <td className="p-1.5 border border-slate-900 text-center font-mono">{row.avgSumatif}</td>
-                    <td className="p-1.5 border border-slate-900 text-center font-mono">{row.sts}</td>
-                    <td className="p-1.5 border border-slate-900 text-center font-mono">{row.sas}</td>
-                    <td className="p-1.5 border border-slate-900 text-center font-mono font-bold bg-slate-100">
-                      {row.finalGrade}
-                    </td>
-                    <td className="p-1.5 border border-slate-900 text-center font-bold">{row.predikat}</td>
-                    <td className="p-1.5 border border-slate-900 text-[10px]">{row.statusKetercapaian}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+              ))}
+            </tbody>
+          </table>
         </div>
       </PrintDocumentModal>
     </div>
