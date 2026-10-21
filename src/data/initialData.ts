@@ -377,6 +377,75 @@ export const DEFAULT_GRADES: GradeRecord[] = [
   { id: 'grd-404-s', studentId: 'std-404', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'Sumatif', title: 'Sumatif: Kalkulus Lanjut', score: 91, maxScore: 100, date: '2026-09-29', semester: 'Ganjil' },
   { id: 'grd-404-sts', studentId: 'std-404', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'STS', title: 'Sumatif Tengah Semester', score: 92, maxScore: 100, date: '2026-10-07', semester: 'Ganjil' },
   { id: 'grd-404-sas', studentId: 'std-404', classId: 'cls-4', subject: 'Matematika Peminatan', type: 'SAS', title: 'Sumatif Akhir Semester', score: 93, maxScore: 100, date: '2026-10-17', semester: 'Ganjil' },
+
+  // ==========================================
+  // SEMESTER GENAP: MATEMATIKA (KELAS X.1)
+  // ==========================================
+  // Siswa std-101 (Semester Genap)
+  { id: 'grd-genap-101-t1', studentId: 'std-101', classId: 'cls-1', subject: 'Matematika', type: 'Tugas', title: 'Tugas 1: Vektor & Matriks', score: 95, maxScore: 100, date: '2027-01-18', semester: 'Genap' },
+  { id: 'grd-genap-101-t2', studentId: 'std-101', classId: 'cls-1', subject: 'Matematika', type: 'Tugas', title: 'Tugas 2: Sistem Persamaan Linear', score: 96, maxScore: 100, date: '2027-02-08', semester: 'Genap' },
+  { id: 'grd-genap-101-h', studentId: 'std-101', classId: 'cls-1', subject: 'Matematika', type: 'Harian', title: 'Formatif: Aljabar Vektor', score: 92, maxScore: 100, date: '2027-02-20', semester: 'Genap' },
+  { id: 'grd-genap-101-s', studentId: 'std-101', classId: 'cls-1', subject: 'Matematika', type: 'Sumatif', title: 'Sumatif: Transformasi Geometri', score: 94, maxScore: 100, date: '2027-03-05', semester: 'Genap' },
+  { id: 'grd-genap-101-sts', studentId: 'std-101', classId: 'cls-1', subject: 'Matematika', type: 'STS', title: 'Sumatif Tengah Semester Genap', score: 96, maxScore: 100, date: '2027-03-22', semester: 'Genap' },
+  { id: 'grd-genap-101-sas', studentId: 'std-101', classId: 'cls-1', subject: 'Matematika', type: 'SAS', title: 'Sumatif Akhir Tahun', score: 98, maxScore: 100, date: '2027-05-18', semester: 'Genap' },
+
+  // Siswa std-102 (Semester Genap)
+  { id: 'grd-genap-102-t1', studentId: 'std-102', classId: 'cls-1', subject: 'Matematika', type: 'Tugas', title: 'Tugas 1: Vektor & Matriks', score: 90, maxScore: 100, date: '2027-01-18', semester: 'Genap' },
+  { id: 'grd-genap-102-t2', studentId: 'std-102', classId: 'cls-1', subject: 'Matematika', type: 'Tugas', title: 'Tugas 2: Sistem Persamaan Linear', score: 92, maxScore: 100, date: '2027-02-08', semester: 'Genap' },
+  { id: 'grd-genap-102-h', studentId: 'std-102', classId: 'cls-1', subject: 'Matematika', type: 'Harian', title: 'Formatif: Aljabar Vektor', score: 88, maxScore: 100, date: '2027-02-20', semester: 'Genap' },
+  { id: 'grd-genap-102-s', studentId: 'std-102', classId: 'cls-1', subject: 'Matematika', type: 'Sumatif', title: 'Sumatif: Transformasi Geometri', score: 91, maxScore: 100, date: '2027-03-05', semester: 'Genap' },
+  { id: 'grd-genap-102-sts', studentId: 'std-102', classId: 'cls-1', subject: 'Matematika', type: 'STS', title: 'Sumatif Tengah Semester Genap', score: 93, maxScore: 100, date: '2027-03-22', semester: 'Genap' },
+  { id: 'grd-genap-102-sas', studentId: 'std-102', classId: 'cls-1', subject: 'Matematika', type: 'SAS', title: 'Sumatif Akhir Tahun', score: 92, maxScore: 100, date: '2027-05-18', semester: 'Genap' },
+
+  // Siswa std-103 (Semester Genap)
+  { id: 'grd-genap-103-t1', studentId: 'std-103', classId: 'cls-1', subject: 'Matematika', type: 'Tugas', title: 'Tugas 1: Vektor & Matriks', score: 88, maxScore: 100, date: '2027-01-18', semester: 'Genap' },
+  { id: 'grd-genap-103-t2', studentId: 'std-103', classId: 'cls-1', subject: 'Matematika', type: 'Tugas', title: 'Tugas 2: Sistem Persamaan Linear', score: 87, maxScore: 100, date: '2027-02-08', semester: 'Genap' },
+  { id: 'grd-genap-103-h', studentId: 'std-103', classId: 'cls-1', subject: 'Matematika', type: 'Harian', title: 'Formatif: Aljabar Vektor', score: 85, maxScore: 100, date: '2027-02-20', semester: 'Genap' },
+  { id: 'grd-genap-103-s', studentId: 'std-103', classId: 'cls-1', subject: 'Matematika', type: 'Sumatif', title: 'Sumatif: Transformasi Geometri', score: 89, maxScore: 100, date: '2027-03-05', semester: 'Genap' },
+  { id: 'grd-genap-103-sts', studentId: 'std-103', classId: 'cls-1', subject: 'Matematika', type: 'STS', title: 'Sumatif Tengah Semester Genap', score: 90, maxScore: 100, date: '2027-03-22', semester: 'Genap' },
+  { id: 'grd-genap-103-sas', studentId: 'std-103', classId: 'cls-1', subject: 'Matematika', type: 'SAS', title: 'Sumatif Akhir Tahun', score: 91, maxScore: 100, date: '2027-05-18', semester: 'Genap' },
+
+  // Siswa std-104 (Semester Genap: Mengalami Peningkatan Nilai)
+  { id: 'grd-genap-104-t1', studentId: 'std-104', classId: 'cls-1', subject: 'Matematika', type: 'Tugas', title: 'Tugas 1: Vektor & Matriks', score: 78, maxScore: 100, date: '2027-01-18', semester: 'Genap' },
+  { id: 'grd-genap-104-t2', studentId: 'std-104', classId: 'cls-1', subject: 'Matematika', type: 'Tugas', title: 'Tugas 2: Sistem Persamaan Linear', score: 80, maxScore: 100, date: '2027-02-08', semester: 'Genap' },
+  { id: 'grd-genap-104-h', studentId: 'std-104', classId: 'cls-1', subject: 'Matematika', type: 'Harian', title: 'Formatif: Aljabar Vektor', score: 76, maxScore: 100, date: '2027-02-20', semester: 'Genap' },
+  { id: 'grd-genap-104-s', studentId: 'std-104', classId: 'cls-1', subject: 'Matematika', type: 'Sumatif', title: 'Sumatif: Transformasi Geometri', score: 78, maxScore: 100, date: '2027-03-05', semester: 'Genap' },
+  { id: 'grd-genap-104-sts', studentId: 'std-104', classId: 'cls-1', subject: 'Matematika', type: 'STS', title: 'Sumatif Tengah Semester Genap', score: 79, maxScore: 100, date: '2027-03-22', semester: 'Genap' },
+  { id: 'grd-genap-104-sas', studentId: 'std-104', classId: 'cls-1', subject: 'Matematika', type: 'SAS', title: 'Sumatif Akhir Tahun', score: 80, maxScore: 100, date: '2027-05-18', semester: 'Genap' },
+
+  // ==========================================
+  // MATA PELAJARAN: INFORMATIKA (KELAS X.1)
+  // ==========================================
+  // Siswa std-101 (Informatika Ganjil & Genap)
+  { id: 'grd-inf-101-1', studentId: 'std-101', classId: 'cls-1', subject: 'Informatika', type: 'Tugas', title: 'Tugas 1: Analisis Data', score: 94, maxScore: 100, date: '2026-09-15', semester: 'Ganjil' },
+  { id: 'grd-inf-101-2', studentId: 'std-101', classId: 'cls-1', subject: 'Informatika', type: 'Sumatif', title: 'Sumatif: Algoritma Pemrograman', score: 96, maxScore: 100, date: '2026-10-02', semester: 'Ganjil' },
+  { id: 'grd-inf-101-sts', studentId: 'std-101', classId: 'cls-1', subject: 'Informatika', type: 'STS', title: 'STS Informatika Ganjil', score: 95, maxScore: 100, date: '2026-10-10', semester: 'Ganjil' },
+  { id: 'grd-inf-101-g1', studentId: 'std-101', classId: 'cls-1', subject: 'Informatika', type: 'Tugas', title: 'Tugas 1: Basis Data Relasional', score: 97, maxScore: 100, date: '2027-02-12', semester: 'Genap' },
+  { id: 'grd-inf-101-g2', studentId: 'std-101', classId: 'cls-1', subject: 'Informatika', type: 'Sumatif', title: 'Sumatif: Rekayasa Perangkat Lunak', score: 98, maxScore: 100, date: '2027-03-10', semester: 'Genap' },
+
+  // Siswa std-102 (Informatika Ganjil & Genap)
+  { id: 'grd-inf-102-1', studentId: 'std-102', classId: 'cls-1', subject: 'Informatika', type: 'Tugas', title: 'Tugas 1: Analisis Data', score: 90, maxScore: 100, date: '2026-09-15', semester: 'Ganjil' },
+  { id: 'grd-inf-102-2', studentId: 'std-102', classId: 'cls-1', subject: 'Informatika', type: 'Sumatif', title: 'Sumatif: Algoritma Pemrograman', score: 88, maxScore: 100, date: '2026-10-02', semester: 'Ganjil' },
+  { id: 'grd-inf-102-sts', studentId: 'std-102', classId: 'cls-1', subject: 'Informatika', type: 'STS', title: 'STS Informatika Ganjil', score: 92, maxScore: 100, date: '2026-10-10', semester: 'Ganjil' },
+  { id: 'grd-inf-102-g1', studentId: 'std-102', classId: 'cls-1', subject: 'Informatika', type: 'Tugas', title: 'Tugas 1: Basis Data Relasional', score: 93, maxScore: 100, date: '2027-02-12', semester: 'Genap' },
+  { id: 'grd-inf-102-g2', studentId: 'std-102', classId: 'cls-1', subject: 'Informatika', type: 'Sumatif', title: 'Sumatif: Rekayasa Perangkat Lunak', score: 94, maxScore: 100, date: '2027-03-10', semester: 'Genap' },
+
+  // ==========================================
+  // MATA PELAJARAN: FISIKA (KELAS X.1)
+  // ==========================================
+  // Siswa std-101 (Fisika)
+  { id: 'grd-fis-101-1', studentId: 'std-101', classId: 'cls-1', subject: 'Fisika', type: 'Tugas', title: 'Tugas 1: Pengukuran & Angka Penting', score: 92, maxScore: 100, date: '2026-09-14', semester: 'Ganjil' },
+  { id: 'grd-fis-101-2', studentId: 'std-101', classId: 'cls-1', subject: 'Fisika', type: 'Sumatif', title: 'Sumatif: Kinematika Gerak Lurus', score: 91, maxScore: 100, date: '2026-09-28', semester: 'Ganjil' },
+  { id: 'grd-fis-101-sts', studentId: 'std-101', classId: 'cls-1', subject: 'Fisika', type: 'STS', title: 'STS Fisika Ganjil', score: 93, maxScore: 100, date: '2026-10-09', semester: 'Ganjil' },
+  { id: 'grd-fis-101-g1', studentId: 'std-101', classId: 'cls-1', subject: 'Fisika', type: 'Tugas', title: 'Tugas 1: Dinamika Newton & Gravitasi', score: 94, maxScore: 100, date: '2027-02-15', semester: 'Genap' },
+  { id: 'grd-fis-101-g2', studentId: 'std-101', classId: 'cls-1', subject: 'Fisika', type: 'Sumatif', title: 'Sumatif: Usaha & Energi', score: 95, maxScore: 100, date: '2027-03-12', semester: 'Genap' },
+
+  // Siswa std-102 (Fisika)
+  { id: 'grd-fis-102-1', studentId: 'std-102', classId: 'cls-1', subject: 'Fisika', type: 'Tugas', title: 'Tugas 1: Pengukuran & Angka Penting', score: 86, maxScore: 100, date: '2026-09-14', semester: 'Ganjil' },
+  { id: 'grd-fis-102-2', studentId: 'std-102', classId: 'cls-1', subject: 'Fisika', type: 'Sumatif', title: 'Sumatif: Kinematika Gerak Lurus', score: 85, maxScore: 100, date: '2026-09-28', semester: 'Ganjil' },
+  { id: 'grd-fis-102-sts', studentId: 'std-102', classId: 'cls-1', subject: 'Fisika', type: 'STS', title: 'STS Fisika Ganjil', score: 88, maxScore: 100, date: '2026-10-09', semester: 'Ganjil' },
+  { id: 'grd-fis-102-g1', studentId: 'std-102', classId: 'cls-1', subject: 'Fisika', type: 'Tugas', title: 'Tugas 1: Dinamika Newton & Gravitasi', score: 89, maxScore: 100, date: '2027-02-15', semester: 'Genap' },
+  { id: 'grd-fis-102-g2', studentId: 'std-102', classId: 'cls-1', subject: 'Fisika', type: 'Sumatif', title: 'Sumatif: Usaha & Energi', score: 90, maxScore: 100, date: '2027-03-12', semester: 'Genap' },
 ];
 
 // Seed realistic Attendance records for analysis

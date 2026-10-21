@@ -38,8 +38,10 @@ import {
   TrendingDown,
   HelpCircle,
   CheckCheck,
+  TrendingUp,
 } from 'lucide-react';
 import { PrintDocumentModal } from './PrintDocumentModal';
+import { GradeTrendAnalytics } from './GradeTrendAnalytics';
 
 interface GradeManagementProps {
   students: Student[];
@@ -73,7 +75,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
   school,
   currentUser,
 }) => {
-  const [activeTab, setActiveTab] = useState<'ledger' | 'mass' | 'history'>('ledger');
+  const [activeTab, setActiveTab] = useState<'ledger' | 'mass' | 'history' | 'analytics'>('ledger');
 
   // Ledger configuration states
   const [ledgerClassId, setLedgerClassId] = useState<string>(classes[0]?.id || '');
@@ -970,6 +972,17 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
             <ListChecks className="w-3.5 h-3.5" />
             <span>Riwayat & Edit Nilai ({grades.length})</span>
           </button>
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'analytics'
+                ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>Visualisasi & Tren Nilai</span>
+          </button>
         </div>
       </div>
 
@@ -1104,6 +1117,16 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                   </select>
                 </div>
               )}
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('analytics')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors cursor-pointer shadow-2xs"
+                title="Buka visualisasi tren nilai siswa kelas ini"
+              >
+                <TrendingUp className="w-3.5 h-3.5" />
+                <span>Visualisasi Tren</span>
+              </button>
 
               <button
                 type="button"
@@ -2265,7 +2288,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
             </div>
           </div>
         </div>
-      ) : (
+      ) : activeTab === 'history' ? (
         /* TAB 3: RIWAYAT & EDIT PENILAIAN INDIVIDUAL */
         <div className="space-y-4">
           <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -2368,6 +2391,19 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
             </div>
           </div>
         </div>
+      ) : (
+        /* TAB 4: VISUALISASI DATA NILAI & TREN RECHARTS */
+        <GradeTrendAnalytics
+          grades={grades}
+          students={students}
+          classes={classes}
+          school={school}
+          initialClassId={ledgerClassId}
+          onNavigateToLedger={(classId) => {
+            setLedgerClassId(classId);
+            setActiveTab('ledger');
+          }}
+        />
       )}
 
       {/* MODAL 1: EDIT SEMUA NILAI SISWA */}
