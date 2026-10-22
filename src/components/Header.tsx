@@ -103,8 +103,8 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header
-      className={`no-print sticky top-0 z-30 transition-colors ${getThemeHeaderStyles(
+    <div
+      className={`w-full transition-colors ${getThemeHeaderStyles(
         theme.menuColor,
         theme.mode
       )}`}
@@ -253,6 +253,6 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
       </div>
-    </header>
+    </div>
   );
 };

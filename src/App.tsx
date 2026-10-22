@@ -12,6 +12,7 @@ import {
 } from './types';
 import { StorageService, DEFAULT_THEME_CONFIG } from './services/storageService';
 import { Header } from './components/Header';
+import { TopMenuBar } from './components/TopMenuBar';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
 import { ClassManagement } from './components/ClassManagement';
@@ -313,44 +314,53 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 antialiased font-sans transition-colors">
-      {/* Top Header */}
-      <Header
-        school={school}
-        currentUser={currentUser}
-        theme={theme}
-        onOpenAuth={() => setIsAuthModalOpen(true)}
-        onLogout={handleLogout}
-        onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
-        onOpenShare={() => setIsShareModalOpen(true)}
-        onOpenTheme={() => setIsThemeModalOpen(true)}
-        onToggleThemeMode={() =>
-          handleUpdateTheme({
-            ...theme,
-            mode: theme.mode === 'dark' ? 'light' : 'dark',
-          })
-        }
-        onOpenEditProfile={() => setIsEditProfileModalOpen(true)}
-        activeTab={activeTab}
-      />
-
-      {/* Main Container: Sidebar + Content */}
-      <div className="flex-1 flex max-w-7xl w-full mx-auto">
-        <Sidebar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          isOpen={isSidebarOpen}
-          onClose={() => setIsSidebarOpen(false)}
-          currentUser={currentUser}
+      {/* Top Application Navigation: Sticky Brand Header & Horizontal Menu Bar */}
+      <header className="no-print sticky top-0 z-30 shadow-xs">
+        <Header
           school={school}
+          currentUser={currentUser}
           theme={theme}
-          onResetData={handleResetToDefaults}
+          onOpenAuth={() => setIsAuthModalOpen(true)}
+          onLogout={handleLogout}
+          onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
           onOpenShare={() => setIsShareModalOpen(true)}
           onOpenTheme={() => setIsThemeModalOpen(true)}
+          onToggleThemeMode={() =>
+            handleUpdateTheme({
+              ...theme,
+              mode: theme.mode === 'dark' ? 'light' : 'dark',
+            })
+          }
           onOpenEditProfile={() => setIsEditProfileModalOpen(true)}
+          activeTab={activeTab}
         />
+        <TopMenuBar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          theme={theme}
+          onResetData={handleResetToDefaults}
+        />
+      </header>
 
+      {/* Mobile Drawer (Sidebar for mobile screens) */}
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        currentUser={currentUser}
+        school={school}
+        theme={theme}
+        onResetData={handleResetToDefaults}
+        onOpenShare={() => setIsShareModalOpen(true)}
+        onOpenTheme={() => setIsThemeModalOpen(true)}
+        onOpenEditProfile={() => setIsEditProfileModalOpen(true)}
+      />
+
+      {/* Main Container: Full-width dynamic workspace without left sidebar */}
+      <div className="flex-1 flex flex-col max-w-7xl w-full mx-auto">
         {/* Dynamic Main Workspace */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0 overflow-y-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0">
           {activeTab === 'dashboard' && (
             <Dashboard
               classes={classes}
