@@ -42,7 +42,16 @@ export interface AssessmentColumn {
   date: string;
   maxScore: number;
   subject: string;
+  isPaten?: boolean;
 }
+
+export const DEFAULT_PATEN_COLUMNS: Array<{ type: GradeType; defaultTitle: string }> = [
+  { type: 'Tugas', defaultTitle: 'Tugas 1: Mandiri / Kelompok' },
+  { type: 'Harian', defaultTitle: 'Formatif / Ulangan Harian 1' },
+  { type: 'Sumatif', defaultTitle: 'Sumatif Lingkup Materi (TP) 1' },
+  { type: 'STS', defaultTitle: 'Sumatif Tengah Semester (STS)' },
+  { type: 'SAS', defaultTitle: 'Sumatif Akhir Semester (SAS)' },
+];
 
 export const GRADE_TYPE_LABELS: Record<GradeType, string> = {
   Tugas: 'Tugas Mandiri / Kelompok',
@@ -203,7 +212,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
     SAS: 5,
   };
 
-  // Gabungan Kolom Tersimpan + Kolom Baru Ditambahkan (Tugas selalu di depan)
+  // Gabungan Kolom Tersimpan + Kolom Baru + Komponen Paten Wajib
   const allColumns = useMemo<AssessmentColumn[]>(() => {
     const list = [...savedColumns];
     customColumns.forEach((custom) => {
@@ -211,12 +220,36 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
         list.push(custom);
       }
     });
+
+    // Pastikan Komponen Paten (Formatif/Ulangan, Sumatif TP, STS, SAS, dan Tugas) selalu ada
+    const patenTypes: GradeType[] = ['Tugas', 'Harian', 'Sumatif', 'STS', 'SAS'];
+    patenTypes.forEach((pt) => {
+      const existing = list.find((c) => c.type === pt);
+      if (existing) {
+        existing.isPaten = true;
+      } else {
+        const def = DEFAULT_PATEN_COLUMNS.find((d) => d.type === pt);
+        const title = def?.defaultTitle || GRADE_TYPE_LABELS[pt];
+        const date = new Date().toISOString().slice(0, 10);
+        const key = `paten__${selectedClassId}__${pt}__${title.toLowerCase()}__${date}`;
+        list.push({
+          key,
+          type: pt,
+          title,
+          date,
+          maxScore: 100,
+          subject: selectedSubject,
+          isPaten: true,
+        });
+      }
+    });
+
     return list.sort((a, b) => {
       const diff = (typeOrder[a.type] || 99) - (typeOrder[b.type] || 99);
       if (diff !== 0) return diff;
       return a.date.localeCompare(b.date);
     });
-  }, [savedColumns, customColumns]);
+  }, [savedColumns, customColumns, selectedClassId, selectedSubject]);
 
   // Kolom Penilaian Khusus Tugas
   const tugasColumns = useMemo(() => {
@@ -273,35 +306,24 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
 
   const isWeightValid = totalWeight === 100;
 
-  // PERHITUNGAN NILAI AKHIR OTOMATIS & OBJEKTIF
-  // Ketentuan Utama: "Nilai yang belum diinput tidak boleh otomatis dianggap nol."
+  // PERHITUNGAN NILAI AKHIR OTOMATIS & OBJEKTIF:
+  // "Hitung komponen yang kosong, Jumlahkan langsung semua komponen dengan bobot nilai tugas yang ditetapkan untuk mendapatkan nilai hasil akhir"
   const studentEvaluations = useMemo(() => {
     return classStudents.map((student, idx) => {
       const studentScores = tableScores[student.id] || {};
-
-      const typeScores: Record<GradeType, number[]> = {
-        Tugas: [],
-        Harian: [],
-        Sumatif: [],
-        STS: [],
-        SAS: [],
-      };
 
       let filledCount = 0;
       allColumns.forEach((col) => {
         const val = studentScores[col.key];
         if (typeof val === 'number' && !isNaN(val)) {
-          typeScores[col.type].push(val);
           filledCount++;
         }
       });
 
-      // Hitung khusus akumulasi Tugas (termasuk nilai kosong yang dihitung 0):
-      // "langsung akumulasikan tugas yang ada termasuk nilai kosong dengan menjumlah seluruh nilai tugas dan membagi jumlah tugas ada"
+      // 1. TUGAS (Akumulasi seluruh tugas di kelas, nilai kosong dihitung 0)
       const totalTugasCount = tugasColumns.length;
       let sumTugasWithZero = 0;
       let submittedTugasCount = 0;
-
       tugasColumns.forEach((col) => {
         const val = studentScores[col.key];
         if (typeof val === 'number' && !isNaN(val)) {
@@ -309,57 +331,97 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
           submittedTugasCount++;
         }
       });
-
       const rataRataTugas = totalTugasCount > 0
         ? Math.round((sumTugasWithZero / totalTugasCount) * 10) / 10
-        : null;
+        : 0;
 
-      // Rata-rata per jenis penilaian: untuk Tugas gunakan akumulasi rata-rata tugas (kosong dihitung 0) sebagai bobot ke Nilai Akhir
-      const typeAverages: Record<GradeType, number | null> = {
-        Tugas: rataRataTugas,
-        Harian: typeScores.Harian.length > 0
-          ? typeScores.Harian.reduce((a, b) => a + b, 0) / typeScores.Harian.length
-          : null,
-        Sumatif: typeScores.Sumatif.length > 0
-          ? typeScores.Sumatif.reduce((a, b) => a + b, 0) / typeScores.Sumatif.length
-          : null,
-        STS: typeScores.STS.length > 0
-          ? typeScores.STS[typeScores.STS.length - 1]
-          : null,
-        SAS: typeScores.SAS.length > 0
-          ? typeScores.SAS[typeScores.SAS.length - 1]
-          : null,
-      };
-
-      // Hitung nilai akhir dengan bobot komponen yang aktif
-      let weightedSum = 0;
-      let activeWeightsSum = 0;
-
-      (Object.keys(typeAverages) as GradeType[]).forEach((type) => {
-        const avg = typeAverages[type];
-        if (avg !== null) {
-          const w = weights[type] || 0;
-          weightedSum += avg * w;
-          activeWeightsSum += w;
+      // 2. FORMATIF / ULANGAN HARIAN (Nilai kosong dihitung 0)
+      const harianColumns = allColumns.filter((c) => c.type === 'Harian');
+      let sumHarianWithZero = 0;
+      let submittedHarianCount = 0;
+      harianColumns.forEach((col) => {
+        const val = studentScores[col.key];
+        if (typeof val === 'number' && !isNaN(val)) {
+          sumHarianWithZero += val;
+          submittedHarianCount++;
         }
       });
+      const avgHarian = harianColumns.length > 0
+        ? Math.round((sumHarianWithZero / harianColumns.length) * 10) / 10
+        : 0;
 
-      let finalScore: number | null = null;
-      if (activeWeightsSum > 0) {
-        // Dinormalisasi ke bobot aktif sehingga komponen belum terbit TIDAK menjadi nol!
-        finalScore = Math.round((weightedSum / activeWeightsSum) * 10) / 10;
-      }
+      // 3. SUMATIF LINGKUP MATERI TP (Nilai kosong dihitung 0)
+      const sumatifColumns = allColumns.filter((c) => c.type === 'Sumatif');
+      let sumSumatifWithZero = 0;
+      let submittedSumatifCount = 0;
+      sumatifColumns.forEach((col) => {
+        const val = studentScores[col.key];
+        if (typeof val === 'number' && !isNaN(val)) {
+          sumSumatifWithZero += val;
+          submittedSumatifCount++;
+        }
+      });
+      const avgSumatif = sumatifColumns.length > 0
+        ? Math.round((sumSumatifWithZero / sumatifColumns.length) * 10) / 10
+        : 0;
+
+      // 4. SUMATIF TENGAH SEMESTER STS (Nilai kosong dihitung 0)
+      const stsColumns = allColumns.filter((c) => c.type === 'STS');
+      let sumSTSWithZero = 0;
+      let submittedSTSCount = 0;
+      stsColumns.forEach((col) => {
+        const val = studentScores[col.key];
+        if (typeof val === 'number' && !isNaN(val)) {
+          sumSTSWithZero += val;
+          submittedSTSCount++;
+        }
+      });
+      const avgSTS = stsColumns.length > 0
+        ? Math.round((sumSTSWithZero / stsColumns.length) * 10) / 10
+        : 0;
+
+      // 5. SUMATIF AKHIR SEMESTER SAS (Nilai kosong dihitung 0)
+      const sasColumns = allColumns.filter((c) => c.type === 'SAS');
+      let sumSASWithZero = 0;
+      let submittedSASCount = 0;
+      sasColumns.forEach((col) => {
+        const val = studentScores[col.key];
+        if (typeof val === 'number' && !isNaN(val)) {
+          sumSASWithZero += val;
+          submittedSASCount++;
+        }
+      });
+      const avgSAS = sasColumns.length > 0
+        ? Math.round((sumSASWithZero / sasColumns.length) * 10) / 10
+        : 0;
+
+      const typeAverages: Record<GradeType, number> = {
+        Tugas: rataRataTugas,
+        Harian: avgHarian,
+        Sumatif: avgSumatif,
+        STS: avgSTS,
+        SAS: avgSAS,
+      };
+
+      // Jumlahkan langsung semua komponen dengan bobot nilai yang ditetapkan untuk mendapatkan nilai hasil akhir:
+      // (Komponen kosong dihitung bernilai 0)
+      const weightedSum =
+        (rataRataTugas * (Number(weights.Tugas) || 0)) +
+        (avgHarian * (Number(weights.Harian) || 0)) +
+        (avgSumatif * (Number(weights.Sumatif) || 0)) +
+        (avgSTS * (Number(weights.STS) || 0)) +
+        (avgSAS * (Number(weights.SAS) || 0));
+
+      const finalScore = Math.round((weightedSum / 100) * 10) / 10;
 
       const isComplete = allColumns.length > 0 && filledCount === allColumns.length;
-      const isPassing = finalScore !== null ? finalScore >= 75 : false;
+      const isPassing = finalScore >= 75;
 
-      let predikat = '-';
-      if (finalScore !== null) {
-        if (finalScore >= 90) predikat = 'A';
-        else if (finalScore >= 80) predikat = 'B';
-        else if (finalScore >= 70) predikat = 'C';
-        else predikat = 'D';
-      }
+      let predikat = 'D';
+      if (finalScore >= 90) predikat = 'A';
+      else if (finalScore >= 80) predikat = 'B';
+      else if (finalScore >= 70) predikat = 'C';
+      else predikat = 'D';
 
       return {
         student,
@@ -374,7 +436,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
         isPassing,
         typeAverages,
         // Properti khusus akumulasi Rata-Rata Tugas:
-        rataRataTugas,
+        rataRataTugas: totalTugasCount > 0 ? rataRataTugas : null,
         sumTugasWithZero,
         submittedTugasCount,
         totalTugasCount,
@@ -613,6 +675,13 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
 
   // Hapus Komponen Penilaian dari Tabel & Database
   const handleDeleteColumn = (col: AssessmentColumn) => {
+    if (col.isPaten) {
+      alert(
+        `Komponen [${GRADE_TYPE_LABELS[col.type]}] merupakan komponen paten kurikulum dan tidak dapat dihapus.\n\nAnda dapat mengedit judul materi/teks dan tanggal penilaiannya.`
+      );
+      return;
+    }
+
     const confirmDelete = window.confirm(
       `Apakah Anda yakin ingin menghapus komponen penilaian:\n\n` +
       `[${GRADE_TYPE_LABELS[col.type]}]\n"${col.title}" (Tanggal: ${col.date})?\n\n` +
@@ -716,6 +785,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
       key: newKey,
       title: cleanTitle,
       date: cleanDate,
+      isPaten: columnToEdit.isPaten,
     };
 
     setCustomColumns((prev) => {
@@ -1472,13 +1542,20 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                         onClick={() => handleOpenEditColumn(col)}
                         title="Klik untuk mengedit deskripsi materi & tanggal penilaian"
                       >
-                        <span
-                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${getTypeBadge(
-                            col.type
-                          )}`}
-                        >
-                          {GRADE_TYPE_SHORT[col.type]}
-                        </span>
+                        <div className="flex items-center gap-1">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${getTypeBadge(
+                              col.type
+                            )}`}
+                          >
+                            {GRADE_TYPE_SHORT[col.type]}
+                          </span>
+                          {col.isPaten && (
+                            <span className="inline-block px-1.5 py-0.2 rounded text-[9px] font-black bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 uppercase tracking-wider">
+                              Paten
+                            </span>
+                          )}
+                        </div>
                         <div
                           className="font-bold text-slate-900 dark:text-white leading-tight line-clamp-2 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1 group/title"
                           title={`Klik untuk edit: ${col.title}`}
@@ -1501,14 +1578,16 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteColumn(col)}
-                          className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 p-1 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
-                          title={`Hapus komponen "${col.title}"`}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {!col.isPaten && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteColumn(col)}
+                            className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 p-1 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                            title={`Hapus komponen "${col.title}"`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </th>
@@ -1535,7 +1614,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                 {/* Nilai Akhir Otomatis */}
                 <th className="py-3 px-4 font-bold text-center text-indigo-700 dark:text-indigo-300 min-w-[125px] bg-indigo-50/70 dark:bg-indigo-950/40">
                   <div className="leading-tight font-extrabold text-sm">Nilai Akhir</div>
-                  <div className="text-[10px] text-indigo-500 font-normal">Bobot Aktif (Termasuk Tugas)</div>
+                  <div className="text-[10px] text-indigo-500 font-normal">Akumulasi Bobot 100% (Kosong = 0)</div>
                 </th>
 
                 {/* Predikat & Ketercapaian */}
