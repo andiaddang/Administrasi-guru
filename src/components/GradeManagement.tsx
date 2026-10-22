@@ -30,6 +30,7 @@ import {
   Filter,
   ChevronDown,
   ChevronUp,
+  Pencil,
 } from 'lucide-react';
 import { PrintDocumentModal } from './PrintDocumentModal';
 import { GradeTrendAnalytics } from './GradeTrendAnalytics';
@@ -120,6 +121,12 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
   const [newColType, setNewColType] = useState<GradeType>('Tugas');
   const [newColTitle, setNewColTitle] = useState<string>('');
   const [newColDate, setNewColDate] = useState<string>(new Date().toISOString().slice(0, 10));
+
+  // Edit Komponen Penilaian (Deskripsi & Tanggal)
+  const [isEditColumnModalOpen, setIsEditColumnModalOpen] = useState<boolean>(false);
+  const [columnToEdit, setColumnToEdit] = useState<AssessmentColumn | null>(null);
+  const [editColTitle, setEditColTitle] = useState<string>('');
+  const [editColDate, setEditColDate] = useState<string>('');
 
   const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
   const [showTrendChart, setShowTrendChart] = useState<boolean>(false);
@@ -644,6 +651,98 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
 
     setIsDirty(true);
     showToast(`Komponen "${col.title}" berhasil dihapus.`);
+  };
+
+  // Buka Modal Edit Komponen Penilaian
+  const handleOpenEditColumn = (col: AssessmentColumn) => {
+    setColumnToEdit(col);
+    setEditColTitle(col.title);
+    setEditColDate(col.date || new Date().toISOString().slice(0, 10));
+    setIsEditColumnModalOpen(true);
+  };
+
+  // Simpan Perubahan Deskripsi Materi / Teks dan Tanggal Penilaian
+  const handleSaveEditColumn = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!columnToEdit) return;
+
+    const cleanTitle = editColTitle.trim();
+    const cleanDate = editColDate.trim() || new Date().toISOString().slice(0, 10);
+
+    if (!cleanTitle) {
+      alert('Deskripsi materi / judul penilaian tidak boleh kosong.');
+      return;
+    }
+
+    const oldKey = columnToEdit.key;
+    const newKey = `${columnToEdit.type}__${cleanTitle.toLowerCase()}__${cleanDate}`;
+
+    // Cek apakah ada duplikasi dengan kolom lain
+    if (newKey !== oldKey && allColumns.some((c) => c.key === newKey)) {
+      alert('Komponen penilaian dengan judul dan tanggal yang sama sudah ada.');
+      return;
+    }
+
+    // 1. Perbarui nilai di database / state grades jika sudah pernah disimpan
+    const matchingOldGrades = grades.filter(
+      (g) =>
+        g.classId === selectedClassId &&
+        g.type === columnToEdit.type &&
+        (g.title || '').trim().toLowerCase() === columnToEdit.title.trim().toLowerCase() &&
+        (g.date || '').trim() === columnToEdit.date.trim()
+    );
+
+    if (matchingOldGrades.length > 0) {
+      if (newKey !== oldKey) {
+        if (onDeleteBatchGrades) {
+          onDeleteBatchGrades(matchingOldGrades.map((m) => m.id));
+        } else {
+          matchingOldGrades.forEach((m) => onDeleteGrade(m.id));
+        }
+      }
+
+      const updatedRecords: GradeRecord[] = matchingOldGrades.map((m) => ({
+        ...m,
+        id: `grd-${m.studentId}-${columnToEdit.type}-${cleanTitle.toLowerCase().replace(/[^a-z0-9]/g, '_')}-${cleanDate}`,
+        title: cleanTitle,
+        date: cleanDate,
+      }));
+      onSaveBatchGrades(updatedRecords);
+    }
+
+    // 2. Perbarui customColumns jika kolom ini ada di customColumns
+    const updatedCol: AssessmentColumn = {
+      ...columnToEdit,
+      key: newKey,
+      title: cleanTitle,
+      date: cleanDate,
+    };
+
+    setCustomColumns((prev) => {
+      const filtered = prev.filter((c) => c.key !== oldKey && c.key !== newKey);
+      return [...filtered, updatedCol];
+    });
+
+    // 3. Migrasi data tableScores dari oldKey ke newKey
+    if (newKey !== oldKey) {
+      setTableScores((prev) => {
+        const next = { ...prev };
+        Object.keys(next).forEach((studentId) => {
+          const studentMap = { ...next[studentId] };
+          if (studentMap[oldKey] !== undefined) {
+            studentMap[newKey] = studentMap[oldKey];
+            delete studentMap[oldKey];
+          }
+          next[studentId] = studentMap;
+        });
+        return next;
+      });
+    }
+
+    setIsEditColumnModalOpen(false);
+    setColumnToEdit(null);
+    setIsDirty(true);
+    showToast(`Komponen [${GRADE_TYPE_SHORT[columnToEdit.type]}] berhasil diperbarui: "${cleanTitle}" (${cleanDate}).`);
   };
 
   // Preset Bobot Cepat
@@ -1365,10 +1464,14 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                 {displayColumns.map((col) => (
                   <th
                     key={col.key}
-                    className="py-3 px-3 min-w-[170px] max-w-[220px] font-bold text-slate-800 dark:text-slate-100 align-top group"
+                    className="py-3 px-3 min-w-[170px] max-w-[220px] font-bold text-slate-800 dark:text-slate-100 align-top group hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors"
                   >
                     <div className="flex items-start justify-between gap-1.5">
-                      <div className="space-y-1">
+                      <div
+                        className="space-y-1 flex-1 cursor-pointer"
+                        onClick={() => handleOpenEditColumn(col)}
+                        title="Klik untuk mengedit deskripsi materi & tanggal penilaian"
+                      >
                         <span
                           className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${getTypeBadge(
                             col.type
@@ -1377,25 +1480,36 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                           {GRADE_TYPE_SHORT[col.type]}
                         </span>
                         <div
-                          className="font-bold text-slate-900 dark:text-white leading-tight line-clamp-2"
-                          title={col.title}
+                          className="font-bold text-slate-900 dark:text-white leading-tight line-clamp-2 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1 group/title"
+                          title={`Klik untuk edit: ${col.title}`}
                         >
-                          {col.title}
+                          <span>{col.title}</span>
+                          <Pencil className="w-2.5 h-2.5 opacity-0 group-hover/title:opacity-100 text-indigo-500 shrink-0 transition-opacity" />
                         </div>
-                        <div className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">
+                        <div className="text-[10px] text-slate-400 dark:text-slate-500 font-normal hover:text-slate-600 dark:hover:text-slate-300">
                           Tgl: {col.date || '-'}
                         </div>
                       </div>
 
-                      {/* Tombol Hapus Tugas / Komponen */}
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteColumn(col)}
-                        className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 p-1 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer shrink-0"
-                        title={`Hapus komponen "${col.title}"`}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {/* Tombol Aksi: Edit & Hapus */}
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditColumn(col)}
+                          className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 p-1 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors cursor-pointer"
+                          title={`Edit deskripsi teks & tanggal "${col.title}"`}
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteColumn(col)}
+                          className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 p-1 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                          title={`Hapus komponen "${col.title}"`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   </th>
                 ))}
@@ -1718,6 +1832,94 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Tambahkan ke Tabel</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: EDIT KOMPONEN PENILAIAN (DESKRIPSI TEKS & TANGGAL) */}
+      {isEditColumnModalOpen && columnToEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in-50">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                  <Pencil className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 dark:text-white text-sm">
+                    Edit Komponen Penilaian
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+                      [{GRADE_TYPE_LABELS[columnToEdit.type]}]
+                    </span>{' '}
+                    — Kelas {currentClass?.name}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditColumnModalOpen(false);
+                  setColumnToEdit(null);
+                }}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer p-1 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditColumn} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Deskripsi Materi / Judul Penilaian
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editColTitle}
+                  onChange={(e) => setEditColTitle(e.target.value)}
+                  placeholder="Contoh: Tugas 1: SPLDV & Matriks"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Deskripsi materi akan langsung diperbarui pada header tabel penilaian.
+                </p>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Tanggal Penilaian
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={editColDate}
+                  onChange={(e) => setEditColDate(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditColumnModalOpen(false);
+                    setColumnToEdit(null);
+                  }}
+                  className="px-3.5 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Simpan Perubahan</span>
                 </button>
               </div>
             </form>
