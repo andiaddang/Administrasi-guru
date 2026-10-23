@@ -719,32 +719,26 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
           second: '2-digit',
         })
       );
-      showToast(`Berhasil menyimpan ${recordsToSave.length} nilai 3 Komponen untuk ${currentClass?.name || 'kelas'}!`);
+      showToast(`Berhasil menyimpan ${recordsToSave.length} nilai Psikomotorik & Sikap untuk ${currentClass?.name || 'kelas'}!`);
     } else {
       showToast('Belum ada nilai yang diinput untuk disimpan.');
     }
   };
 
-  // Unduh Format Spreadsheet Excel (.csv)
+  // Unduh Format Spreadsheet Excel (.csv) - Penilaian Psikomotorik & Sikap
   const handleExportExcel3Komponen = () => {
     const headers = [
       'NO',
       'NISN',
       'NAMA SISWA',
       'JK',
-      'TUGAS 1',
-      'TUGAS 2',
-      'UH 1',
-      'UH 2',
-      'RATA FORMATIF',
-      'NA KOGNITIF',
-      'DISIPLIN',
-      'KERJASAMA',
-      'TNG JAWAB',
-      'TOTAL SKOR',
-      'PROSES/PRAKTIK',
-      'PRODUK',
-      'PRESENTASI',
+      'DISIPLIN (1-4)',
+      'KERJASAMA (1-4)',
+      'TNG JAWAB (1-4)',
+      'TOTAL SKOR SIKAP (3-12)',
+      'PROSES/PRAKTIK (0-100)',
+      'PRODUK (0-100)',
+      'PRESENTASI (0-100)',
       'NA PSIKOMOTOR',
       'PREDIKAT',
     ];
@@ -757,12 +751,6 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
         `"${student.nisn || student.nisnNis || ''}"`,
         `"${student.name}"`,
         student.gender,
-        s.tugas1 !== '' ? s.tugas1 : '',
-        s.tugas2 !== '' ? s.tugas2 : '',
-        s.uh1 !== '' ? s.uh1 : '',
-        s.uh2 !== '' ? s.uh2 : '',
-        item.rataFormatif !== null ? item.rataFormatif : '',
-        item.naKognitif !== null ? item.naKognitif : '',
         s.disiplin !== '' ? s.disiplin : '',
         s.kerjasama !== '' ? s.kerjasama : '',
         s.tngJawab !== '' ? s.tngJawab : '',
@@ -777,7 +765,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
 
     const csvContent =
       '\uFEFF' +
-      `PENILAIAN SISWA (3 KOMPONEN DALAM 1 TABEL)\n` +
+      `PENILAIAN SISWA (PSIKOMOTORIK DAN SIKAP)\n` +
       `Kelas: ${currentClass?.name || ''} | Mata Pelajaran: ${selectedSubject} | Semester: ${school.semester}\n\n` +
       headers.join(',') +
       '\n' +
@@ -787,10 +775,10 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Penilaian_Siswa_3_Komponen_${currentClass?.name || 'Kelas'}.csv`;
+    a.download = `Penilaian_Psikomotorik_dan_Sikap_${currentClass?.name || 'Kelas'}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    showToast('Tabel 3 Komponen berhasil diekspor ke format Excel (CSV).');
+    showToast('Tabel Penilaian Psikomotorik & Sikap berhasil diekspor ke Excel (CSV).');
   };
 
   // Mata Pelajaran Pengampu
@@ -1547,9 +1535,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
             <div className="flex items-center gap-2.5">
               <Table className="w-4 h-4 text-emerald-300" />
               <div className="text-left">
-                <span className="block text-xs font-bold">1. Tabel 3 Komponen (Sesuai Format Gambar Excel)</span>
+                <span className="block text-xs font-bold">1. Penilaian Psikomotorik & Sikap</span>
                 <span className={`text-[10px] block ${viewMode === '3komponen' ? 'text-emerald-100' : 'text-slate-400'}`}>
-                  Kognitif (Pengetahuan) · Afektif (Sikap) · Psikomotorik (Keterampilan)
+                  Komponen Afektif (Sikap) · Komponen Psikomotorik (Keterampilan)
                 </span>
               </div>
             </div>
@@ -1560,7 +1548,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                   : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
               }`}
             >
-              Format Gambar
+              Psikomotorik & Sikap
             </span>
           </button>
 
@@ -1991,16 +1979,16 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
 
       {viewMode === '3komponen' ? (
         <div className="space-y-4">
-          {/* BANNER UTAMA EXCEL: PENILAIAN SISWA (3 KOMPONEN DALAM 1 TABEL) */}
+          {/* BANNER UTAMA EXCEL: PENILAIAN SISWA (PSIKOMOTORIK DAN SIKAP) */}
           <div className="bg-emerald-800 text-white p-5 rounded-2xl shadow-lg border border-emerald-700 space-y-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-emerald-700/80 pb-4">
               <div>
                 <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-emerald-900/80 text-emerald-200 text-[11px] font-bold tracking-wider uppercase mb-1 border border-emerald-600/50">
                   <FileSpreadsheet className="w-3.5 h-3.5" />
-                  Format Standar Excel Sekolah (Gambar Referensi)
+                  Format Penilaian Sikap & Keterampilan (Psikomotorik)
                 </div>
                 <h2 className="text-lg sm:text-xl font-black tracking-wide text-white uppercase">
-                  PENILAIAN SISWA (3 KOMPONEN DALAM 1 TABEL)
+                  PENILAIAN SISWA (PSIKOMOTORIK DAN SIKAP)
                 </h2>
                 <p className="text-xs text-emerald-100/90 mt-0.5">
                   Kelas: <span className="font-bold text-white">{currentClass?.name}</span> · Mata Pelajaran:{' '}
@@ -2008,13 +1996,13 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                 </p>
               </div>
 
-              {/* Tombol Aksi Format Gambar */}
+              {/* Tombol Aksi Format Psikomotorik & Sikap */}
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={handleLoadSampleFromImage}
                   className="px-3 py-2 text-xs font-bold rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
-                  title="Muat data contoh persis seperti baris 5 dan 6 pada gambar (Ahmad Fauzi NISN 12345 & Budi Santoso NISN 12346)"
+                  title="Muat data contoh persis seperti pada gambar (Ahmad Fauzi & Budi Santoso)"
                 >
                   <RotateCcw className="w-3.5 h-3.5 text-emerald-300" />
                   <span>Muat Contoh Seperti Gambar</span>
@@ -2024,7 +2012,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                   type="button"
                   onClick={handleExportExcel3Komponen}
                   className="px-3 py-2 text-xs font-bold rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
-                  title="Unduh leger nilai 3 komponen dalam format file Excel (.csv)"
+                  title="Unduh tabel penilaian psikomotorik dan sikap dalam format file Excel (.csv)"
                 >
                   <Download className="w-3.5 h-3.5 text-emerald-300" />
                   <span>Ekspor Excel (.csv)</span>
@@ -2036,7 +2024,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                   className="px-3 py-2 text-xs font-bold rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
                 >
                   <Printer className="w-3.5 h-3.5 text-emerald-300" />
-                  <span>Cetak Leger 3 Komponen</span>
+                  <span>Cetak Leger Sikap & Keterampilan</span>
                 </button>
 
                 <button
@@ -2045,33 +2033,17 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                   className="px-4 py-2 text-xs font-bold rounded-xl bg-white text-emerald-950 hover:bg-emerald-50 transition-all cursor-pointer flex items-center gap-1.5 shadow-md"
                 >
                   <Save className="w-3.5 h-3.5 text-emerald-700" />
-                  <span>Simpan Nilai 3 Komponen</span>
+                  <span>Simpan Nilai Psikomotorik & Sikap</span>
                 </button>
               </div>
             </div>
 
-            {/* 3 KARTU RINGKASAN METRIK KELAS */}
+            {/* RINGKASAN METRIK KELAS PSIKOMOTORIK & SIKAP */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {/* Kognitif */}
+              {/* Afektif / Sikap */}
               <div className="bg-emerald-900/60 p-3.5 rounded-xl border border-emerald-700/60 space-y-1">
                 <span className="text-[11px] text-emerald-200 uppercase tracking-wider font-bold block">
-                  1. Rata-Rata Kognitif (Pengetahuan)
-                </span>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-black text-white">
-                    {threeCompStats.avgKognitif !== null ? threeCompStats.avgKognitif.toFixed(1) : '-'}
-                  </span>
-                  <span className="text-[11px] text-emerald-300">/ 100</span>
-                </div>
-                <p className="text-[10px] text-emerald-200">
-                  Rerata Tugas 1, Tugas 2, UH 1, & UH 2 ({threeCompStats.evaluatedCount} siswa)
-                </p>
-              </div>
-
-              {/* Afektif */}
-              <div className="bg-emerald-900/60 p-3.5 rounded-xl border border-emerald-700/60 space-y-1">
-                <span className="text-[11px] text-emerald-200 uppercase tracking-wider font-bold block">
-                  2. Rata-Rata Afektif (Sikap)
+                  1. Rata-Rata Afektif (Sikap)
                 </span>
                 <div className="flex items-baseline gap-2">
                   <span className="text-2xl font-black text-amber-300">
@@ -2084,10 +2056,10 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                 </p>
               </div>
 
-              {/* Psikomotorik */}
+              {/* Psikomotorik / Keterampilan */}
               <div className="bg-emerald-900/60 p-3.5 rounded-xl border border-emerald-700/60 space-y-1">
                 <span className="text-[11px] text-emerald-200 uppercase tracking-wider font-bold block">
-                  3. Rata-Rata Psikomotorik (Keterampilan)
+                  2. Rata-Rata Psikomotorik (Keterampilan)
                 </span>
                 <div className="flex items-baseline gap-2">
                   <span className="text-2xl font-black text-purple-200">
@@ -2099,10 +2071,30 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                   Rerata dari Proses/Praktik, Produk, & Presentasi
                 </p>
               </div>
+
+              {/* Distribusi Predikat Keterampilan */}
+              <div className="bg-emerald-900/60 p-3.5 rounded-xl border border-emerald-700/60 space-y-1">
+                <span className="text-[11px] text-emerald-200 uppercase tracking-wider font-bold block">
+                  3. Evaluasi Ketercapaian Siswa
+                </span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-white">
+                    {threeCompEvaluations.filter((e) => e.predikat.startsWith('Sangat Baik') || e.predikat.startsWith('Baik')).length}
+                  </span>
+                  <span className="text-[11px] text-emerald-300">
+                    / {threeCompEvaluations.length} Siswa (Predikat A/B)
+                  </span>
+                </div>
+                <p className="text-[10px] text-emerald-200">
+                  {threeCompStats.avgPsikomotor !== null && threeCompStats.avgPsikomotor >= 70
+                    ? 'Kinerja keterampilan kelas: Sangat Memuaskan'
+                    : 'Perlu penguatan pada aspek produk & presentasi'}
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* TABEL EXCEL 3 KOMPONEN PERSIS GAMBAR */}
+          {/* TABEL EXCEL PENILAIAN PSIKOMOTORIK DAN SIKAP (TANPA KOGNITIF) */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-300 dark:border-slate-800 shadow-sm overflow-hidden">
             <div className="overflow-x-auto max-h-[750px] relative">
               <table className="w-full text-left text-xs border-collapse border border-slate-300 dark:border-slate-700">
@@ -2117,28 +2109,20 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                       DATA SISWA
                     </th>
 
-                    {/* 1. KOMPONEN KOGNITIF (PENGETAHUAN) (6 KOLOM) */}
-                    <th
-                      colSpan={6}
-                      className="py-2.5 px-3 bg-blue-800 text-white border-r border-blue-900"
-                    >
-                      1. KOMPONEN KOGNITIF (PENGETAHUAN)
-                    </th>
-
-                    {/* 2. KOMPONEN AFEKTIF (SIKAP) (4 KOLOM) */}
+                    {/* 1. KOMPONEN AFEKTIF (SIKAP) (4 KOLOM) */}
                     <th
                       colSpan={4}
                       className="py-2.5 px-3 bg-amber-800 text-white border-r border-amber-900"
                     >
-                      2. KOMPONEN AFEKTIF (SIKAP)
+                      1. KOMPONEN AFEKTIF (SIKAP)
                     </th>
 
-                    {/* 3. KOMPONEN PSIKOMOTORIK (KETERAMPILAN) (5 KOLOM) */}
+                    {/* 2. KOMPONEN PSIKOMOTORIK (KETERAMPILAN) (5 KOLOM) */}
                     <th
                       colSpan={5}
                       className="py-2.5 px-3 bg-purple-800 text-white"
                     >
-                      3. KOMPONEN PSIKOMOTORIK (KETERAMPILAN)
+                      2. KOMPONEN PSIKOMOTORIK (KETERAMPILAN)
                     </th>
                   </tr>
 
@@ -2151,65 +2135,45 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                     <th className="py-2 px-3 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 w-24 sticky left-12 z-30">
                       NISN
                     </th>
-                    <th className="py-2 px-4 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 min-w-[150px] text-left sticky left-36 z-30">
+                    <th className="py-2 px-4 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 min-w-[170px] text-left sticky left-36 z-30">
                       NAMA SISWA
                     </th>
                     <th className="py-2 px-2 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 w-12">
                       JK
                     </th>
 
-                    {/* KOGNITIF */}
-                    <th className="py-2 px-2 bg-blue-50 dark:bg-blue-950/70 text-blue-900 dark:text-blue-200 w-20">
-                      TUGAS 1
-                    </th>
-                    <th className="py-2 px-2 bg-blue-50 dark:bg-blue-950/70 text-blue-900 dark:text-blue-200 w-20">
-                      TUGAS 2
-                    </th>
-                    <th className="py-2 px-2 bg-blue-50 dark:bg-blue-950/70 text-blue-900 dark:text-blue-200 w-20">
-                      UH 1
-                    </th>
-                    <th className="py-2 px-2 bg-blue-50 dark:bg-blue-950/70 text-blue-900 dark:text-blue-200 w-20">
-                      UH 2
-                    </th>
-                    <th className="py-2 px-2.5 bg-blue-200 dark:bg-blue-900 text-blue-950 dark:text-blue-100 font-extrabold w-24 border-x-2 border-blue-400 dark:border-blue-700">
-                      RATA FORMATIF
-                    </th>
-                    <th className="py-2 px-2.5 bg-blue-300 dark:bg-blue-800 text-blue-950 dark:text-white font-black w-24 border-r-2 border-blue-500 dark:border-blue-600">
-                      NA KOGNITIF
-                    </th>
-
                     {/* AFEKTIF */}
-                    <th className="py-2 px-2 bg-amber-50 dark:bg-amber-950/70 text-amber-900 dark:text-amber-200 w-20">
+                    <th className="py-2 px-2.5 bg-amber-50 dark:bg-amber-950/70 text-amber-900 dark:text-amber-200 w-24">
                       DISIPLIN
                       <span className="block text-[9px] font-normal text-amber-700 dark:text-amber-400">(1-4)</span>
                     </th>
-                    <th className="py-2 px-2 bg-amber-50 dark:bg-amber-950/70 text-amber-900 dark:text-amber-200 w-20">
+                    <th className="py-2 px-2.5 bg-amber-50 dark:bg-amber-950/70 text-amber-900 dark:text-amber-200 w-24">
                       KERJASAMA
                       <span className="block text-[9px] font-normal text-amber-700 dark:text-amber-400">(1-4)</span>
                     </th>
-                    <th className="py-2 px-2 bg-amber-50 dark:bg-amber-950/70 text-amber-900 dark:text-amber-200 w-20">
+                    <th className="py-2 px-2.5 bg-amber-50 dark:bg-amber-950/70 text-amber-900 dark:text-amber-200 w-24">
                       TNG JAWAB
                       <span className="block text-[9px] font-normal text-amber-700 dark:text-amber-400">(1-4)</span>
                     </th>
-                    <th className="py-2 px-2.5 bg-amber-200 dark:bg-amber-900 text-amber-950 dark:text-amber-100 font-black w-24 border-x-2 border-amber-400 dark:border-amber-700">
+                    <th className="py-2 px-3 bg-amber-200 dark:bg-amber-900 text-amber-950 dark:text-amber-100 font-black w-28 border-x-2 border-amber-400 dark:border-amber-700">
                       TOTAL SKOR
                       <span className="block text-[9px] font-normal text-amber-800 dark:text-amber-300">(3-12)</span>
                     </th>
 
                     {/* PSIKOMOTORIK */}
-                    <th className="py-2 px-2 bg-purple-50 dark:bg-purple-950/70 text-purple-900 dark:text-purple-200 w-24">
+                    <th className="py-2 px-2.5 bg-purple-50 dark:bg-purple-950/70 text-purple-900 dark:text-purple-200 w-28">
                       PROSES/PRAKTIK
                     </th>
-                    <th className="py-2 px-2 bg-purple-50 dark:bg-purple-950/70 text-purple-900 dark:text-purple-200 w-20">
+                    <th className="py-2 px-2.5 bg-purple-50 dark:bg-purple-950/70 text-purple-900 dark:text-purple-200 w-24">
                       PRODUK
                     </th>
-                    <th className="py-2 px-2 bg-purple-50 dark:bg-purple-950/70 text-purple-900 dark:text-purple-200 w-20">
+                    <th className="py-2 px-2.5 bg-purple-50 dark:bg-purple-950/70 text-purple-900 dark:text-purple-200 w-24">
                       PRESENTASI
                     </th>
-                    <th className="py-2 px-2.5 bg-purple-200 dark:bg-purple-900 text-purple-950 dark:text-purple-100 font-black w-24 border-x-2 border-purple-400 dark:border-purple-700">
+                    <th className="py-2 px-3 bg-purple-200 dark:bg-purple-900 text-purple-950 dark:text-purple-100 font-black w-28 border-x-2 border-purple-400 dark:border-purple-700">
                       NA PSIKOMOTOR
                     </th>
-                    <th className="py-2 px-3 bg-purple-300 dark:bg-purple-800 text-purple-950 dark:text-white font-black min-w-[130px]">
+                    <th className="py-2 px-3 bg-purple-300 dark:bg-purple-800 text-purple-950 dark:text-white font-black min-w-[140px]">
                       PREDIKAT
                     </th>
                   </tr>
@@ -2218,7 +2182,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800 font-sans">
                   {threeCompEvaluations.length === 0 ? (
                     <tr>
-                      <td colSpan={19} className="py-12 text-center text-slate-400 dark:text-slate-500">
+                      <td colSpan={13} className="py-12 text-center text-slate-400 dark:text-slate-500">
                         Tidak ada siswa yang ditemukan untuk kelas ini.
                       </td>
                     </tr>
@@ -2267,76 +2231,8 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                             </span>
                           </td>
 
-                          {/* KOGNITIF: TUGAS 1 */}
-                          <td className="p-1 text-center bg-blue-50/20 dark:bg-blue-950/10">
-                            <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              value={s.tugas1}
-                              placeholder="—"
-                              onChange={(e) => handleThreeCompScoreChange(std.id, 'tugas1', e.target.value)}
-                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                            />
-                          </td>
-
-                          {/* KOGNITIF: TUGAS 2 */}
-                          <td className="p-1 text-center bg-blue-50/20 dark:bg-blue-950/10">
-                            <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              value={s.tugas2}
-                              placeholder="—"
-                              onChange={(e) => handleThreeCompScoreChange(std.id, 'tugas2', e.target.value)}
-                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                            />
-                          </td>
-
-                          {/* KOGNITIF: UH 1 */}
-                          <td className="p-1 text-center bg-blue-50/20 dark:bg-blue-950/10">
-                            <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              value={s.uh1}
-                              placeholder="—"
-                              onChange={(e) => handleThreeCompScoreChange(std.id, 'uh1', e.target.value)}
-                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                            />
-                          </td>
-
-                          {/* KOGNITIF: UH 2 */}
-                          <td className="p-1 text-center bg-blue-50/20 dark:bg-blue-950/10">
-                            <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              value={s.uh2}
-                              placeholder="—"
-                              onChange={(e) => handleThreeCompScoreChange(std.id, 'uh2', e.target.value)}
-                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                            />
-                          </td>
-
-                          {/* KOGNITIF: RATA FORMATIF (OTOMATIS) */}
-                          <td className="py-2 px-2 text-center font-mono font-bold text-blue-950 dark:text-blue-100 bg-blue-100/60 dark:bg-blue-900/30 border-x-2 border-blue-300 dark:border-blue-800">
-                            {item.rataFormatif !== null ? item.rataFormatif : <span className="text-slate-400 italic font-normal">—</span>}
-                          </td>
-
-                          {/* KOGNITIF: NA KOGNITIF (OTOMATIS) */}
-                          <td className="py-2 px-2 text-center font-mono font-black text-sm text-blue-950 dark:text-white bg-blue-200/70 dark:bg-blue-800/40 border-r-2 border-blue-400 dark:border-blue-700">
-                            {item.naKognitif !== null ? (
-                              <span className="px-2 py-0.5 rounded bg-blue-600 text-white font-extrabold shadow-2xs">
-                                {item.naKognitif}
-                              </span>
-                            ) : (
-                              <span className="text-slate-400 italic font-normal text-xs">—</span>
-                            )}
-                          </td>
-
                           {/* AFEKTIF: DISIPLIN (SKALA 1-4) */}
-                          <td className="p-1 text-center bg-amber-50/20 dark:bg-amber-950/10">
+                          <td className="p-1.5 text-center bg-amber-50/20 dark:bg-amber-950/10">
                             <input
                               type="number"
                               min="1"
@@ -2344,12 +2240,12 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                               value={s.disiplin}
                               placeholder="1-4"
                               onChange={(e) => handleThreeCompScoreChange(std.id, 'disiplin', e.target.value)}
-                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1 text-amber-900 dark:text-amber-200 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1.5 text-amber-900 dark:text-amber-200 focus:ring-2 focus:ring-amber-500 focus:outline-none"
                             />
                           </td>
 
                           {/* AFEKTIF: KERJASAMA (SKALA 1-4) */}
-                          <td className="p-1 text-center bg-amber-50/20 dark:bg-amber-950/10">
+                          <td className="p-1.5 text-center bg-amber-50/20 dark:bg-amber-950/10">
                             <input
                               type="number"
                               min="1"
@@ -2357,12 +2253,12 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                               value={s.kerjasama}
                               placeholder="1-4"
                               onChange={(e) => handleThreeCompScoreChange(std.id, 'kerjasama', e.target.value)}
-                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1 text-amber-900 dark:text-amber-200 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1.5 text-amber-900 dark:text-amber-200 focus:ring-2 focus:ring-amber-500 focus:outline-none"
                             />
                           </td>
 
                           {/* AFEKTIF: TNG JAWAB (SKALA 1-4) */}
-                          <td className="p-1 text-center bg-amber-50/20 dark:bg-amber-950/10">
+                          <td className="p-1.5 text-center bg-amber-50/20 dark:bg-amber-950/10">
                             <input
                               type="number"
                               min="1"
@@ -2370,14 +2266,14 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                               value={s.tngJawab}
                               placeholder="1-4"
                               onChange={(e) => handleThreeCompScoreChange(std.id, 'tngJawab', e.target.value)}
-                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1 text-amber-900 dark:text-amber-200 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1.5 text-amber-900 dark:text-amber-200 focus:ring-2 focus:ring-amber-500 focus:outline-none"
                             />
                           </td>
 
                           {/* AFEKTIF: TOTAL SKOR (OTOMATIS) */}
-                          <td className="py-2 px-2 text-center font-mono font-black text-amber-950 dark:text-amber-100 bg-amber-100/60 dark:bg-amber-900/30 border-x-2 border-amber-300 dark:border-amber-800">
+                          <td className="py-2 px-3 text-center font-mono font-black text-amber-950 dark:text-amber-100 bg-amber-100/60 dark:bg-amber-900/30 border-x-2 border-amber-300 dark:border-amber-800">
                             {item.totalSkorAfektif !== null ? (
-                              <span className="px-2 py-0.5 rounded bg-amber-500 text-white font-extrabold shadow-2xs">
+                              <span className="px-2.5 py-1 rounded bg-amber-500 text-white font-extrabold shadow-2xs">
                                 {item.totalSkorAfektif}
                               </span>
                             ) : (
@@ -2386,7 +2282,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                           </td>
 
                           {/* PSIKOMOTORIK: PROSES/PRAKTIK */}
-                          <td className="p-1 text-center bg-purple-50/20 dark:bg-purple-950/10">
+                          <td className="p-1.5 text-center bg-purple-50/20 dark:bg-purple-950/10">
                             <input
                               type="number"
                               min="0"
@@ -2394,12 +2290,12 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                               value={s.proses}
                               placeholder="—"
                               onChange={(e) => handleThreeCompScoreChange(std.id, 'proses', e.target.value)}
-                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1 text-purple-900 dark:text-purple-200 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1.5 text-purple-900 dark:text-purple-200 focus:ring-2 focus:ring-purple-500 focus:outline-none"
                             />
                           </td>
 
                           {/* PSIKOMOTORIK: PRODUK */}
-                          <td className="p-1 text-center bg-purple-50/20 dark:bg-purple-950/10">
+                          <td className="p-1.5 text-center bg-purple-50/20 dark:bg-purple-950/10">
                             <input
                               type="number"
                               min="0"
@@ -2407,12 +2303,12 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                               value={s.produk}
                               placeholder="—"
                               onChange={(e) => handleThreeCompScoreChange(std.id, 'produk', e.target.value)}
-                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1 text-purple-900 dark:text-purple-200 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1.5 text-purple-900 dark:text-purple-200 focus:ring-2 focus:ring-purple-500 focus:outline-none"
                             />
                           </td>
 
                           {/* PSIKOMOTORIK: PRESENTASI */}
-                          <td className="p-1 text-center bg-purple-50/20 dark:bg-purple-950/10">
+                          <td className="p-1.5 text-center bg-purple-50/20 dark:bg-purple-950/10">
                             <input
                               type="number"
                               min="0"
@@ -2420,14 +2316,14 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                               value={s.presentasi}
                               placeholder="—"
                               onChange={(e) => handleThreeCompScoreChange(std.id, 'presentasi', e.target.value)}
-                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1 text-purple-900 dark:text-purple-200 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1.5 text-purple-900 dark:text-purple-200 focus:ring-2 focus:ring-purple-500 focus:outline-none"
                             />
                           </td>
 
                           {/* PSIKOMOTORIK: NA PSIKOMOTOR (OTOMATIS) */}
-                          <td className="py-2 px-2 text-center font-mono font-black text-sm text-purple-950 dark:text-white bg-purple-100/60 dark:bg-purple-900/30 border-x-2 border-purple-300 dark:border-purple-800">
+                          <td className="py-2 px-3 text-center font-mono font-black text-sm text-purple-950 dark:text-white bg-purple-100/60 dark:bg-purple-900/30 border-x-2 border-purple-300 dark:border-purple-800">
                             {item.naPsikomotor !== null ? (
-                              <span className="px-2 py-0.5 rounded bg-purple-600 text-white font-extrabold shadow-2xs">
+                              <span className="px-2.5 py-1 rounded bg-purple-600 text-white font-extrabold shadow-2xs">
                                 {item.naPsikomotor}
                               </span>
                             ) : (
@@ -2436,7 +2332,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                           </td>
 
                           {/* PSIKOMOTORIK: PREDIKAT (OTOMATIS) */}
-                          <td className="py-2 px-2.5 text-center bg-purple-100/40 dark:bg-purple-950/20">
+                          <td className="py-2 px-3 text-center bg-purple-100/40 dark:bg-purple-950/20">
                             {item.predikat !== '—' ? (
                               <span
                                 className={`inline-block px-2.5 py-1 rounded-lg text-xs font-extrabold shadow-2xs ${
@@ -2468,89 +2364,53 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                       <td colSpan={4} className="py-3 px-3 text-right uppercase tracking-wider font-extrabold text-slate-800 dark:text-slate-200">
                         RATA-RATA KELAS:
                       </td>
-                      {/* Tugas 1 */}
-                      <td className="py-2 px-1 text-slate-700 dark:text-slate-300 font-mono">
-                        {(() => {
-                          const list = threeCompEvaluations.map((e) => e.scores.tugas1).filter((v): v is number => typeof v === 'number');
-                          return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
-                        })()}
-                      </td>
-                      {/* Tugas 2 */}
-                      <td className="py-2 px-1 text-slate-700 dark:text-slate-300 font-mono">
-                        {(() => {
-                          const list = threeCompEvaluations.map((e) => e.scores.tugas2).filter((v): v is number => typeof v === 'number');
-                          return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
-                        })()}
-                      </td>
-                      {/* UH 1 */}
-                      <td className="py-2 px-1 text-slate-700 dark:text-slate-300 font-mono">
-                        {(() => {
-                          const list = threeCompEvaluations.map((e) => e.scores.uh1).filter((v): v is number => typeof v === 'number');
-                          return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
-                        })()}
-                      </td>
-                      {/* UH 2 */}
-                      <td className="py-2 px-1 text-slate-700 dark:text-slate-300 font-mono">
-                        {(() => {
-                          const list = threeCompEvaluations.map((e) => e.scores.uh2).filter((v): v is number => typeof v === 'number');
-                          return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
-                        })()}
-                      </td>
-                      {/* Rata Formatif */}
-                      <td className="py-2 px-1 text-blue-900 dark:text-blue-200 font-mono font-black bg-blue-100/80 dark:bg-blue-900/50">
-                        {threeCompStats.avgKognitif !== null ? threeCompStats.avgKognitif.toFixed(1) : '-'}
-                      </td>
-                      {/* NA Kognitif */}
-                      <td className="py-2 px-1 text-blue-950 dark:text-white font-mono font-black bg-blue-200 dark:bg-blue-800">
-                        {threeCompStats.avgKognitif !== null ? Math.round(threeCompStats.avgKognitif) : '-'}
-                      </td>
 
                       {/* Afektif */}
-                      <td className="py-2 px-1 text-amber-900 dark:text-amber-200 font-mono">
+                      <td className="py-2.5 px-2 text-amber-900 dark:text-amber-200 font-mono">
                         {(() => {
                           const list = threeCompEvaluations.map((e) => e.scores.disiplin).filter((v): v is number => typeof v === 'number');
                           return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
                         })()}
                       </td>
-                      <td className="py-2 px-1 text-amber-900 dark:text-amber-200 font-mono">
+                      <td className="py-2.5 px-2 text-amber-900 dark:text-amber-200 font-mono">
                         {(() => {
                           const list = threeCompEvaluations.map((e) => e.scores.kerjasama).filter((v): v is number => typeof v === 'number');
                           return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
                         })()}
                       </td>
-                      <td className="py-2 px-1 text-amber-900 dark:text-amber-200 font-mono">
+                      <td className="py-2.5 px-2 text-amber-900 dark:text-amber-200 font-mono">
                         {(() => {
                           const list = threeCompEvaluations.map((e) => e.scores.tngJawab).filter((v): v is number => typeof v === 'number');
                           return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
                         })()}
                       </td>
-                      <td className="py-2 px-1 text-amber-950 dark:text-white font-mono font-black bg-amber-200 dark:bg-amber-800">
+                      <td className="py-2.5 px-2 text-amber-950 dark:text-white font-mono font-black bg-amber-200 dark:bg-amber-800">
                         {threeCompStats.avgAfektif !== null ? threeCompStats.avgAfektif.toFixed(1) : '-'}
                       </td>
 
                       {/* Psikomotorik */}
-                      <td className="py-2 px-1 text-purple-900 dark:text-purple-200 font-mono">
+                      <td className="py-2.5 px-2 text-purple-900 dark:text-purple-200 font-mono">
                         {(() => {
                           const list = threeCompEvaluations.map((e) => e.scores.proses).filter((v): v is number => typeof v === 'number');
                           return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
                         })()}
                       </td>
-                      <td className="py-2 px-1 text-purple-900 dark:text-purple-200 font-mono">
+                      <td className="py-2.5 px-2 text-purple-900 dark:text-purple-200 font-mono">
                         {(() => {
                           const list = threeCompEvaluations.map((e) => e.scores.produk).filter((v): v is number => typeof v === 'number');
                           return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
                         })()}
                       </td>
-                      <td className="py-2 px-1 text-purple-900 dark:text-purple-200 font-mono">
+                      <td className="py-2.5 px-2 text-purple-900 dark:text-purple-200 font-mono">
                         {(() => {
                           const list = threeCompEvaluations.map((e) => e.scores.presentasi).filter((v): v is number => typeof v === 'number');
                           return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
                         })()}
                       </td>
-                      <td className="py-2 px-1 text-purple-950 dark:text-white font-mono font-black bg-purple-200 dark:bg-purple-800">
+                      <td className="py-2.5 px-2 text-purple-950 dark:text-white font-mono font-black bg-purple-200 dark:bg-purple-800">
                         {threeCompStats.avgPsikomotor !== null ? Math.round(threeCompStats.avgPsikomotor) : '-'}
                       </td>
-                      <td className="py-2 px-2 bg-purple-100 dark:bg-purple-950/40 text-purple-900 dark:text-purple-200 text-xs">
+                      <td className="py-2.5 px-3 bg-purple-100 dark:bg-purple-950/40 text-purple-900 dark:text-purple-200 text-xs">
                         {threeCompStats.avgPsikomotor !== null && threeCompStats.avgPsikomotor >= 70
                           ? 'Sangat Baik (A)'
                           : threeCompStats.avgPsikomotor !== null && threeCompStats.avgPsikomotor >= 60
@@ -2563,17 +2423,16 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
               </table>
             </div>
 
-            {/* Bilah Bawah Tabel 3 Komponen */}
+            {/* Bilah Bawah Tabel Psikomotorik & Sikap */}
             <div className="bg-slate-50 dark:bg-slate-800/60 p-4 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-400">
               <div className="space-y-1">
                 <div>
                   Menampilkan <span className="font-bold text-slate-800 dark:text-slate-200">{filteredStudents.length}</span> siswa dalam format{' '}
-                  <span className="font-bold text-emerald-700 dark:text-emerald-400">3 Komponen Dalam 1 Tabel (Kognitif, Afektif, Psikomotorik)</span>.
+                  <span className="font-bold text-emerald-700 dark:text-emerald-400">Penilaian Psikomotorik dan Sikap</span> (Afektif & Keterampilan).
                 </div>
                 <div className="text-[11px] text-slate-500 flex flex-wrap items-center gap-3">
-                  <span>• Rata Formatif = (Tugas 1 + Tugas 2 + UH 1 + UH 2) / 4</span>
-                  <span>• Total Skor Sikap = Disiplin + Kerjasama + Tanggung Jawab</span>
-                  <span>• NA Psikomotor = (Proses + Produk + Presentasi) / 3</span>
+                  <span>• Total Skor Sikap = Disiplin + Kerjasama + Tanggung Jawab (Skala 1-4)</span>
+                  <span>• NA Psikomotor = (Proses/Praktik + Produk + Presentasi) / 3</span>
                 </div>
               </div>
 
@@ -2592,7 +2451,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                   className="px-4 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
                 >
                   <Save className="w-3.5 h-3.5" />
-                  <span>Simpan Nilai 3 Komponen</span>
+                  <span>Simpan Nilai Psikomotorik & Sikap</span>
                 </button>
               </div>
             </div>
@@ -3869,7 +3728,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
         onClose={() => setIsPrintModalOpen(false)}
         title={
           viewMode === '3komponen'
-            ? 'PENILAIAN SISWA (3 KOMPONEN DALAM 1 TABEL)'
+            ? 'PENILAIAN SISWA (PSIKOMOTORIK DAN SIKAP)'
             : 'LEGER NILAI HASIL BELAJAR SISWA'
         }
         subtitle={`Kelas: ${currentClass?.name || ''} | Mata Pelajaran: ${selectedSubject} | Semester: ${school.semester} T.A ${school.academicYear}`}
@@ -3887,35 +3746,28 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
           {viewMode === '3komponen' ? (
             <div className="space-y-3">
               <div className="text-center font-black text-xs tracking-wider uppercase border border-slate-900 bg-slate-100 py-1 print:border-black">
-                PENILAIAN SISWA (3 KOMPONEN DALAM 1 TABEL)
+                PENILAIAN SISWA (PSIKOMOTORIK DAN SIKAP)
               </div>
               <table className="w-full text-[9px] border border-slate-900 border-collapse print:border-black">
                 <thead>
                   <tr className="bg-slate-200 text-slate-900 font-bold border-b border-slate-900 text-center uppercase">
                     <th colSpan={4} className="p-1 border border-slate-900 bg-slate-300">DATA SISWA</th>
-                    <th colSpan={6} className="p-1 border border-slate-900 bg-blue-100">1. KOMPONEN KOGNITIF (PENGETAHUAN)</th>
-                    <th colSpan={4} className="p-1 border border-slate-900 bg-amber-100">2. KOMPONEN AFEKTIF (SIKAP)</th>
-                    <th colSpan={5} className="p-1 border border-slate-900 bg-purple-100">3. KOMPONEN PSIKOMOTORIK (KETERAMPILAN)</th>
+                    <th colSpan={4} className="p-1 border border-slate-900 bg-amber-100">1. KOMPONEN AFEKTIF (SIKAP)</th>
+                    <th colSpan={5} className="p-1 border border-slate-900 bg-purple-100">2. KOMPONEN PSIKOMOTORIK (KETERAMPILAN)</th>
                   </tr>
                   <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-900 text-center uppercase">
                     <th className="p-1 border border-slate-900 w-6">NO</th>
                     <th className="p-1 border border-slate-900 w-16">NISN</th>
-                    <th className="p-1 border border-slate-900 text-left min-w-[110px]">NAMA SISWA</th>
+                    <th className="p-1 border border-slate-900 text-left min-w-[120px]">NAMA SISWA</th>
                     <th className="p-1 border border-slate-900 w-6">JK</th>
-                    <th className="p-1 border border-slate-900 w-10">TUGAS 1</th>
-                    <th className="p-1 border border-slate-900 w-10">TUGAS 2</th>
-                    <th className="p-1 border border-slate-900 w-10">UH 1</th>
-                    <th className="p-1 border border-slate-900 w-10">UH 2</th>
-                    <th className="p-1 border border-slate-900 w-14 bg-blue-50 font-bold">RATA FORMATIF</th>
-                    <th className="p-1 border border-slate-900 w-12 bg-blue-100 font-black">NA KOGNITIF</th>
-                    <th className="p-1 border border-slate-900 w-10">DISIPLIN</th>
-                    <th className="p-1 border border-slate-900 w-10">KERJASAMA</th>
-                    <th className="p-1 border border-slate-900 w-10">TNG JAWAB</th>
-                    <th className="p-1 border border-slate-900 w-12 bg-amber-100 font-black">TOTAL SKOR</th>
-                    <th className="p-1 border border-slate-900 w-14">PROSES/PRAKTIK</th>
-                    <th className="p-1 border border-slate-900 w-10">PRODUK</th>
-                    <th className="p-1 border border-slate-900 w-10">PRESENTASI</th>
-                    <th className="p-1 border border-slate-900 w-12 bg-purple-100 font-black">NA PSIKOMOTOR</th>
+                    <th className="p-1 border border-slate-900 w-12">DISIPLIN</th>
+                    <th className="p-1 border border-slate-900 w-12">KERJASAMA</th>
+                    <th className="p-1 border border-slate-900 w-12">TNG JAWAB</th>
+                    <th className="p-1 border border-slate-900 w-14 bg-amber-100 font-black">TOTAL SKOR</th>
+                    <th className="p-1 border border-slate-900 w-16">PROSES/PRAKTIK</th>
+                    <th className="p-1 border border-slate-900 w-12">PRODUK</th>
+                    <th className="p-1 border border-slate-900 w-12">PRESENTASI</th>
+                    <th className="p-1 border border-slate-900 w-14 bg-purple-100 font-black">NA PSIKOMOTOR</th>
                     <th className="p-1 border border-slate-900 w-20 bg-purple-50">PREDIKAT</th>
                   </tr>
                 </thead>
@@ -3926,12 +3778,6 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                       <td className="p-1 border border-slate-900 font-mono">{row.student.nisnNis || row.student.nisn || '-'}</td>
                       <td className="p-1 border border-slate-900 text-left font-medium">{row.student.name}</td>
                       <td className="p-1 border border-slate-900">{row.student.gender}</td>
-                      <td className="p-1 border border-slate-900 font-mono">{row.scores.tugas1 !== '' ? row.scores.tugas1 : '-'}</td>
-                      <td className="p-1 border border-slate-900 font-mono">{row.scores.tugas2 !== '' ? row.scores.tugas2 : '-'}</td>
-                      <td className="p-1 border border-slate-900 font-mono">{row.scores.uh1 !== '' ? row.scores.uh1 : '-'}</td>
-                      <td className="p-1 border border-slate-900 font-mono">{row.scores.uh2 !== '' ? row.scores.uh2 : '-'}</td>
-                      <td className="p-1 border border-slate-900 font-mono font-bold bg-blue-50/50">{row.rataFormatif !== null ? row.rataFormatif : '-'}</td>
-                      <td className="p-1 border border-slate-900 font-mono font-black bg-blue-100/50">{row.naKognitif !== null ? row.naKognitif : '-'}</td>
                       <td className="p-1 border border-slate-900 font-mono">{row.scores.disiplin !== '' ? row.scores.disiplin : '-'}</td>
                       <td className="p-1 border border-slate-900 font-mono">{row.scores.kerjasama !== '' ? row.scores.kerjasama : '-'}</td>
                       <td className="p-1 border border-slate-900 font-mono">{row.scores.tngJawab !== '' ? row.scores.tngJawab : '-'}</td>
