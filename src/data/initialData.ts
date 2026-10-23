@@ -85,7 +85,9 @@ export const DEFAULT_CLASSES: ClassRoom[] = [
 ];
 
 export const DEFAULT_STUDENTS: Student[] = [
-  // Kelas X.1
+  // Kelas X.1 (Dengan siswa contoh sesuai gambar penilaian 3 komponen)
+  { id: 'std-100a', nisnNis: '12345', nisn: '12345', nis: '12345', name: 'Ahmad Fauzi', gender: 'L', classId: 'cls-1', parentPhone: '081242331100', status: 'Aktif' },
+  { id: 'std-100b', nisnNis: '12346', nisn: '12346', nis: '12346', name: 'Budi Santoso', gender: 'L', classId: 'cls-1', parentPhone: '081242331100b', status: 'Aktif' },
   { id: 'std-101', nisnNis: '0081234001 / 2425001', nisn: '0081234001', nis: '2425001', name: 'Andi Siti Nurhaliza', gender: 'P', classId: 'cls-1', parentPhone: '081242331101', status: 'Aktif' },
   { id: 'std-102', nisnNis: '0081234002 / 2425002', nisn: '0081234002', nis: '2425002', name: 'Muh. Fajar Ramadhan', gender: 'L', classId: 'cls-1', parentPhone: '081242331102', status: 'Aktif' },
   { id: 'std-103', nisnNis: '0081234003 / 2425003', nisn: '0081234003', nis: '2425003', name: 'Nur Aisyah Maharani', gender: 'P', classId: 'cls-1', parentPhone: '081242331103', status: 'Aktif' },

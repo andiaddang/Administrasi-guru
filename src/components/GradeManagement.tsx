@@ -31,6 +31,7 @@ import {
   ChevronDown,
   ChevronUp,
   Pencil,
+  Download,
 } from 'lucide-react';
 import { PrintDocumentModal } from './PrintDocumentModal';
 import { GradeTrendAnalytics } from './GradeTrendAnalytics';
@@ -44,6 +45,88 @@ export interface AssessmentColumn {
   subject: string;
   isPaten?: boolean;
 }
+
+// STRUKTUR TABEL PENILAIAN 3 KOMPONEN (SESUAI GAMBAR REFERENSI EXCEL USER)
+// 1. Kognitif: TUGAS 1, TUGAS 2, UH 1, UH 2 -> RATA FORMATIF -> NA KOGNITIF
+// 2. Afektif: DISIPLIN, KERJASAMA, TNG JAWAB -> TOTAL SKOR
+// 3. Psikomotorik: PROSES/PRAKTIK, PRODUK, PRESENTASI -> NA PSIKOMOTOR -> PREDIKAT
+export interface ThreeComponentStudentScore {
+  tugas1: number | '';
+  tugas2: number | '';
+  uh1: number | '';
+  uh2: number | '';
+  disiplin: number | ''; // skala 1-4
+  kerjasama: number | ''; // skala 1-4
+  tngJawab: number | ''; // skala 1-4
+  proses: number | ''; // 0-100
+  produk: number | ''; // 0-100
+  presentasi: number | ''; // 0-100
+}
+
+const STORAGE_3KOMPONEN_KEY = 'sman1_gowa_3komponen_scores_v3';
+
+const getInitial3KomponenScores = (): Record<string, Record<string, ThreeComponentStudentScore>> => {
+  try {
+    const raw = localStorage.getItem(STORAGE_3KOMPONEN_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {
+    console.error('Error loading 3-component scores', e);
+  }
+  return {
+    'cls-1': {
+      // Baris 5 Sesuai Gambar: Ahmad Fauzi
+      'std-100a': {
+        tugas1: 85,
+        tugas2: 90,
+        uh1: 80,
+        uh2: 85,
+        disiplin: 4,
+        kerjasama: 3,
+        tngJawab: 4,
+        proses: 85,
+        produk: 80,
+        presentasi: 90,
+      },
+      // Baris 6 Sesuai Gambar: Budi Santoso
+      'std-100b': {
+        tugas1: 75,
+        tugas2: 80,
+        uh1: 70,
+        uh2: 78,
+        disiplin: 3,
+        kerjasama: 3,
+        tngJawab: 2,
+        proses: 75,
+        produk: 70,
+        presentasi: 75,
+      },
+      'std-101': {
+        tugas1: 88,
+        tugas2: 92,
+        uh1: 85,
+        uh2: 90,
+        disiplin: 4,
+        kerjasama: 4,
+        tngJawab: 4,
+        proses: 90,
+        produk: 88,
+        presentasi: 92,
+      },
+      'std-102': {
+        tugas1: 80,
+        tugas2: 85,
+        uh1: 78,
+        uh2: 82,
+        disiplin: 3,
+        kerjasama: 4,
+        tngJawab: 3,
+        proses: 80,
+        produk: 82,
+        presentasi: 85,
+      },
+    },
+  };
+};
 
 export const createDefaultClassColumns = (classId: string, subject: string, date: string): AssessmentColumn[] => [
   // Kolom 1: Tugas (3 sub-kolom bawaan)
@@ -240,6 +323,475 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
   const [columnToEdit, setColumnToEdit] = useState<AssessmentColumn | null>(null);
   const [editColTitle, setEditColTitle] = useState<string>('');
   const [editColDate, setEditColDate] = useState<string>('');
+
+  // Mode Tampilan Tabel Penilaian:
+  // '3komponen': Format Excel 3 Komponen (Kognitif, Afektif, Psikomotorik) persis gambar referensi user
+  // '5pilar': Format Kurikulum Merdeka (Tugas, Formatif, Sumatif TP, STS, SAS)
+  const [viewMode, setViewMode] = useState<'3komponen' | '5pilar'>('3komponen');
+  const [threeCompScoresMap, setThreeCompScoresMap] = useState<Record<string, Record<string, ThreeComponentStudentScore>>>(getInitial3KomponenScores);
+
+  const saveThreeCompScores = (next: Record<string, Record<string, ThreeComponentStudentScore>>) => {
+    setThreeCompScoresMap(next);
+    try {
+      localStorage.setItem(STORAGE_3KOMPONEN_KEY, JSON.stringify(next));
+    } catch (e) {
+      console.error('Error saving 3-component scores', e);
+    }
+  };
+
+  // Evaluasi Perhitungan Otomatis Model 3 Komponen (Sesuai Rumus Gambar Excel)
+  const threeCompEvaluations = useMemo(() => {
+    const classScores = threeCompScoresMap[selectedClassId] || {};
+    return filteredStudents.map((student, idx) => {
+      let s = classScores[student.id];
+      if (!s) {
+        if (student.name.toLowerCase().includes('ahmad fauzi') || student.nisn === '12345' || student.nisnNis === '12345') {
+          s = {
+            tugas1: 85,
+            tugas2: 90,
+            uh1: 80,
+            uh2: 85,
+            disiplin: 4,
+            kerjasama: 3,
+            tngJawab: 4,
+            proses: 85,
+            produk: 80,
+            presentasi: 90,
+          };
+        } else if (student.name.toLowerCase().includes('budi santoso') || student.nisn === '12346' || student.nisnNis === '12346') {
+          s = {
+            tugas1: 75,
+            tugas2: 80,
+            uh1: 70,
+            uh2: 78,
+            disiplin: 3,
+            kerjasama: 3,
+            tngJawab: 2,
+            proses: 75,
+            produk: 70,
+            presentasi: 75,
+          };
+        } else {
+          s = {
+            tugas1: '',
+            tugas2: '',
+            uh1: '',
+            uh2: '',
+            disiplin: '',
+            kerjasama: '',
+            tngJawab: '',
+            proses: '',
+            produk: '',
+            presentasi: '',
+          };
+        }
+      }
+
+      // 1. Kognitif: Rata Formatif & NA Kognitif
+      const kognitifValues = [s.tugas1, s.tugas2, s.uh1, s.uh2].filter(
+        (v): v is number => typeof v === 'number' && !isNaN(v)
+      );
+      const sumKognitif = kognitifValues.reduce((a, b) => a + b, 0);
+      const rataFormatif = kognitifValues.length > 0 ? Math.round((sumKognitif / kognitifValues.length) * 100) / 100 : null;
+      const naKognitif = rataFormatif !== null ? Math.round(rataFormatif) : null;
+
+      // 2. Afektif: Total Skor
+      const hasAfektif = (typeof s.disiplin === 'number' || typeof s.kerjasama === 'number' || typeof s.tngJawab === 'number');
+      const totalSkorAfektif = hasAfektif
+        ? (Number(s.disiplin) || 0) + (Number(s.kerjasama) || 0) + (Number(s.tngJawab) || 0)
+        : null;
+
+      // 3. Psikomotorik: NA Psikomotor & Predikat
+      const psikomotorValues = [s.proses, s.produk, s.presentasi].filter(
+        (v): v is number => typeof v === 'number' && !isNaN(v)
+      );
+      const sumPsikomotor = psikomotorValues.reduce((a, b) => a + b, 0);
+      const naPsikomotor = psikomotorValues.length > 0 ? Math.round(sumPsikomotor / psikomotorValues.length) : null;
+
+      let predikat = '—';
+      if (naPsikomotor !== null) {
+        if (naPsikomotor >= 70) predikat = 'Sangat Baik (A)';
+        else if (naPsikomotor >= 60) predikat = 'Baik (B)';
+        else if (naPsikomotor >= 50) predikat = 'Cukup (C)';
+        else predikat = 'Kurang (D)';
+      }
+
+      return {
+        student,
+        no: idx + 1,
+        scores: s,
+        rataFormatif,
+        naKognitif,
+        totalSkorAfektif,
+        naPsikomotor,
+        predikat,
+      };
+    });
+  }, [threeCompScoresMap, selectedClassId, filteredStudents]);
+
+  // Statistik Kelas untuk Model 3 Komponen
+  const threeCompStats = useMemo(() => {
+    const kognitifList = threeCompEvaluations
+      .map((e) => e.naKognitif)
+      .filter((v): v is number => v !== null);
+    const afektifList = threeCompEvaluations
+      .map((e) => e.totalSkorAfektif)
+      .filter((v): v is number => v !== null);
+    const psikomotorList = threeCompEvaluations
+      .map((e) => e.naPsikomotor)
+      .filter((v): v is number => v !== null);
+
+    const avgKognitif = kognitifList.length > 0 ? Math.round((kognitifList.reduce((a, b) => a + b, 0) / kognitifList.length) * 10) / 10 : null;
+    const avgAfektif = afektifList.length > 0 ? Math.round((afektifList.reduce((a, b) => a + b, 0) / afektifList.length) * 10) / 10 : null;
+    const avgPsikomotor = psikomotorList.length > 0 ? Math.round((psikomotorList.reduce((a, b) => a + b, 0) / psikomotorList.length) * 10) / 10 : null;
+
+    return {
+      avgKognitif,
+      avgAfektif,
+      avgPsikomotor,
+      evaluatedCount: Math.max(kognitifList.length, afektifList.length, psikomotorList.length),
+    };
+  }, [threeCompEvaluations]);
+
+  // Handle Input Perubahan Skor 3 Komponen
+  const handleThreeCompScoreChange = (
+    studentId: string,
+    field: keyof ThreeComponentStudentScore,
+    rawVal: string
+  ) => {
+    let val: number | '' = '';
+    if (rawVal.trim() !== '') {
+      const num = Number(rawVal);
+      if (!isNaN(num)) {
+        if (field === 'disiplin' || field === 'kerjasama' || field === 'tngJawab') {
+          val = Math.min(4, Math.max(1, num));
+        } else {
+          val = Math.min(100, Math.max(0, num));
+        }
+      }
+    }
+
+    const classScores = { ...(threeCompScoresMap[selectedClassId] || {}) };
+    const currentStudentScore = classScores[studentId] || {
+      tugas1: '',
+      tugas2: '',
+      uh1: '',
+      uh2: '',
+      disiplin: '',
+      kerjasama: '',
+      tngJawab: '',
+      proses: '',
+      produk: '',
+      presentasi: '',
+    };
+
+    classScores[studentId] = {
+      ...currentStudentScore,
+      [field]: val,
+    };
+
+    const nextMap = {
+      ...threeCompScoresMap,
+      [selectedClassId]: classScores,
+    };
+
+    saveThreeCompScores(nextMap);
+    setIsDirty(true);
+  };
+
+  // Muat Data Contoh Persis Gambar (Ahmad Fauzi & Budi Santoso)
+  const handleLoadSampleFromImage = () => {
+    const sampleMap: Record<string, ThreeComponentStudentScore> = {
+      // Baris 5 Sesuai Gambar: Ahmad Fauzi
+      'std-100a': {
+        tugas1: 85,
+        tugas2: 90,
+        uh1: 80,
+        uh2: 85,
+        disiplin: 4,
+        kerjasama: 3,
+        tngJawab: 4,
+        proses: 85,
+        produk: 80,
+        presentasi: 90,
+      },
+      // Baris 6 Sesuai Gambar: Budi Santoso
+      'std-100b': {
+        tugas1: 75,
+        tugas2: 80,
+        uh1: 70,
+        uh2: 78,
+        disiplin: 3,
+        kerjasama: 3,
+        tngJawab: 2,
+        proses: 75,
+        produk: 70,
+        presentasi: 75,
+      },
+    };
+
+    // Tambahkan data realistis untuk siswa lainnya di kelas
+    classStudents.forEach((student, i) => {
+      if (student.id !== 'std-100a' && student.id !== 'std-100b') {
+        sampleMap[student.id] = {
+          tugas1: 80 + (i % 15),
+          tugas2: 82 + ((i * 3) % 15),
+          uh1: 75 + ((i * 4) % 20),
+          uh2: 78 + ((i * 2) % 18),
+          disiplin: (3 + (i % 2)) as number,
+          kerjasama: (3 + ((i + 1) % 2)) as number,
+          tngJawab: (3 + ((i * 2) % 2)) as number,
+          proses: 78 + (i % 18),
+          produk: 76 + ((i * 3) % 20),
+          presentasi: 80 + ((i * 2) % 16),
+        };
+      }
+    });
+
+    const next = {
+      ...threeCompScoresMap,
+      [selectedClassId]: sampleMap,
+    };
+    saveThreeCompScores(next);
+    setIsDirty(true);
+    showToast('Data contoh sesuai gambar (Ahmad Fauzi & Budi Santoso) berhasil dimuat!');
+  };
+
+  // Simpan Semua Nilai Model 3 Komponen
+  const handleSaveAll3CompGrades = () => {
+    const recordsToSave: GradeRecord[] = [];
+    const now = new Date().toISOString().slice(0, 10);
+
+    threeCompEvaluations.forEach((item) => {
+      const s = item.scores;
+      const stdId = item.student.id;
+
+      if (typeof s.tugas1 === 'number') {
+        recordsToSave.push({
+          id: `grd-${stdId}-Tugas-tugas1-${now}`,
+          studentId: stdId,
+          classId: selectedClassId,
+          subject: selectedSubject,
+          type: 'Tugas',
+          title: 'TUGAS 1',
+          score: s.tugas1,
+          maxScore: 100,
+          date: now,
+          semester: school.semester,
+        });
+      }
+      if (typeof s.tugas2 === 'number') {
+        recordsToSave.push({
+          id: `grd-${stdId}-Tugas-tugas2-${now}`,
+          studentId: stdId,
+          classId: selectedClassId,
+          subject: selectedSubject,
+          type: 'Tugas',
+          title: 'TUGAS 2',
+          score: s.tugas2,
+          maxScore: 100,
+          date: now,
+          semester: school.semester,
+        });
+      }
+      if (typeof s.uh1 === 'number') {
+        recordsToSave.push({
+          id: `grd-${stdId}-Harian-uh1-${now}`,
+          studentId: stdId,
+          classId: selectedClassId,
+          subject: selectedSubject,
+          type: 'Harian',
+          title: 'UH 1',
+          score: s.uh1,
+          maxScore: 100,
+          date: now,
+          semester: school.semester,
+        });
+      }
+      if (typeof s.uh2 === 'number') {
+        recordsToSave.push({
+          id: `grd-${stdId}-Harian-uh2-${now}`,
+          studentId: stdId,
+          classId: selectedClassId,
+          subject: selectedSubject,
+          type: 'Harian',
+          title: 'UH 2',
+          score: s.uh2,
+          maxScore: 100,
+          date: now,
+          semester: school.semester,
+        });
+      }
+      if (typeof s.disiplin === 'number') {
+        recordsToSave.push({
+          id: `grd-${stdId}-Sumatif-disiplin-${now}`,
+          studentId: stdId,
+          classId: selectedClassId,
+          subject: selectedSubject,
+          type: 'Sumatif',
+          title: 'DISIPLIN (Afektif)',
+          score: s.disiplin * 25,
+          maxScore: 100,
+          date: now,
+          semester: school.semester,
+        });
+      }
+      if (typeof s.kerjasama === 'number') {
+        recordsToSave.push({
+          id: `grd-${stdId}-Sumatif-kerjasama-${now}`,
+          studentId: stdId,
+          classId: selectedClassId,
+          subject: selectedSubject,
+          type: 'Sumatif',
+          title: 'KERJASAMA (Afektif)',
+          score: s.kerjasama * 25,
+          maxScore: 100,
+          date: now,
+          semester: school.semester,
+        });
+      }
+      if (typeof s.tngJawab === 'number') {
+        recordsToSave.push({
+          id: `grd-${stdId}-Sumatif-tngJawab-${now}`,
+          studentId: stdId,
+          classId: selectedClassId,
+          subject: selectedSubject,
+          type: 'Sumatif',
+          title: 'TNG JAWAB (Afektif)',
+          score: s.tngJawab * 25,
+          maxScore: 100,
+          date: now,
+          semester: school.semester,
+        });
+      }
+      if (typeof s.proses === 'number') {
+        recordsToSave.push({
+          id: `grd-${stdId}-STS-proses-${now}`,
+          studentId: stdId,
+          classId: selectedClassId,
+          subject: selectedSubject,
+          type: 'STS',
+          title: 'PROSES/PRAKTIK (Psikomotorik)',
+          score: s.proses,
+          maxScore: 100,
+          date: now,
+          semester: school.semester,
+        });
+      }
+      if (typeof s.produk === 'number') {
+        recordsToSave.push({
+          id: `grd-${stdId}-SAS-produk-${now}`,
+          studentId: stdId,
+          classId: selectedClassId,
+          subject: selectedSubject,
+          type: 'SAS',
+          title: 'PRODUK (Psikomotorik)',
+          score: s.produk,
+          maxScore: 100,
+          date: now,
+          semester: school.semester,
+        });
+      }
+      if (typeof s.presentasi === 'number') {
+        recordsToSave.push({
+          id: `grd-${stdId}-Tugas-presentasi-${now}`,
+          studentId: stdId,
+          classId: selectedClassId,
+          subject: selectedSubject,
+          type: 'Tugas',
+          title: 'PRESENTASI (Psikomotorik)',
+          score: s.presentasi,
+          maxScore: 100,
+          date: now,
+          semester: school.semester,
+        });
+      }
+    });
+
+    if (recordsToSave.length > 0) {
+      onSaveBatchGrades(recordsToSave);
+      setIsDirty(false);
+      setAutoSaveStatus('saved');
+      setLastSavedTime(
+        new Date().toLocaleTimeString('id-ID', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        })
+      );
+      showToast(`Berhasil menyimpan ${recordsToSave.length} nilai 3 Komponen untuk ${currentClass?.name || 'kelas'}!`);
+    } else {
+      showToast('Belum ada nilai yang diinput untuk disimpan.');
+    }
+  };
+
+  // Unduh Format Spreadsheet Excel (.csv)
+  const handleExportExcel3Komponen = () => {
+    const headers = [
+      'NO',
+      'NISN',
+      'NAMA SISWA',
+      'JK',
+      'TUGAS 1',
+      'TUGAS 2',
+      'UH 1',
+      'UH 2',
+      'RATA FORMATIF',
+      'NA KOGNITIF',
+      'DISIPLIN',
+      'KERJASAMA',
+      'TNG JAWAB',
+      'TOTAL SKOR',
+      'PROSES/PRAKTIK',
+      'PRODUK',
+      'PRESENTASI',
+      'NA PSIKOMOTOR',
+      'PREDIKAT',
+    ];
+
+    const rows = threeCompEvaluations.map((item) => {
+      const student = item.student;
+      const s = item.scores;
+      return [
+        item.no,
+        `"${student.nisn || student.nisnNis || ''}"`,
+        `"${student.name}"`,
+        student.gender,
+        s.tugas1 !== '' ? s.tugas1 : '',
+        s.tugas2 !== '' ? s.tugas2 : '',
+        s.uh1 !== '' ? s.uh1 : '',
+        s.uh2 !== '' ? s.uh2 : '',
+        item.rataFormatif !== null ? item.rataFormatif : '',
+        item.naKognitif !== null ? item.naKognitif : '',
+        s.disiplin !== '' ? s.disiplin : '',
+        s.kerjasama !== '' ? s.kerjasama : '',
+        s.tngJawab !== '' ? s.tngJawab : '',
+        item.totalSkorAfektif !== null ? item.totalSkorAfektif : '',
+        s.proses !== '' ? s.proses : '',
+        s.produk !== '' ? s.produk : '',
+        s.presentasi !== '' ? s.presentasi : '',
+        item.naPsikomotor !== null ? item.naPsikomotor : '',
+        `"${item.predikat}"`,
+      ].join(',');
+    });
+
+    const csvContent =
+      '\uFEFF' +
+      `PENILAIAN SISWA (3 KOMPONEN DALAM 1 TABEL)\n` +
+      `Kelas: ${currentClass?.name || ''} | Mata Pelajaran: ${selectedSubject} | Semester: ${school.semester}\n\n` +
+      headers.join(',') +
+      '\n' +
+      rows.join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Penilaian_Siswa_3_Komponen_${currentClass?.name || 'Kelas'}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Tabel 3 Komponen berhasil diekspor ke format Excel (CSV).');
+  };
 
   // Mata Pelajaran Pengampu
   const defaultSubject = currentUser?.subject?.split('&')[0]?.trim() || 'Matematika';
@@ -967,18 +1519,79 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
             {/* Tombol Simpan Semua Nilai */}
             <button
               type="button"
-              onClick={handleSaveAllClassGrades}
-              disabled={!isWeightValid}
+              onClick={viewMode === '3komponen' ? handleSaveAll3CompGrades : handleSaveAllClassGrades}
+              disabled={viewMode === '5pilar' && !isWeightValid}
               className={`px-4 py-2 text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2 ${
                 isDirty
                   ? 'bg-indigo-600 hover:bg-indigo-700 text-white ring-2 ring-indigo-400/50 animate-pulse'
                   : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-              } ${!isWeightValid ? 'opacity-50 cursor-not-allowed' : ''}`}
+              } ${viewMode === '5pilar' && !isWeightValid ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <Save className="w-4 h-4" />
               <span>Simpan Semua Nilai ({currentClass?.name || 'Kelas'})</span>
             </button>
           </div>
+        </div>
+
+        {/* TAB PILIHAN FORMAT TABEL PENILAIAN */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+          <button
+            type="button"
+            onClick={() => setViewMode('3komponen')}
+            className={`py-3 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer border ${
+              viewMode === '3komponen'
+                ? 'bg-emerald-700 text-white border-emerald-800 shadow-md ring-2 ring-emerald-400/40'
+                : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <Table className="w-4 h-4 text-emerald-300" />
+              <div className="text-left">
+                <span className="block text-xs font-bold">1. Tabel 3 Komponen (Sesuai Format Gambar Excel)</span>
+                <span className={`text-[10px] block ${viewMode === '3komponen' ? 'text-emerald-100' : 'text-slate-400'}`}>
+                  Kognitif (Pengetahuan) · Afektif (Sikap) · Psikomotorik (Keterampilan)
+                </span>
+              </div>
+            </div>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider shrink-0 ${
+                viewMode === '3komponen'
+                  ? 'bg-emerald-900 text-emerald-100 border border-emerald-600'
+                  : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+              }`}
+            >
+              Format Gambar
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setViewMode('5pilar')}
+            className={`py-3 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer border ${
+              viewMode === '5pilar'
+                ? 'bg-indigo-600 text-white border-indigo-700 shadow-md ring-2 ring-indigo-400/40'
+                : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <SlidersHorizontal className="w-4 h-4 text-indigo-300" />
+              <div className="text-left">
+                <span className="block text-xs font-bold">2. Tabel 5 Pilar (Model Kurikulum Merdeka)</span>
+                <span className={`text-[10px] block ${viewMode === '5pilar' ? 'text-indigo-100' : 'text-slate-400'}`}>
+                  Tugas · Rata-Rata Tugas · Formatif · Sumatif TP · STS · SAS
+                </span>
+              </div>
+            </div>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider shrink-0 ${
+                viewMode === '5pilar'
+                  ? 'bg-indigo-800 text-indigo-100 border border-indigo-500'
+                  : 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300'
+              }`}
+            >
+              5 Pilar
+            </span>
+          </button>
         </div>
 
         {/* FILTER SEBELUM INPUT */}
@@ -1106,29 +1719,31 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
               </span>
             </label>
 
-            <button
-              type="button"
-              onClick={() => setIsWeightSettingsOpen(!isWeightSettingsOpen)}
-              className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 cursor-pointer"
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-500" />
-              <span>Atur Bobot Komponen</span>
-              <span
-                className={`px-1.5 py-0.2 rounded text-[10px] font-extrabold ${
-                  isWeightValid
-                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                    : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
-                }`}
+            {viewMode === '5pilar' && (
+              <button
+                type="button"
+                onClick={() => setIsWeightSettingsOpen(!isWeightSettingsOpen)}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 cursor-pointer"
               >
-                {totalWeight}%
-              </span>
-            </button>
+                <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-500" />
+                <span>Atur Bobot Komponen</span>
+                <span
+                  className={`px-1.5 py-0.2 rounded text-[10px] font-extrabold ${
+                    isWeightValid
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                      : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                  }`}
+                >
+                  {totalWeight}%
+                </span>
+              </button>
+            )}
           </div>
         </div>
       </div>
 
-      {/* PANEL PENGATURAN BOBOT (COLLAPSIBLE) */}
-      {isWeightSettingsOpen && (
+      {/* PANEL PENGATURAN BOBOT (COLLAPSIBLE - HANYA UNTUK 5 PILAR) */}
+      {viewMode === '5pilar' && isWeightSettingsOpen && (
         <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 animate-in fade-in-50 duration-200">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
             <div>
@@ -1374,7 +1989,618 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
         </div>
       )}
 
-      {/* ANALISIS HASIL BELAJAR OBJEKTIF (RATA-RATA, TERTINGGI, TERENDAH, TUNTAS, TIDAK TUNTAS) */}
+      {viewMode === '3komponen' ? (
+        <div className="space-y-4">
+          {/* BANNER UTAMA EXCEL: PENILAIAN SISWA (3 KOMPONEN DALAM 1 TABEL) */}
+          <div className="bg-emerald-800 text-white p-5 rounded-2xl shadow-lg border border-emerald-700 space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-emerald-700/80 pb-4">
+              <div>
+                <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-emerald-900/80 text-emerald-200 text-[11px] font-bold tracking-wider uppercase mb-1 border border-emerald-600/50">
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  Format Standar Excel Sekolah (Gambar Referensi)
+                </div>
+                <h2 className="text-lg sm:text-xl font-black tracking-wide text-white uppercase">
+                  PENILAIAN SISWA (3 KOMPONEN DALAM 1 TABEL)
+                </h2>
+                <p className="text-xs text-emerald-100/90 mt-0.5">
+                  Kelas: <span className="font-bold text-white">{currentClass?.name}</span> · Mata Pelajaran:{' '}
+                  <span className="font-bold text-white">{selectedSubject}</span> · Semester {school.semester} T.A {school.academicYear}
+                </p>
+              </div>
+
+              {/* Tombol Aksi Format Gambar */}
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleLoadSampleFromImage}
+                  className="px-3 py-2 text-xs font-bold rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
+                  title="Muat data contoh persis seperti baris 5 dan 6 pada gambar (Ahmad Fauzi NISN 12345 & Budi Santoso NISN 12346)"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-emerald-300" />
+                  <span>Muat Contoh Seperti Gambar</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleExportExcel3Komponen}
+                  className="px-3 py-2 text-xs font-bold rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
+                  title="Unduh leger nilai 3 komponen dalam format file Excel (.csv)"
+                >
+                  <Download className="w-3.5 h-3.5 text-emerald-300" />
+                  <span>Ekspor Excel (.csv)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsPrintModalOpen(true)}
+                  className="px-3 py-2 text-xs font-bold rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
+                >
+                  <Printer className="w-3.5 h-3.5 text-emerald-300" />
+                  <span>Cetak Leger 3 Komponen</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSaveAll3CompGrades}
+                  className="px-4 py-2 text-xs font-bold rounded-xl bg-white text-emerald-950 hover:bg-emerald-50 transition-all cursor-pointer flex items-center gap-1.5 shadow-md"
+                >
+                  <Save className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>Simpan Nilai 3 Komponen</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 3 KARTU RINGKASAN METRIK KELAS */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Kognitif */}
+              <div className="bg-emerald-900/60 p-3.5 rounded-xl border border-emerald-700/60 space-y-1">
+                <span className="text-[11px] text-emerald-200 uppercase tracking-wider font-bold block">
+                  1. Rata-Rata Kognitif (Pengetahuan)
+                </span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-white">
+                    {threeCompStats.avgKognitif !== null ? threeCompStats.avgKognitif.toFixed(1) : '-'}
+                  </span>
+                  <span className="text-[11px] text-emerald-300">/ 100</span>
+                </div>
+                <p className="text-[10px] text-emerald-200">
+                  Rerata Tugas 1, Tugas 2, UH 1, & UH 2 ({threeCompStats.evaluatedCount} siswa)
+                </p>
+              </div>
+
+              {/* Afektif */}
+              <div className="bg-emerald-900/60 p-3.5 rounded-xl border border-emerald-700/60 space-y-1">
+                <span className="text-[11px] text-emerald-200 uppercase tracking-wider font-bold block">
+                  2. Rata-Rata Afektif (Sikap)
+                </span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-amber-300">
+                    {threeCompStats.avgAfektif !== null ? threeCompStats.avgAfektif.toFixed(1) : '-'}
+                  </span>
+                  <span className="text-[11px] text-emerald-300">/ 12</span>
+                </div>
+                <p className="text-[10px] text-emerald-200">
+                  Total skor dari Disiplin, Kerjasama, & Tanggung Jawab (Skala 1-4)
+                </p>
+              </div>
+
+              {/* Psikomotorik */}
+              <div className="bg-emerald-900/60 p-3.5 rounded-xl border border-emerald-700/60 space-y-1">
+                <span className="text-[11px] text-emerald-200 uppercase tracking-wider font-bold block">
+                  3. Rata-Rata Psikomotorik (Keterampilan)
+                </span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-purple-200">
+                    {threeCompStats.avgPsikomotor !== null ? threeCompStats.avgPsikomotor.toFixed(1) : '-'}
+                  </span>
+                  <span className="text-[11px] text-emerald-300">/ 100</span>
+                </div>
+                <p className="text-[10px] text-emerald-200">
+                  Rerata dari Proses/Praktik, Produk, & Presentasi
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* TABEL EXCEL 3 KOMPONEN PERSIS GAMBAR */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-300 dark:border-slate-800 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto max-h-[750px] relative">
+              <table className="w-full text-left text-xs border-collapse border border-slate-300 dark:border-slate-700">
+                <thead className="sticky top-0 z-20 shadow-xs">
+                  {/* BARIS HEADER TIER 1: KATEGORI KOMPONEN */}
+                  <tr className="border-b border-slate-300 dark:border-slate-700 text-center font-extrabold uppercase text-[11px] tracking-wider">
+                    {/* DATA SISWA (4 KOLOM) */}
+                    <th
+                      colSpan={4}
+                      className="py-2.5 px-3 bg-slate-700 text-white border-r border-slate-400 dark:border-slate-600 sticky left-0 z-30"
+                    >
+                      DATA SISWA
+                    </th>
+
+                    {/* 1. KOMPONEN KOGNITIF (PENGETAHUAN) (6 KOLOM) */}
+                    <th
+                      colSpan={6}
+                      className="py-2.5 px-3 bg-blue-800 text-white border-r border-blue-900"
+                    >
+                      1. KOMPONEN KOGNITIF (PENGETAHUAN)
+                    </th>
+
+                    {/* 2. KOMPONEN AFEKTIF (SIKAP) (4 KOLOM) */}
+                    <th
+                      colSpan={4}
+                      className="py-2.5 px-3 bg-amber-800 text-white border-r border-amber-900"
+                    >
+                      2. KOMPONEN AFEKTIF (SIKAP)
+                    </th>
+
+                    {/* 3. KOMPONEN PSIKOMOTORIK (KETERAMPILAN) (5 KOLOM) */}
+                    <th
+                      colSpan={5}
+                      className="py-2.5 px-3 bg-purple-800 text-white"
+                    >
+                      3. KOMPONEN PSIKOMOTORIK (KETERAMPILAN)
+                    </th>
+                  </tr>
+
+                  {/* BARIS HEADER TIER 2: SUB-KOLOM */}
+                  <tr className="border-b border-slate-300 dark:border-slate-700 text-center font-bold text-[10px] uppercase divide-x divide-slate-300 dark:divide-slate-700">
+                    {/* DATA SISWA */}
+                    <th className="py-2 px-2 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 w-12 sticky left-0 z-30">
+                      NO
+                    </th>
+                    <th className="py-2 px-3 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 w-24 sticky left-12 z-30">
+                      NISN
+                    </th>
+                    <th className="py-2 px-4 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 min-w-[150px] text-left sticky left-36 z-30">
+                      NAMA SISWA
+                    </th>
+                    <th className="py-2 px-2 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 w-12">
+                      JK
+                    </th>
+
+                    {/* KOGNITIF */}
+                    <th className="py-2 px-2 bg-blue-50 dark:bg-blue-950/70 text-blue-900 dark:text-blue-200 w-20">
+                      TUGAS 1
+                    </th>
+                    <th className="py-2 px-2 bg-blue-50 dark:bg-blue-950/70 text-blue-900 dark:text-blue-200 w-20">
+                      TUGAS 2
+                    </th>
+                    <th className="py-2 px-2 bg-blue-50 dark:bg-blue-950/70 text-blue-900 dark:text-blue-200 w-20">
+                      UH 1
+                    </th>
+                    <th className="py-2 px-2 bg-blue-50 dark:bg-blue-950/70 text-blue-900 dark:text-blue-200 w-20">
+                      UH 2
+                    </th>
+                    <th className="py-2 px-2.5 bg-blue-200 dark:bg-blue-900 text-blue-950 dark:text-blue-100 font-extrabold w-24 border-x-2 border-blue-400 dark:border-blue-700">
+                      RATA FORMATIF
+                    </th>
+                    <th className="py-2 px-2.5 bg-blue-300 dark:bg-blue-800 text-blue-950 dark:text-white font-black w-24 border-r-2 border-blue-500 dark:border-blue-600">
+                      NA KOGNITIF
+                    </th>
+
+                    {/* AFEKTIF */}
+                    <th className="py-2 px-2 bg-amber-50 dark:bg-amber-950/70 text-amber-900 dark:text-amber-200 w-20">
+                      DISIPLIN
+                      <span className="block text-[9px] font-normal text-amber-700 dark:text-amber-400">(1-4)</span>
+                    </th>
+                    <th className="py-2 px-2 bg-amber-50 dark:bg-amber-950/70 text-amber-900 dark:text-amber-200 w-20">
+                      KERJASAMA
+                      <span className="block text-[9px] font-normal text-amber-700 dark:text-amber-400">(1-4)</span>
+                    </th>
+                    <th className="py-2 px-2 bg-amber-50 dark:bg-amber-950/70 text-amber-900 dark:text-amber-200 w-20">
+                      TNG JAWAB
+                      <span className="block text-[9px] font-normal text-amber-700 dark:text-amber-400">(1-4)</span>
+                    </th>
+                    <th className="py-2 px-2.5 bg-amber-200 dark:bg-amber-900 text-amber-950 dark:text-amber-100 font-black w-24 border-x-2 border-amber-400 dark:border-amber-700">
+                      TOTAL SKOR
+                      <span className="block text-[9px] font-normal text-amber-800 dark:text-amber-300">(3-12)</span>
+                    </th>
+
+                    {/* PSIKOMOTORIK */}
+                    <th className="py-2 px-2 bg-purple-50 dark:bg-purple-950/70 text-purple-900 dark:text-purple-200 w-24">
+                      PROSES/PRAKTIK
+                    </th>
+                    <th className="py-2 px-2 bg-purple-50 dark:bg-purple-950/70 text-purple-900 dark:text-purple-200 w-20">
+                      PRODUK
+                    </th>
+                    <th className="py-2 px-2 bg-purple-50 dark:bg-purple-950/70 text-purple-900 dark:text-purple-200 w-20">
+                      PRESENTASI
+                    </th>
+                    <th className="py-2 px-2.5 bg-purple-200 dark:bg-purple-900 text-purple-950 dark:text-purple-100 font-black w-24 border-x-2 border-purple-400 dark:border-purple-700">
+                      NA PSIKOMOTOR
+                    </th>
+                    <th className="py-2 px-3 bg-purple-300 dark:bg-purple-800 text-purple-950 dark:text-white font-black min-w-[130px]">
+                      PREDIKAT
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800 font-sans">
+                  {threeCompEvaluations.length === 0 ? (
+                    <tr>
+                      <td colSpan={19} className="py-12 text-center text-slate-400 dark:text-slate-500">
+                        Tidak ada siswa yang ditemukan untuk kelas ini.
+                      </td>
+                    </tr>
+                  ) : (
+                    threeCompEvaluations.map((item) => {
+                      const s = item.scores;
+                      const std = item.student;
+                      const isHighlighted =
+                        std.name.toLowerCase().includes('ahmad fauzi') ||
+                        std.name.toLowerCase().includes('budi santoso');
+
+                      return (
+                        <tr
+                          key={std.id}
+                          className={`hover:bg-indigo-50/30 dark:hover:bg-slate-800/40 transition-colors divide-x divide-slate-200 dark:divide-slate-800 ${
+                            isHighlighted ? 'bg-amber-50/20 dark:bg-amber-950/10' : ''
+                          }`}
+                        >
+                          {/* 1. NO */}
+                          <td className="py-2 px-2 text-center font-mono font-medium text-slate-600 dark:text-slate-400 sticky left-0 z-10 bg-white dark:bg-slate-900">
+                            {item.no}
+                          </td>
+
+                          {/* 2. NISN */}
+                          <td className="py-2 px-3 text-center font-mono text-[11px] font-semibold text-slate-700 dark:text-slate-300 sticky left-12 z-10 bg-white dark:bg-slate-900">
+                            {std.nisnNis || std.nisn || std.nis || '-'}
+                          </td>
+
+                          {/* 3. NAMA SISWA */}
+                          <td className="py-2 px-3 sticky left-36 z-10 bg-white dark:bg-slate-900 shadow-r">
+                            <div className="font-semibold text-slate-900 dark:text-white truncate" title={std.name}>
+                              {std.name}
+                            </div>
+                          </td>
+
+                          {/* 4. JK */}
+                          <td className="py-2 px-2 text-center">
+                            <span
+                              className={`inline-block w-5 h-5 rounded-full text-center text-[10px] font-bold leading-5 ${
+                                std.gender === 'L'
+                                  ? 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300'
+                                  : 'bg-pink-100 text-pink-800 dark:bg-pink-950 dark:text-pink-300'
+                              }`}
+                            >
+                              {std.gender}
+                            </span>
+                          </td>
+
+                          {/* KOGNITIF: TUGAS 1 */}
+                          <td className="p-1 text-center bg-blue-50/20 dark:bg-blue-950/10">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={s.tugas1}
+                              placeholder="—"
+                              onChange={(e) => handleThreeCompScoreChange(std.id, 'tugas1', e.target.value)}
+                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            />
+                          </td>
+
+                          {/* KOGNITIF: TUGAS 2 */}
+                          <td className="p-1 text-center bg-blue-50/20 dark:bg-blue-950/10">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={s.tugas2}
+                              placeholder="—"
+                              onChange={(e) => handleThreeCompScoreChange(std.id, 'tugas2', e.target.value)}
+                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            />
+                          </td>
+
+                          {/* KOGNITIF: UH 1 */}
+                          <td className="p-1 text-center bg-blue-50/20 dark:bg-blue-950/10">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={s.uh1}
+                              placeholder="—"
+                              onChange={(e) => handleThreeCompScoreChange(std.id, 'uh1', e.target.value)}
+                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            />
+                          </td>
+
+                          {/* KOGNITIF: UH 2 */}
+                          <td className="p-1 text-center bg-blue-50/20 dark:bg-blue-950/10">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={s.uh2}
+                              placeholder="—"
+                              onChange={(e) => handleThreeCompScoreChange(std.id, 'uh2', e.target.value)}
+                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            />
+                          </td>
+
+                          {/* KOGNITIF: RATA FORMATIF (OTOMATIS) */}
+                          <td className="py-2 px-2 text-center font-mono font-bold text-blue-950 dark:text-blue-100 bg-blue-100/60 dark:bg-blue-900/30 border-x-2 border-blue-300 dark:border-blue-800">
+                            {item.rataFormatif !== null ? item.rataFormatif : <span className="text-slate-400 italic font-normal">—</span>}
+                          </td>
+
+                          {/* KOGNITIF: NA KOGNITIF (OTOMATIS) */}
+                          <td className="py-2 px-2 text-center font-mono font-black text-sm text-blue-950 dark:text-white bg-blue-200/70 dark:bg-blue-800/40 border-r-2 border-blue-400 dark:border-blue-700">
+                            {item.naKognitif !== null ? (
+                              <span className="px-2 py-0.5 rounded bg-blue-600 text-white font-extrabold shadow-2xs">
+                                {item.naKognitif}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 italic font-normal text-xs">—</span>
+                            )}
+                          </td>
+
+                          {/* AFEKTIF: DISIPLIN (SKALA 1-4) */}
+                          <td className="p-1 text-center bg-amber-50/20 dark:bg-amber-950/10">
+                            <input
+                              type="number"
+                              min="1"
+                              max="4"
+                              value={s.disiplin}
+                              placeholder="1-4"
+                              onChange={(e) => handleThreeCompScoreChange(std.id, 'disiplin', e.target.value)}
+                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1 text-amber-900 dark:text-amber-200 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                            />
+                          </td>
+
+                          {/* AFEKTIF: KERJASAMA (SKALA 1-4) */}
+                          <td className="p-1 text-center bg-amber-50/20 dark:bg-amber-950/10">
+                            <input
+                              type="number"
+                              min="1"
+                              max="4"
+                              value={s.kerjasama}
+                              placeholder="1-4"
+                              onChange={(e) => handleThreeCompScoreChange(std.id, 'kerjasama', e.target.value)}
+                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1 text-amber-900 dark:text-amber-200 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                            />
+                          </td>
+
+                          {/* AFEKTIF: TNG JAWAB (SKALA 1-4) */}
+                          <td className="p-1 text-center bg-amber-50/20 dark:bg-amber-950/10">
+                            <input
+                              type="number"
+                              min="1"
+                              max="4"
+                              value={s.tngJawab}
+                              placeholder="1-4"
+                              onChange={(e) => handleThreeCompScoreChange(std.id, 'tngJawab', e.target.value)}
+                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1 text-amber-900 dark:text-amber-200 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                            />
+                          </td>
+
+                          {/* AFEKTIF: TOTAL SKOR (OTOMATIS) */}
+                          <td className="py-2 px-2 text-center font-mono font-black text-amber-950 dark:text-amber-100 bg-amber-100/60 dark:bg-amber-900/30 border-x-2 border-amber-300 dark:border-amber-800">
+                            {item.totalSkorAfektif !== null ? (
+                              <span className="px-2 py-0.5 rounded bg-amber-500 text-white font-extrabold shadow-2xs">
+                                {item.totalSkorAfektif}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 italic font-normal text-xs">—</span>
+                            )}
+                          </td>
+
+                          {/* PSIKOMOTORIK: PROSES/PRAKTIK */}
+                          <td className="p-1 text-center bg-purple-50/20 dark:bg-purple-950/10">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={s.proses}
+                              placeholder="—"
+                              onChange={(e) => handleThreeCompScoreChange(std.id, 'proses', e.target.value)}
+                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1 text-purple-900 dark:text-purple-200 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                            />
+                          </td>
+
+                          {/* PSIKOMOTORIK: PRODUK */}
+                          <td className="p-1 text-center bg-purple-50/20 dark:bg-purple-950/10">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={s.produk}
+                              placeholder="—"
+                              onChange={(e) => handleThreeCompScoreChange(std.id, 'produk', e.target.value)}
+                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1 text-purple-900 dark:text-purple-200 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                            />
+                          </td>
+
+                          {/* PSIKOMOTORIK: PRESENTASI */}
+                          <td className="p-1 text-center bg-purple-50/20 dark:bg-purple-950/10">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={s.presentasi}
+                              placeholder="—"
+                              onChange={(e) => handleThreeCompScoreChange(std.id, 'presentasi', e.target.value)}
+                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1 text-purple-900 dark:text-purple-200 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                            />
+                          </td>
+
+                          {/* PSIKOMOTORIK: NA PSIKOMOTOR (OTOMATIS) */}
+                          <td className="py-2 px-2 text-center font-mono font-black text-sm text-purple-950 dark:text-white bg-purple-100/60 dark:bg-purple-900/30 border-x-2 border-purple-300 dark:border-purple-800">
+                            {item.naPsikomotor !== null ? (
+                              <span className="px-2 py-0.5 rounded bg-purple-600 text-white font-extrabold shadow-2xs">
+                                {item.naPsikomotor}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 italic font-normal text-xs">—</span>
+                            )}
+                          </td>
+
+                          {/* PSIKOMOTORIK: PREDIKAT (OTOMATIS) */}
+                          <td className="py-2 px-2.5 text-center bg-purple-100/40 dark:bg-purple-950/20">
+                            {item.predikat !== '—' ? (
+                              <span
+                                className={`inline-block px-2.5 py-1 rounded-lg text-xs font-extrabold shadow-2xs ${
+                                  item.predikat.startsWith('Sangat Baik')
+                                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700'
+                                    : item.predikat.startsWith('Baik')
+                                    ? 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200 border border-sky-300 dark:border-sky-700'
+                                    : item.predikat.startsWith('Cukup')
+                                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-700'
+                                    : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200 border border-rose-300 dark:border-rose-700'
+                                }`}
+                              >
+                                {item.predikat}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 italic text-xs">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+
+                {/* FOOTER TABEL: RATA-RATA KELAS */}
+                {threeCompEvaluations.length > 0 && (
+                  <tfoot className="bg-slate-100 dark:bg-slate-800 border-t-2 border-slate-300 dark:border-slate-700 font-bold text-center text-[11px]">
+                    <tr className="divide-x divide-slate-200 dark:divide-slate-700">
+                      <td colSpan={4} className="py-3 px-3 text-right uppercase tracking-wider font-extrabold text-slate-800 dark:text-slate-200">
+                        RATA-RATA KELAS:
+                      </td>
+                      {/* Tugas 1 */}
+                      <td className="py-2 px-1 text-slate-700 dark:text-slate-300 font-mono">
+                        {(() => {
+                          const list = threeCompEvaluations.map((e) => e.scores.tugas1).filter((v): v is number => typeof v === 'number');
+                          return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
+                        })()}
+                      </td>
+                      {/* Tugas 2 */}
+                      <td className="py-2 px-1 text-slate-700 dark:text-slate-300 font-mono">
+                        {(() => {
+                          const list = threeCompEvaluations.map((e) => e.scores.tugas2).filter((v): v is number => typeof v === 'number');
+                          return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
+                        })()}
+                      </td>
+                      {/* UH 1 */}
+                      <td className="py-2 px-1 text-slate-700 dark:text-slate-300 font-mono">
+                        {(() => {
+                          const list = threeCompEvaluations.map((e) => e.scores.uh1).filter((v): v is number => typeof v === 'number');
+                          return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
+                        })()}
+                      </td>
+                      {/* UH 2 */}
+                      <td className="py-2 px-1 text-slate-700 dark:text-slate-300 font-mono">
+                        {(() => {
+                          const list = threeCompEvaluations.map((e) => e.scores.uh2).filter((v): v is number => typeof v === 'number');
+                          return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
+                        })()}
+                      </td>
+                      {/* Rata Formatif */}
+                      <td className="py-2 px-1 text-blue-900 dark:text-blue-200 font-mono font-black bg-blue-100/80 dark:bg-blue-900/50">
+                        {threeCompStats.avgKognitif !== null ? threeCompStats.avgKognitif.toFixed(1) : '-'}
+                      </td>
+                      {/* NA Kognitif */}
+                      <td className="py-2 px-1 text-blue-950 dark:text-white font-mono font-black bg-blue-200 dark:bg-blue-800">
+                        {threeCompStats.avgKognitif !== null ? Math.round(threeCompStats.avgKognitif) : '-'}
+                      </td>
+
+                      {/* Afektif */}
+                      <td className="py-2 px-1 text-amber-900 dark:text-amber-200 font-mono">
+                        {(() => {
+                          const list = threeCompEvaluations.map((e) => e.scores.disiplin).filter((v): v is number => typeof v === 'number');
+                          return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
+                        })()}
+                      </td>
+                      <td className="py-2 px-1 text-amber-900 dark:text-amber-200 font-mono">
+                        {(() => {
+                          const list = threeCompEvaluations.map((e) => e.scores.kerjasama).filter((v): v is number => typeof v === 'number');
+                          return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
+                        })()}
+                      </td>
+                      <td className="py-2 px-1 text-amber-900 dark:text-amber-200 font-mono">
+                        {(() => {
+                          const list = threeCompEvaluations.map((e) => e.scores.tngJawab).filter((v): v is number => typeof v === 'number');
+                          return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
+                        })()}
+                      </td>
+                      <td className="py-2 px-1 text-amber-950 dark:text-white font-mono font-black bg-amber-200 dark:bg-amber-800">
+                        {threeCompStats.avgAfektif !== null ? threeCompStats.avgAfektif.toFixed(1) : '-'}
+                      </td>
+
+                      {/* Psikomotorik */}
+                      <td className="py-2 px-1 text-purple-900 dark:text-purple-200 font-mono">
+                        {(() => {
+                          const list = threeCompEvaluations.map((e) => e.scores.proses).filter((v): v is number => typeof v === 'number');
+                          return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
+                        })()}
+                      </td>
+                      <td className="py-2 px-1 text-purple-900 dark:text-purple-200 font-mono">
+                        {(() => {
+                          const list = threeCompEvaluations.map((e) => e.scores.produk).filter((v): v is number => typeof v === 'number');
+                          return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
+                        })()}
+                      </td>
+                      <td className="py-2 px-1 text-purple-900 dark:text-purple-200 font-mono">
+                        {(() => {
+                          const list = threeCompEvaluations.map((e) => e.scores.presentasi).filter((v): v is number => typeof v === 'number');
+                          return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
+                        })()}
+                      </td>
+                      <td className="py-2 px-1 text-purple-950 dark:text-white font-mono font-black bg-purple-200 dark:bg-purple-800">
+                        {threeCompStats.avgPsikomotor !== null ? Math.round(threeCompStats.avgPsikomotor) : '-'}
+                      </td>
+                      <td className="py-2 px-2 bg-purple-100 dark:bg-purple-950/40 text-purple-900 dark:text-purple-200 text-xs">
+                        {threeCompStats.avgPsikomotor !== null && threeCompStats.avgPsikomotor >= 70
+                          ? 'Sangat Baik (A)'
+                          : threeCompStats.avgPsikomotor !== null && threeCompStats.avgPsikomotor >= 60
+                          ? 'Baik (B)'
+                          : '-'}
+                      </td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </div>
+
+            {/* Bilah Bawah Tabel 3 Komponen */}
+            <div className="bg-slate-50 dark:bg-slate-800/60 p-4 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-400">
+              <div className="space-y-1">
+                <div>
+                  Menampilkan <span className="font-bold text-slate-800 dark:text-slate-200">{filteredStudents.length}</span> siswa dalam format{' '}
+                  <span className="font-bold text-emerald-700 dark:text-emerald-400">3 Komponen Dalam 1 Tabel (Kognitif, Afektif, Psikomotorik)</span>.
+                </div>
+                <div className="text-[11px] text-slate-500 flex flex-wrap items-center gap-3">
+                  <span>• Rata Formatif = (Tugas 1 + Tugas 2 + UH 1 + UH 2) / 4</span>
+                  <span>• Total Skor Sikap = Disiplin + Kerjasama + Tanggung Jawab</span>
+                  <span>• NA Psikomotor = (Proses + Produk + Presentasi) / 3</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleExportExcel3Komponen}
+                  className="px-3.5 py-2 text-xs font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                >
+                  <Download className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Unduh (.csv)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveAll3CompGrades}
+                  className="px-4 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Simpan Nilai 3 Komponen</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* ANALISIS HASIL BELAJAR OBJEKTIF (RATA-RATA, TERTINGGI, TERENDAH, TUNTAS, TIDAK TUNTAS) */}
       <div className="bg-gradient-to-br from-indigo-900 via-indigo-950 to-slate-950 text-white p-5 rounded-2xl shadow-lg border border-indigo-800/40 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-indigo-800/60 pb-3">
           <div className="flex items-center gap-2">
@@ -2440,6 +3666,8 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
           </div>
         </div>
       </div>
+      </div>
+      )}
 
       {/* MODAL: TAMBAH SUB-KOLOM BARU (DAPAT DITAMBAHKAN UNTUK 5 PILAR ASESMEN) */}
       {isAddColumnModalOpen && (
@@ -2639,7 +3867,11 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
       <PrintDocumentModal
         isOpen={isPrintModalOpen}
         onClose={() => setIsPrintModalOpen(false)}
-        title="LEGER NILAI HASIL BELAJAR SISWA"
+        title={
+          viewMode === '3komponen'
+            ? 'PENILAIAN SISWA (3 KOMPONEN DALAM 1 TABEL)'
+            : 'LEGER NILAI HASIL BELAJAR SISWA'
+        }
         subtitle={`Kelas: ${currentClass?.name || ''} | Mata Pelajaran: ${selectedSubject} | Semester: ${school.semester} T.A ${school.academicYear}`}
         school={school}
         currentUser={currentUser}
@@ -2652,60 +3884,124 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
         ]}
       >
         <div className="p-4 space-y-4">
-          <table className="w-full text-[10px] border border-slate-900 border-collapse print:border-black">
-            <thead>
-              <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-900 text-center">
-                <th className="p-1 border border-slate-900 w-8">No</th>
-                <th className="p-1 border border-slate-900 w-24">NISN / NIS</th>
-                <th className="p-1 border border-slate-900 text-left min-w-[120px]">Nama Siswa</th>
-                <th className="p-1 border border-slate-900 w-8">L/P</th>
-                <th className="p-1 border border-slate-900 w-16">Rerata Tugas ({weights.Tugas}%)</th>
-                <th className="p-1 border border-slate-900 w-14">Formatif ({weights.Harian}%)</th>
-                <th className="p-1 border border-slate-900 w-14">Sumatif ({weights.Sumatif}%)</th>
-                <th className="p-1 border border-slate-900 w-14">STS ({weights.STS}%)</th>
-                <th className="p-1 border border-slate-900 w-14">SAS ({weights.SAS}%)</th>
-                <th className="p-1 border border-slate-900 w-14 bg-slate-200 font-extrabold">NA</th>
-                <th className="p-1 border border-slate-900 w-10">Pred.</th>
-                <th className="p-1 border border-slate-900 text-center w-20">Ketercapaian</th>
-              </tr>
-            </thead>
-            <tbody>
-              {studentEvaluations.map((row) => (
-                <tr key={row.student.id} className="border-b border-slate-900">
-                  <td className="p-1 border border-slate-900 text-center font-mono">{row.no}</td>
-                  <td className="p-1 border border-slate-900 text-center font-mono">{row.student.nisnNis || '-'}</td>
-                  <td className="p-1 border border-slate-900 font-medium">{row.student.name}</td>
-                  <td className="p-1 border border-slate-900 text-center">{row.student.gender}</td>
-                  <td className="p-1 border border-slate-900 text-center font-mono font-semibold">
-                    {row.rataRataTugas !== null
-                      ? row.rataRataTugas.toFixed(1)
-                      : row.typeAverages.Tugas !== null
-                      ? Math.round(row.typeAverages.Tugas)
-                      : '-'}
-                  </td>
-                  <td className="p-1 border border-slate-900 text-center font-mono">
-                    {row.typeAverages.Harian !== null ? Math.round(row.typeAverages.Harian) : '-'}
-                  </td>
-                  <td className="p-1 border border-slate-900 text-center font-mono">
-                    {row.typeAverages.Sumatif !== null ? Math.round(row.typeAverages.Sumatif) : '-'}
-                  </td>
-                  <td className="p-1 border border-slate-900 text-center font-mono">
-                    {row.typeAverages.STS !== null ? Math.round(row.typeAverages.STS) : '-'}
-                  </td>
-                  <td className="p-1 border border-slate-900 text-center font-mono">
-                    {row.typeAverages.SAS !== null ? Math.round(row.typeAverages.SAS) : '-'}
-                  </td>
-                  <td className="p-1 border border-slate-900 text-center font-mono font-bold bg-slate-100">
-                    {row.finalScore !== null ? row.finalScore.toFixed(1) : '-'}
-                  </td>
-                  <td className="p-1 border border-slate-900 text-center font-bold">{row.predikat}</td>
-                  <td className="p-1 border border-slate-900 text-center text-[9px] font-semibold">
-                    {row.finalScore !== null ? (row.isPassing ? 'Tuntas' : 'Belum Tuntas') : '-'}
-                  </td>
+          {viewMode === '3komponen' ? (
+            <div className="space-y-3">
+              <div className="text-center font-black text-xs tracking-wider uppercase border border-slate-900 bg-slate-100 py-1 print:border-black">
+                PENILAIAN SISWA (3 KOMPONEN DALAM 1 TABEL)
+              </div>
+              <table className="w-full text-[9px] border border-slate-900 border-collapse print:border-black">
+                <thead>
+                  <tr className="bg-slate-200 text-slate-900 font-bold border-b border-slate-900 text-center uppercase">
+                    <th colSpan={4} className="p-1 border border-slate-900 bg-slate-300">DATA SISWA</th>
+                    <th colSpan={6} className="p-1 border border-slate-900 bg-blue-100">1. KOMPONEN KOGNITIF (PENGETAHUAN)</th>
+                    <th colSpan={4} className="p-1 border border-slate-900 bg-amber-100">2. KOMPONEN AFEKTIF (SIKAP)</th>
+                    <th colSpan={5} className="p-1 border border-slate-900 bg-purple-100">3. KOMPONEN PSIKOMOTORIK (KETERAMPILAN)</th>
+                  </tr>
+                  <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-900 text-center uppercase">
+                    <th className="p-1 border border-slate-900 w-6">NO</th>
+                    <th className="p-1 border border-slate-900 w-16">NISN</th>
+                    <th className="p-1 border border-slate-900 text-left min-w-[110px]">NAMA SISWA</th>
+                    <th className="p-1 border border-slate-900 w-6">JK</th>
+                    <th className="p-1 border border-slate-900 w-10">TUGAS 1</th>
+                    <th className="p-1 border border-slate-900 w-10">TUGAS 2</th>
+                    <th className="p-1 border border-slate-900 w-10">UH 1</th>
+                    <th className="p-1 border border-slate-900 w-10">UH 2</th>
+                    <th className="p-1 border border-slate-900 w-14 bg-blue-50 font-bold">RATA FORMATIF</th>
+                    <th className="p-1 border border-slate-900 w-12 bg-blue-100 font-black">NA KOGNITIF</th>
+                    <th className="p-1 border border-slate-900 w-10">DISIPLIN</th>
+                    <th className="p-1 border border-slate-900 w-10">KERJASAMA</th>
+                    <th className="p-1 border border-slate-900 w-10">TNG JAWAB</th>
+                    <th className="p-1 border border-slate-900 w-12 bg-amber-100 font-black">TOTAL SKOR</th>
+                    <th className="p-1 border border-slate-900 w-14">PROSES/PRAKTIK</th>
+                    <th className="p-1 border border-slate-900 w-10">PRODUK</th>
+                    <th className="p-1 border border-slate-900 w-10">PRESENTASI</th>
+                    <th className="p-1 border border-slate-900 w-12 bg-purple-100 font-black">NA PSIKOMOTOR</th>
+                    <th className="p-1 border border-slate-900 w-20 bg-purple-50">PREDIKAT</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {threeCompEvaluations.map((row) => (
+                    <tr key={row.student.id} className="border-b border-slate-900 text-center">
+                      <td className="p-1 border border-slate-900 font-mono">{row.no}</td>
+                      <td className="p-1 border border-slate-900 font-mono">{row.student.nisnNis || row.student.nisn || '-'}</td>
+                      <td className="p-1 border border-slate-900 text-left font-medium">{row.student.name}</td>
+                      <td className="p-1 border border-slate-900">{row.student.gender}</td>
+                      <td className="p-1 border border-slate-900 font-mono">{row.scores.tugas1 !== '' ? row.scores.tugas1 : '-'}</td>
+                      <td className="p-1 border border-slate-900 font-mono">{row.scores.tugas2 !== '' ? row.scores.tugas2 : '-'}</td>
+                      <td className="p-1 border border-slate-900 font-mono">{row.scores.uh1 !== '' ? row.scores.uh1 : '-'}</td>
+                      <td className="p-1 border border-slate-900 font-mono">{row.scores.uh2 !== '' ? row.scores.uh2 : '-'}</td>
+                      <td className="p-1 border border-slate-900 font-mono font-bold bg-blue-50/50">{row.rataFormatif !== null ? row.rataFormatif : '-'}</td>
+                      <td className="p-1 border border-slate-900 font-mono font-black bg-blue-100/50">{row.naKognitif !== null ? row.naKognitif : '-'}</td>
+                      <td className="p-1 border border-slate-900 font-mono">{row.scores.disiplin !== '' ? row.scores.disiplin : '-'}</td>
+                      <td className="p-1 border border-slate-900 font-mono">{row.scores.kerjasama !== '' ? row.scores.kerjasama : '-'}</td>
+                      <td className="p-1 border border-slate-900 font-mono">{row.scores.tngJawab !== '' ? row.scores.tngJawab : '-'}</td>
+                      <td className="p-1 border border-slate-900 font-mono font-black bg-amber-100/50">{row.totalSkorAfektif !== null ? row.totalSkorAfektif : '-'}</td>
+                      <td className="p-1 border border-slate-900 font-mono">{row.scores.proses !== '' ? row.scores.proses : '-'}</td>
+                      <td className="p-1 border border-slate-900 font-mono">{row.scores.produk !== '' ? row.scores.produk : '-'}</td>
+                      <td className="p-1 border border-slate-900 font-mono">{row.scores.presentasi !== '' ? row.scores.presentasi : '-'}</td>
+                      <td className="p-1 border border-slate-900 font-mono font-black bg-purple-100/50">{row.naPsikomotor !== null ? row.naPsikomotor : '-'}</td>
+                      <td className="p-1 border border-slate-900 font-bold">{row.predikat}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <table className="w-full text-[10px] border border-slate-900 border-collapse print:border-black">
+              <thead>
+                <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-900 text-center">
+                  <th className="p-1 border border-slate-900 w-8">No</th>
+                  <th className="p-1 border border-slate-900 w-24">NISN / NIS</th>
+                  <th className="p-1 border border-slate-900 text-left min-w-[120px]">Nama Siswa</th>
+                  <th className="p-1 border border-slate-900 w-8">L/P</th>
+                  <th className="p-1 border border-slate-900 w-16">Rerata Tugas ({weights.Tugas}%)</th>
+                  <th className="p-1 border border-slate-900 w-14">Formatif ({weights.Harian}%)</th>
+                  <th className="p-1 border border-slate-900 w-14">Sumatif ({weights.Sumatif}%)</th>
+                  <th className="p-1 border border-slate-900 w-14">STS ({weights.STS}%)</th>
+                  <th className="p-1 border border-slate-900 w-14">SAS ({weights.SAS}%)</th>
+                  <th className="p-1 border border-slate-900 w-14 bg-slate-200 font-extrabold">NA</th>
+                  <th className="p-1 border border-slate-900 w-10">Pred.</th>
+                  <th className="p-1 border border-slate-900 text-center w-20">Ketercapaian</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {studentEvaluations.map((row) => (
+                  <tr key={row.student.id} className="border-b border-slate-900">
+                    <td className="p-1 border border-slate-900 text-center font-mono">{row.no}</td>
+                    <td className="p-1 border border-slate-900 text-center font-mono">{row.student.nisnNis || '-'}</td>
+                    <td className="p-1 border border-slate-900 font-medium">{row.student.name}</td>
+                    <td className="p-1 border border-slate-900 text-center">{row.student.gender}</td>
+                    <td className="p-1 border border-slate-900 text-center font-mono font-semibold">
+                      {row.rataRataTugas !== null
+                        ? row.rataRataTugas.toFixed(1)
+                        : row.typeAverages.Tugas !== null
+                        ? Math.round(row.typeAverages.Tugas)
+                        : '-'}
+                    </td>
+                    <td className="p-1 border border-slate-900 text-center font-mono">
+                      {row.typeAverages.Harian !== null ? Math.round(row.typeAverages.Harian) : '-'}
+                    </td>
+                    <td className="p-1 border border-slate-900 text-center font-mono">
+                      {row.typeAverages.Sumatif !== null ? Math.round(row.typeAverages.Sumatif) : '-'}
+                    </td>
+                    <td className="p-1 border border-slate-900 text-center font-mono">
+                      {row.typeAverages.STS !== null ? Math.round(row.typeAverages.STS) : '-'}
+                    </td>
+                    <td className="p-1 border border-slate-900 text-center font-mono">
+                      {row.typeAverages.SAS !== null ? Math.round(row.typeAverages.SAS) : '-'}
+                    </td>
+                    <td className="p-1 border border-slate-900 text-center font-mono font-bold bg-slate-100">
+                      {row.finalScore !== null ? row.finalScore.toFixed(1) : '-'}
+                    </td>
+                    <td className="p-1 border border-slate-900 text-center font-bold">{row.predikat}</td>
+                    <td className="p-1 border border-slate-900 text-center text-[9px] font-semibold">
+                      {row.finalScore !== null ? (row.isPassing ? 'Tuntas' : 'Belum Tuntas') : '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </PrintDocumentModal>
     </div>
