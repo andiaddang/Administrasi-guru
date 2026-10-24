@@ -1489,17 +1489,6 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
 
           {/* Tombol Aksi Utama */}
           <div className="flex flex-wrap items-center gap-2.5">
-            {/* Toggle Grafik Tren */}
-            <button
-              type="button"
-              onClick={() => setShowTrendChart(!showTrendChart)}
-              className="px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
-            >
-              <BarChart3 className="w-3.5 h-3.5 text-indigo-500" />
-              <span>{showTrendChart ? 'Tutup Grafik Tren' : 'Lihat Grafik Tren'}</span>
-              {showTrendChart ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-            </button>
-
             {/* Tombol Cetak Leger */}
             <button
               type="button"
@@ -1524,96 +1513,6 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
               <Save className="w-4 h-4" />
               <span>Simpan Semua Nilai ({currentClass?.name || 'Kelas'})</span>
             </button>
-          </div>
-        </div>
-
-        {/* FILTER SEBELUM INPUT */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* 1. Filter Dropdown Kelas */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5 text-indigo-500" />
-              <span>1. Filter Kelas (Dropdown)</span>
-            </label>
-            <select
-              value={selectedClassId}
-              onChange={(e) => {
-                if (isDirty) {
-                  const confirmChange = window.confirm(
-                    'Anda memiliki perubahan nilai yang belum disimpan. Apakah ingin beralih kelas dan membatalkan perubahan lokal?'
-                  );
-                  if (!confirmChange) return;
-                }
-                setSelectedClassId(e.target.value);
-              }}
-              className="w-full text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-xs"
-            >
-              {classes.map((cls) => (
-                <option key={cls.id} value={cls.id}>
-                  {cls.name} ({cls.major} - Wali: {cls.homeroomTeacher})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* 2. Filter Dropdown Jenis Penilaian */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-              <Filter className="w-3.5 h-3.5 text-indigo-500" />
-              <span>2. Jenis Penilaian</span>
-            </label>
-            <select
-              value={assessmentTypeFilter}
-              onChange={(e) => setAssessmentTypeFilter(e.target.value)}
-              className="w-full text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-xs"
-            >
-              <option value="all">Semua Komponen ({allColumns.length} Penilaian)</option>
-              <option value="Tugas">TUGAS (25%) ({allColumns.filter((c) => c.type === 'Tugas').length})</option>
-              <option value="Harian">FORMATIF / ULANGAN (20%) ({allColumns.filter((c) => c.type === 'Harian').length})</option>
-              <option value="Sumatif">SUMATIF TP (LINGKUP MATERI (20%) ({allColumns.filter((c) => c.type === 'Sumatif').length})</option>
-              <option value="STS">SUMATIF TENGAH SEMESTER / STS (20%) ({allColumns.filter((c) => c.type === 'STS').length})</option>
-              <option value="SAS">SUMATIF AKHIR SEMESTER SAS (20%) ({allColumns.filter((c) => c.type === 'SAS').length})</option>
-            </select>
-          </div>
-
-          {/* 3. Mata Pelajaran & Semester */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-              <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-500" />
-              <span>Mata Pelajaran & Semester</span>
-            </label>
-            <div className="w-full text-xs font-medium bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-xl px-3 py-2.5 text-slate-700 dark:text-slate-300 flex items-center justify-between">
-              <span className="font-semibold text-slate-900 dark:text-white truncate">{selectedSubject}</span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 shrink-0">
-                Sem. {school.semester}
-              </span>
-            </div>
-          </div>
-
-          {/* 4. Pencarian Siswa */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-              <Search className="w-3.5 h-3.5 text-indigo-500" />
-              <span>Cari Siswa</span>
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                value={searchStudent}
-                onChange={(e) => setSearchStudent(e.target.value)}
-                placeholder="Ketik nama atau NISN..."
-                className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl pl-3 pr-8 py-2.5 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500"
-              />
-              {searchStudent && (
-                <button
-                  type="button"
-                  onClick={() => setSearchStudent('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
           </div>
         </div>
 
@@ -2413,188 +2312,75 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
         </div>
       ) : (
         <div className="space-y-6">
-          {/* ANALISIS HASIL BELAJAR OBJEKTIF (RATA-RATA, TERTINGGI, TERENDAH, TUNTAS, TIDAK TUNTAS) */}
-      <div className="bg-gradient-to-br from-indigo-900 via-indigo-950 to-slate-950 text-white p-5 rounded-2xl shadow-lg border border-indigo-800/40 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-indigo-800/60 pb-3">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-indigo-500/20 text-indigo-300 rounded-lg">
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <div>
-              <h2 className="text-sm font-bold tracking-tight text-white">
-                Analisis Evaluasi Hasil Belajar Objektif — {currentClass?.name || 'Kelas'}
-              </h2>
-              <p className="text-[11px] text-indigo-200">
-                Kriteria Ketercapaian Tujuan Pembelajaran (KKTP / KKM): ≥ 75.0 · Dihitung adil tanpa penalti nol untuk tugas belum terbit
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 text-xs">
-            <span className="px-2.5 py-1 rounded-full bg-indigo-800/60 text-indigo-200 font-semibold border border-indigo-700/50">
-              {classAnalytics.evaluatedCount} dari {classAnalytics.totalStudents} Siswa Terisi Nilai
+      {/* BILAH AKSI DI ATAS TABEL PENILAIAN */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-slate-900 px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Filter Dropdown Kelas (Hanya nama kelas) */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+              <Users className="w-3.5 h-3.5 text-indigo-500" />
+              Kelas:
             </span>
-          </div>
-        </div>
-
-        {/* 5 Kartu Metrik Analisis */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          {/* 1. Nilai Rata-rata Kelas */}
-          <div className="bg-white/5 backdrop-blur-md p-3.5 rounded-xl border border-white/10 space-y-1">
-            <span className="text-[11px] text-indigo-200 uppercase tracking-wider font-semibold block">
-              Nilai Rata-rata Kelas
-            </span>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-extrabold text-white">
-                {classAnalytics.hasData ? classAnalytics.average.toFixed(1) : '-'}
-              </span>
-              <span className="text-[11px] text-indigo-300 font-medium">/ 100</span>
-            </div>
-            <p className="text-[10px] text-indigo-300 truncate">
-              {classAnalytics.hasData && classAnalytics.average >= 75 ? 'Rata-rata memenuhi KKTP' : 'Perlu penguatan materi'}
-            </p>
-          </div>
-
-          {/* 2. Nilai Tertinggi */}
-          <div className="bg-white/5 backdrop-blur-md p-3.5 rounded-xl border border-white/10 space-y-1">
-            <span className="text-[11px] text-emerald-300 uppercase tracking-wider font-semibold block flex items-center gap-1">
-              <Award className="w-3.5 h-3.5" />
-              Nilai Tertinggi
-            </span>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-extrabold text-emerald-300">
-                {classAnalytics.hasData ? classAnalytics.highest.toFixed(1) : '-'}
-              </span>
-              <span className="text-[11px] text-emerald-400/80 font-medium">Puncak</span>
-            </div>
-            <p className="text-[10px] text-emerald-200 truncate" title={classAnalytics.highestStudent}>
-              {classAnalytics.hasData ? classAnalytics.highestStudent : '-'}
-            </p>
-          </div>
-
-          {/* 3. Nilai Terendah */}
-          <div className="bg-white/5 backdrop-blur-md p-3.5 rounded-xl border border-white/10 space-y-1">
-            <span className="text-[11px] text-amber-300 uppercase tracking-wider font-semibold block flex items-center gap-1">
-              <TrendingUp className="w-3.5 h-3.5 rotate-180" />
-              Nilai Terendah
-            </span>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-extrabold text-amber-300">
-                {classAnalytics.hasData ? classAnalytics.lowest.toFixed(1) : '-'}
-              </span>
-              <span className="text-[11px] text-amber-400/80 font-medium">Batas</span>
-            </div>
-            <p className="text-[10px] text-amber-200 truncate" title={classAnalytics.lowestStudent}>
-              {classAnalytics.hasData ? classAnalytics.lowestStudent : '-'}
-            </p>
-          </div>
-
-          {/* 4. Jumlah Siswa yang Tuntas */}
-          <div className="bg-emerald-950/40 backdrop-blur-md p-3.5 rounded-xl border border-emerald-500/30 space-y-1">
-            <span className="text-[11px] text-emerald-300 uppercase tracking-wider font-semibold block flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              Siswa Tuntas
-            </span>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-extrabold text-emerald-400">
-                {classAnalytics.passingCount}
-              </span>
-              <span className="text-[11px] text-emerald-300 font-semibold">
-                ({classAnalytics.passingRate}%)
-              </span>
-            </div>
-            <p className="text-[10px] text-emerald-300">Nilai Akhir ≥ 75.0</p>
-          </div>
-
-          {/* 5. Jumlah Siswa yang Tidak Tuntas */}
-          <div className="bg-rose-950/40 backdrop-blur-md p-3.5 rounded-xl border border-rose-500/30 space-y-1 col-span-2 sm:col-span-1">
-            <span className="text-[11px] text-rose-300 uppercase tracking-wider font-semibold block flex items-center gap-1">
-              <AlertCircle className="w-3.5 h-3.5" />
-              Tidak Tuntas
-            </span>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-extrabold text-rose-400">
-                {classAnalytics.failingCount}
-              </span>
-              <span className="text-[11px] text-rose-300 font-semibold">
-                Siswa
-              </span>
-            </div>
-            <p className="text-[10px] text-rose-300">Perlu Bimbingan / Remedial</p>
-          </div>
-        </div>
-
-        {classAnalytics.hasData && (
-          <div className="space-y-1 pt-1">
-            <div className="flex items-center justify-between text-[11px] text-indigo-200">
-              <span>Ketuntasan Belajar Kelas: {classAnalytics.passingRate}%</span>
-              <span>Target Kelulusan: 100%</span>
-            </div>
-            <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden flex">
-              <div
-                style={{ width: `${classAnalytics.passingRate}%` }}
-                className="bg-emerald-500 h-full transition-all duration-500"
-              />
-              <div
-                style={{ width: `${100 - classAnalytics.passingRate}%` }}
-                className="bg-rose-500 h-full transition-all duration-500"
-              />
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* GRAFIK TREN NILAI (OPTIONAL COLLAPSIBLE RECHARTS) */}
-      {showTrendChart && (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm space-y-4 animate-in fade-in-50 duration-200">
-          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-            <div className="flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-indigo-600" />
-              <div>
-                <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                  Visualisasi & Tren Penilaian Semester
-                </h3>
-                <p className="text-xs text-slate-500">Pergerakan rata-rata nilai per mata pelajaran dan per semester</p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowTrendChart(false)}
-              className="text-xs text-slate-400 hover:text-slate-600 font-semibold cursor-pointer"
+            <select
+              value={selectedClassId}
+              onChange={(e) => {
+                if (isDirty) {
+                  const confirmChange = window.confirm(
+                    'Anda memiliki perubahan nilai yang belum disimpan. Apakah ingin beralih kelas dan membatalkan perubahan lokal?'
+                  );
+                  if (!confirmChange) return;
+                }
+                setSelectedClassId(e.target.value);
+              }}
+              className="text-xs font-bold bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-xs"
             >
-              Tutup Grafik
-            </button>
+              {classes.map((cls) => (
+                <option key={cls.id} value={cls.id}>
+                  {cls.name}
+                </option>
+              ))}
+            </select>
           </div>
-          <GradeTrendAnalytics
-            grades={grades}
-            students={students}
-            classes={classes}
-            school={school}
-            initialClassId={selectedClassId}
-          />
-        </div>
-      )}
 
-      {/* BILAH AKSI DI SAMPING TABEL PENILAIAN */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 px-5 py-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+          {/* Cari Siswa */}
+          <div className="relative w-40 sm:w-52">
+            <input
+              type="text"
+              value={searchStudent}
+              onChange={(e) => setSearchStudent(e.target.value)}
+              placeholder="Cari siswa / NISN..."
+              className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl pl-7 pr-6 py-1.5 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500"
+            />
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 top-1/2 -translate-y-1/2" />
+            {searchStudent && (
+              <button
+                type="button"
+                onClick={() => setSearchStudent('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        </div>
+
         <div className="flex flex-wrap items-center gap-2">
           {/* Tombol Penilaian Psikomotorik & Sikap di samping tabel penilaian */}
           <button
             type="button"
             onClick={() => setViewMode('3komponen')}
-            className="px-4 py-2 text-xs font-bold text-emerald-800 dark:text-emerald-200 bg-emerald-50 dark:bg-emerald-950/70 hover:bg-emerald-100 dark:hover:bg-emerald-900/80 border border-emerald-300 dark:border-emerald-800 rounded-xl transition-all cursor-pointer flex items-center gap-2 shadow-xs"
+            className="px-3.5 py-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-200 bg-emerald-50 dark:bg-emerald-950/70 hover:bg-emerald-100 dark:hover:bg-emerald-900/80 border border-emerald-300 dark:border-emerald-800 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
             title="Buka Lembar Penilaian Psikomotorik & Sikap"
           >
-            <Table className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <Table className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             <span>Penilaian Psikomotorik & Sikap</span>
           </button>
-        </div>
 
-        <div className="flex items-center gap-2">
           {/* Tombol Tambah Penilaian */}
           <button
             type="button"
             onClick={() => handleOpenAddModal('Tugas')}
-            className="px-4 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+            className="px-3.5 py-1.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4" />
             <span>Tambah Penilaian</span>
@@ -2612,7 +2398,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                 {/* 1. Nomor */}
                 <th
                   rowSpan={2}
-                  className="py-3 px-3 text-center font-bold text-slate-700 dark:text-slate-200 w-12 sticky left-0 z-30 bg-slate-100 dark:bg-slate-800 border-b border-slate-300 dark:border-slate-700"
+                  className="py-2.5 px-2 text-center font-bold text-slate-700 dark:text-slate-200 w-10 min-w-[40px] max-w-[40px] sticky left-0 z-30 bg-slate-100 dark:bg-slate-800 border-b border-slate-300 dark:border-slate-700 text-xs"
                 >
                   No.
                 </th>
@@ -2620,7 +2406,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                 {/* 2. NISN / NIS */}
                 <th
                   rowSpan={2}
-                  className="py-3 px-3 font-bold text-slate-700 dark:text-slate-200 w-28 sticky left-12 z-30 bg-slate-100 dark:bg-slate-800 border-b border-slate-300 dark:border-slate-700"
+                  className="py-2.5 px-2 font-bold text-center text-slate-700 dark:text-slate-200 w-24 min-w-[96px] max-w-[96px] sticky left-10 z-30 bg-slate-100 dark:bg-slate-800 border-b border-slate-300 dark:border-slate-700 text-xs"
                 >
                   NISN / NIS
                 </th>
@@ -2628,7 +2414,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                 {/* 3. NAMA SISWA */}
                 <th
                   rowSpan={2}
-                  className="py-3 px-4 font-bold text-slate-700 dark:text-slate-200 min-w-[190px] sticky left-40 z-30 bg-slate-100 dark:bg-slate-800 shadow-r border-b border-slate-300 dark:border-slate-700"
+                  className="py-2.5 px-3 font-bold text-left text-slate-700 dark:text-slate-200 min-w-[170px] max-w-[210px] sticky left-[136px] z-30 bg-slate-100 dark:bg-slate-800 shadow-r border-b border-slate-300 dark:border-slate-700 text-xs"
                 >
                   NAMA SISWA
                 </th>
@@ -2636,7 +2422,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                 {/* 4. JENIS KELAMIN */}
                 <th
                   rowSpan={2}
-                  className="py-3 px-3 font-bold text-center text-slate-700 dark:text-slate-200 w-24 border-b border-slate-300 dark:border-slate-700"
+                  className="py-2.5 px-2 font-bold text-center text-slate-700 dark:text-slate-200 w-14 min-w-[50px] border-b border-slate-300 dark:border-slate-700 text-xs"
                 >
                   JENIS KELAMIN
                 </th>
@@ -2645,22 +2431,11 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                 {showTugasSection && (
                   <th
                     colSpan={Math.max(1, tugasCols.length)}
-                    className="py-2.5 px-3 bg-sky-100/95 dark:bg-sky-950/90 border-b border-x border-sky-300 dark:border-sky-800 text-sky-950 dark:text-sky-100 text-center"
+                    className="py-2 px-2.5 bg-sky-100/95 dark:bg-sky-950/90 border-b border-x border-sky-300 dark:border-sky-800 text-sky-950 dark:text-sky-100 text-center"
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-extrabold text-xs text-sky-950 dark:text-sky-100 uppercase tracking-tight">
-                        TUGAS (25%)
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenAddModal('Tugas')}
-                        className="px-2 py-0.5 text-[10px] font-bold bg-sky-600 hover:bg-sky-700 text-white rounded-lg shadow-xs transition-colors flex items-center gap-1 cursor-pointer shrink-0"
-                        title="Tambah Penilaian Tugas"
-                      >
-                        <Plus className="w-3 h-3" />
-                        <span>+ Penilaian</span>
-                      </button>
-                    </div>
+                    <span className="font-extrabold text-xs text-sky-950 dark:text-sky-100 uppercase tracking-tight block">
+                      TUGAS (25%)
+                    </span>
                   </th>
                 )}
 
@@ -2668,7 +2443,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                 {showAvgTugasCol && (
                   <th
                     rowSpan={2}
-                    className="py-3 px-3 font-bold text-center bg-sky-200/90 dark:bg-sky-900/90 border-x-2 border-b border-sky-400 dark:border-sky-700 text-sky-950 dark:text-sky-50 min-w-[140px] shadow-xs align-middle"
+                    className="py-2 px-2 font-bold text-center bg-sky-200/90 dark:bg-sky-900/90 border-x-2 border-b border-sky-400 dark:border-sky-700 text-sky-950 dark:text-sky-50 w-28 min-w-[105px] max-w-[120px] shadow-xs align-middle"
                   >
                     <div className="space-y-0.5">
                       <div className="font-extrabold text-xs text-sky-950 dark:text-sky-50 leading-tight uppercase tracking-tight">
@@ -2685,22 +2460,11 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                 {showFormatifSection && (
                   <th
                     colSpan={Math.max(1, formatifCols.length)}
-                    className="py-2.5 px-3 bg-emerald-100/95 dark:bg-emerald-950/90 border-b border-x border-emerald-300 dark:border-emerald-800 text-emerald-950 dark:text-emerald-100 text-center"
+                    className="py-2 px-2.5 bg-emerald-100/95 dark:bg-emerald-950/90 border-b border-x border-emerald-300 dark:border-emerald-800 text-emerald-950 dark:text-emerald-100 text-center"
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-extrabold text-xs text-emerald-950 dark:text-emerald-100 uppercase tracking-tight">
-                        FORMATIF / ULANGAN (20%)
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenAddModal('Harian')}
-                        className="px-2 py-0.5 text-[10px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs transition-colors flex items-center gap-1 cursor-pointer shrink-0"
-                        title="Tambah Penilaian Formatif / Ulangan"
-                      >
-                        <Plus className="w-3 h-3" />
-                        <span>+ Penilaian</span>
-                      </button>
-                    </div>
+                    <span className="font-extrabold text-xs text-emerald-950 dark:text-emerald-100 uppercase tracking-tight block">
+                      FORMATIF / ULANGAN (20%)
+                    </span>
                   </th>
                 )}
 
@@ -2708,22 +2472,11 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                 {showSumatifSection && (
                   <th
                     colSpan={Math.max(1, sumatifCols.length)}
-                    className="py-2.5 px-3 bg-purple-100/95 dark:bg-purple-950/90 border-b border-x border-purple-300 dark:border-purple-800 text-purple-950 dark:text-purple-100 text-center"
+                    className="py-2 px-2.5 bg-purple-100/95 dark:bg-purple-950/90 border-b border-x border-purple-300 dark:border-purple-800 text-purple-950 dark:text-purple-100 text-center"
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-extrabold text-xs text-purple-950 dark:text-purple-100 uppercase tracking-tight">
-                        SUMATIF TP (LINGKUP MATERI (20%)
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenAddModal('Sumatif')}
-                        className="px-2 py-0.5 text-[10px] font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-xs transition-colors flex items-center gap-1 cursor-pointer shrink-0"
-                        title="Tambah Penilaian Sumatif TP"
-                      >
-                        <Plus className="w-3 h-3" />
-                        <span>+ Penilaian</span>
-                      </button>
-                    </div>
+                    <span className="font-extrabold text-xs text-purple-950 dark:text-purple-100 uppercase tracking-tight block">
+                      SUMATIF TP (LINGKUP MATERI (20%)
+                    </span>
                   </th>
                 )}
 
@@ -2731,13 +2484,11 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                 {showSTSSection && (
                   <th
                     colSpan={Math.max(1, stsCols.length)}
-                    className="py-2.5 px-3 bg-amber-100/95 dark:bg-amber-950/90 border-b border-x border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-100 text-center"
+                    className="py-2 px-2.5 bg-amber-100/95 dark:bg-amber-950/90 border-b border-x border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-100 text-center"
                   >
-                    <div className="flex items-center justify-center">
-                      <span className="font-extrabold text-xs text-amber-950 dark:text-amber-100 uppercase tracking-tight text-center">
-                        SUMATIF TENGAH SEMESTER / STS (20%)
-                      </span>
-                    </div>
+                    <span className="font-extrabold text-xs text-amber-950 dark:text-amber-100 uppercase tracking-tight block text-center">
+                      SUMATIF TENGAH SEMESTER / STS (20%)
+                    </span>
                   </th>
                 )}
 
@@ -2745,29 +2496,27 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                 {showSASSection && (
                   <th
                     colSpan={Math.max(1, sasCols.length)}
-                    className="py-2.5 px-3 bg-rose-100/95 dark:bg-rose-950/90 border-b border-x border-rose-300 dark:border-rose-800 text-rose-950 dark:text-rose-100 text-center"
+                    className="py-2 px-2.5 bg-rose-100/95 dark:bg-rose-950/90 border-b border-x border-rose-300 dark:border-rose-800 text-rose-950 dark:text-rose-100 text-center"
                   >
-                    <div className="flex items-center justify-center">
-                      <span className="font-extrabold text-xs text-rose-950 dark:text-rose-100 uppercase tracking-tight text-center">
-                        SUMATIF AKHIR SEMESTER SAS (20%)
-                      </span>
-                    </div>
+                    <span className="font-extrabold text-xs text-rose-950 dark:text-rose-100 uppercase tracking-tight block text-center">
+                      SUMATIF AKHIR SEMESTER SAS (20%)
+                    </span>
                   </th>
                 )}
 
                 {/* Nilai Akhir Otomatis */}
                 <th
                   rowSpan={2}
-                  className="py-3 px-4 font-bold text-center text-indigo-700 dark:text-indigo-300 min-w-[125px] bg-indigo-50/80 dark:bg-indigo-950/50 border-b border-indigo-200 dark:border-indigo-900"
+                  className="py-2 px-2 font-bold text-center text-indigo-700 dark:text-indigo-300 w-24 min-w-[85px] max-w-[105px] bg-indigo-50/80 dark:bg-indigo-950/50 border-b border-indigo-200 dark:border-indigo-900"
                 >
-                  <div className="leading-tight font-extrabold text-sm">Nilai Akhir</div>
-                  <div className="text-[10px] text-indigo-500 font-normal">Akumulasi Bobot 100% (Kosong = 0)</div>
+                  <div className="leading-tight font-extrabold text-xs">Nilai Akhir</div>
+                  <div className="text-[9px] text-indigo-500 font-normal">Bobot 100%</div>
                 </th>
 
                 {/* Predikat & Ketercapaian */}
                 <th
                   rowSpan={2}
-                  className="py-3 px-3 font-bold text-center text-slate-700 dark:text-slate-200 min-w-[110px] border-b border-slate-300 dark:border-slate-700"
+                  className="py-2 px-2 font-bold text-center text-slate-700 dark:text-slate-200 w-24 min-w-[85px] max-w-[100px] border-b border-slate-300 dark:border-slate-700 text-xs"
                 >
                   Ketercapaian
                 </th>
@@ -2775,7 +2524,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                 {/* Status Kelengkapan Nilai */}
                 <th
                   rowSpan={2}
-                  className="py-3 px-4 font-bold text-center text-slate-700 dark:text-slate-200 min-w-[140px] border-b border-slate-300 dark:border-slate-700"
+                  className="py-2 px-2 font-bold text-center text-slate-700 dark:text-slate-200 w-28 min-w-[100px] max-w-[120px] border-b border-slate-300 dark:border-slate-700 text-xs"
                 >
                   Kelengkapan Nilai
                 </th>
@@ -2789,49 +2538,49 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                     tugasCols.map((col) => (
                       <th
                         key={col.key}
-                        className="py-2.5 px-3 min-w-[160px] max-w-[210px] font-bold text-slate-800 dark:text-slate-100 align-top group hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors border-x border-slate-200 dark:border-slate-700"
+                        className="py-2 px-2 w-28 min-w-[105px] max-w-[125px] font-bold text-slate-800 dark:text-slate-100 align-top group hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors border-x border-slate-200 dark:border-slate-700"
                       >
-                        <div className="flex items-start justify-between gap-1.5">
+                        <div className="flex items-start justify-between gap-1">
                           <div
-                            className="space-y-0.5 flex-1 cursor-pointer"
+                            className="space-y-0.5 flex-1 min-w-0 cursor-pointer text-left"
                             onClick={() => handleOpenEditColumn(col)}
                             title="Klik untuk mengedit deskripsi materi & tanggal penilaian"
                           >
                             <div
-                              className="font-bold text-slate-900 dark:text-white leading-tight line-clamp-2 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1 group/title text-xs"
+                              className="font-bold text-slate-900 dark:text-white leading-tight truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1 group/title text-xs"
                               title={`Klik untuk edit: ${col.title}`}
                             >
-                              <span>{col.title}</span>
+                              <span className="truncate">{col.title}</span>
                               <Pencil className="w-2.5 h-2.5 opacity-0 group-hover/title:opacity-100 text-indigo-500 shrink-0 transition-opacity" />
                             </div>
-                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal hover:text-slate-700 dark:hover:text-slate-200">
-                              Tgl: {col.date || '-'}
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal hover:text-slate-700 dark:hover:text-slate-200 truncate">
+                              {col.date || '-'}
                             </div>
                           </div>
-                          <div className="flex items-center gap-0.5 shrink-0">
+                          <div className="flex items-center shrink-0">
                             <button
                               type="button"
                               onClick={() => handleOpenEditColumn(col)}
-                              className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 p-1 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors cursor-pointer"
+                              className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 p-0.5 rounded hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors cursor-pointer"
                               title={`Edit deskripsi teks & tanggal "${col.title}"`}
                             >
-                              <Pencil className="w-3.5 h-3.5" />
+                              <Pencil className="w-3 h-3" />
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDeleteColumn(col)}
-                              className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 p-1 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                              className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 p-0.5 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
                               title={`Hapus sub-kolom "${col.title}"`}
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="w-3 h-3" />
                             </button>
                           </div>
                         </div>
                       </th>
                     ))
                   ) : (
-                    <th className="py-2.5 px-3 text-center text-xs text-slate-400 italic">
-                      Belum ada sub-kolom tugas
+                    <th className="py-2 px-2 text-center text-xs text-slate-400 italic w-28 min-w-[105px]">
+                      Belum ada sub-kolom
                     </th>
                   ))}
 
@@ -2841,49 +2590,49 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                     formatifCols.map((col) => (
                       <th
                         key={col.key}
-                        className="py-2.5 px-3 min-w-[160px] max-w-[210px] font-bold text-slate-800 dark:text-slate-100 align-top group hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors border-x border-slate-200 dark:border-slate-700"
+                        className="py-2 px-2 w-28 min-w-[105px] max-w-[125px] font-bold text-slate-800 dark:text-slate-100 align-top group hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors border-x border-slate-200 dark:border-slate-700"
                       >
-                        <div className="flex items-start justify-between gap-1.5">
+                        <div className="flex items-start justify-between gap-1">
                           <div
-                            className="space-y-0.5 flex-1 cursor-pointer"
+                            className="space-y-0.5 flex-1 min-w-0 cursor-pointer text-left"
                             onClick={() => handleOpenEditColumn(col)}
                             title="Klik untuk mengedit deskripsi materi & tanggal penilaian"
                           >
                             <div
-                              className="font-bold text-slate-900 dark:text-white leading-tight line-clamp-2 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1 group/title text-xs"
+                              className="font-bold text-slate-900 dark:text-white leading-tight truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1 group/title text-xs"
                               title={`Klik untuk edit: ${col.title}`}
                             >
-                              <span>{col.title}</span>
+                              <span className="truncate">{col.title}</span>
                               <Pencil className="w-2.5 h-2.5 opacity-0 group-hover/title:opacity-100 text-indigo-500 shrink-0 transition-opacity" />
                             </div>
-                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal hover:text-slate-700 dark:hover:text-slate-200">
-                              Tgl: {col.date || '-'}
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal hover:text-slate-700 dark:hover:text-slate-200 truncate">
+                              {col.date || '-'}
                             </div>
                           </div>
-                          <div className="flex items-center gap-0.5 shrink-0">
+                          <div className="flex items-center shrink-0">
                             <button
                               type="button"
                               onClick={() => handleOpenEditColumn(col)}
-                              className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 p-1 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors cursor-pointer"
+                              className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 p-0.5 rounded hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors cursor-pointer"
                               title={`Edit deskripsi teks & tanggal "${col.title}"`}
                             >
-                              <Pencil className="w-3.5 h-3.5" />
+                              <Pencil className="w-3 h-3" />
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDeleteColumn(col)}
-                              className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 p-1 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                              className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 p-0.5 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
                               title={`Hapus sub-kolom "${col.title}"`}
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="w-3 h-3" />
                             </button>
                           </div>
                         </div>
                       </th>
                     ))
                   ) : (
-                    <th className="py-2.5 px-3 text-center text-xs text-slate-400 italic">
-                      Belum ada sub-kolom formatif
+                    <th className="py-2 px-2 text-center text-xs text-slate-400 italic w-28 min-w-[105px]">
+                      Belum ada sub-kolom
                     </th>
                   ))}
 
@@ -2893,49 +2642,49 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                     sumatifCols.map((col) => (
                       <th
                         key={col.key}
-                        className="py-2.5 px-3 min-w-[160px] max-w-[210px] font-bold text-slate-800 dark:text-slate-100 align-top group hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors border-x border-slate-200 dark:border-slate-700"
+                        className="py-2 px-2 w-28 min-w-[105px] max-w-[125px] font-bold text-slate-800 dark:text-slate-100 align-top group hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors border-x border-slate-200 dark:border-slate-700"
                       >
-                        <div className="flex items-start justify-between gap-1.5">
+                        <div className="flex items-start justify-between gap-1">
                           <div
-                            className="space-y-0.5 flex-1 cursor-pointer"
+                            className="space-y-0.5 flex-1 min-w-0 cursor-pointer text-left"
                             onClick={() => handleOpenEditColumn(col)}
                             title="Klik untuk mengedit deskripsi materi & tanggal penilaian"
                           >
                             <div
-                              className="font-bold text-slate-900 dark:text-white leading-tight line-clamp-2 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1 group/title text-xs"
+                              className="font-bold text-slate-900 dark:text-white leading-tight truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1 group/title text-xs"
                               title={`Klik untuk edit: ${col.title}`}
                             >
-                              <span>{col.title}</span>
+                              <span className="truncate">{col.title}</span>
                               <Pencil className="w-2.5 h-2.5 opacity-0 group-hover/title:opacity-100 text-indigo-500 shrink-0 transition-opacity" />
                             </div>
-                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal hover:text-slate-700 dark:hover:text-slate-200">
-                              Tgl: {col.date || '-'}
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal hover:text-slate-700 dark:hover:text-slate-200 truncate">
+                              {col.date || '-'}
                             </div>
                           </div>
-                          <div className="flex items-center gap-0.5 shrink-0">
+                          <div className="flex items-center shrink-0">
                             <button
                               type="button"
                               onClick={() => handleOpenEditColumn(col)}
-                              className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 p-1 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors cursor-pointer"
+                              className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 p-0.5 rounded hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors cursor-pointer"
                               title={`Edit deskripsi teks & tanggal "${col.title}"`}
                             >
-                              <Pencil className="w-3.5 h-3.5" />
+                              <Pencil className="w-3 h-3" />
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDeleteColumn(col)}
-                              className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 p-1 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                              className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 p-0.5 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
                               title={`Hapus sub-kolom "${col.title}"`}
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="w-3 h-3" />
                             </button>
                           </div>
                         </div>
                       </th>
                     ))
                   ) : (
-                    <th className="py-2.5 px-3 text-center text-xs text-slate-400 italic">
-                      Belum ada sub-kolom sumatif TP
+                    <th className="py-2 px-2 text-center text-xs text-slate-400 italic w-28 min-w-[105px]">
+                      Belum ada sub-kolom
                     </th>
                   ))}
 
@@ -2945,40 +2694,40 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                     stsCols.map((col) => (
                       <th
                         key={col.key}
-                        className="py-2.5 px-3 min-w-[160px] max-w-[210px] font-bold text-slate-800 dark:text-slate-100 align-top group hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors border-x border-slate-200 dark:border-slate-700"
+                        className="py-2 px-2 w-28 min-w-[105px] max-w-[125px] font-bold text-slate-800 dark:text-slate-100 align-top group hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors border-x border-slate-200 dark:border-slate-700"
                       >
-                        <div className="flex items-start justify-between gap-1.5">
+                        <div className="flex items-start justify-between gap-1">
                           <div
-                            className="space-y-0.5 flex-1 cursor-pointer"
+                            className="space-y-0.5 flex-1 min-w-0 cursor-pointer text-left"
                             onClick={() => handleOpenEditColumn(col)}
                             title="Klik untuk mengedit deskripsi materi & tanggal penilaian"
                           >
                             <div
-                              className="font-bold text-slate-900 dark:text-white leading-tight line-clamp-2 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1 group/title text-xs"
+                              className="font-bold text-slate-900 dark:text-white leading-tight truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1 group/title text-xs"
                               title={`Klik untuk edit: ${col.title}`}
                             >
-                              <span>{col.title}</span>
+                              <span className="truncate">{col.title}</span>
                               <Pencil className="w-2.5 h-2.5 opacity-0 group-hover/title:opacity-100 text-indigo-500 shrink-0 transition-opacity" />
                             </div>
-                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal hover:text-slate-700 dark:hover:text-slate-200">
-                              Tgl: {col.date || '-'}
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal hover:text-slate-700 dark:hover:text-slate-200 truncate">
+                              {col.date || '-'}
                             </div>
                           </div>
-                          <div className="flex items-center gap-0.5 shrink-0">
+                          <div className="flex items-center shrink-0">
                             <button
                               type="button"
                               onClick={() => handleOpenEditColumn(col)}
-                              className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 p-1 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors cursor-pointer"
+                              className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 p-0.5 rounded hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors cursor-pointer"
                               title={`Edit deskripsi teks & tanggal "${col.title}"`}
                             >
-                              <Pencil className="w-3.5 h-3.5" />
+                              <Pencil className="w-3 h-3" />
                             </button>
                           </div>
                         </div>
                       </th>
                     ))
                   ) : (
-                    <th className="py-2.5 px-3 text-center text-xs text-slate-400 italic">
+                    <th className="py-2 px-2 text-center text-xs text-slate-400 italic w-28 min-w-[105px]">
                       Belum ada kolom STS
                     </th>
                   ))}
@@ -2989,40 +2738,40 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                     sasCols.map((col) => (
                       <th
                         key={col.key}
-                        className="py-2.5 px-3 min-w-[160px] max-w-[210px] font-bold text-slate-800 dark:text-slate-100 align-top group hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors border-x border-slate-200 dark:border-slate-700"
+                        className="py-2 px-2 w-28 min-w-[105px] max-w-[125px] font-bold text-slate-800 dark:text-slate-100 align-top group hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors border-x border-slate-200 dark:border-slate-700"
                       >
-                        <div className="flex items-start justify-between gap-1.5">
+                        <div className="flex items-start justify-between gap-1">
                           <div
-                            className="space-y-0.5 flex-1 cursor-pointer"
+                            className="space-y-0.5 flex-1 min-w-0 cursor-pointer text-left"
                             onClick={() => handleOpenEditColumn(col)}
                             title="Klik untuk mengedit deskripsi materi & tanggal penilaian"
                           >
                             <div
-                              className="font-bold text-slate-900 dark:text-white leading-tight line-clamp-2 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1 group/title text-xs"
+                              className="font-bold text-slate-900 dark:text-white leading-tight truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1 group/title text-xs"
                               title={`Klik untuk edit: ${col.title}`}
                             >
-                              <span>{col.title}</span>
+                              <span className="truncate">{col.title}</span>
                               <Pencil className="w-2.5 h-2.5 opacity-0 group-hover/title:opacity-100 text-indigo-500 shrink-0 transition-opacity" />
                             </div>
-                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal hover:text-slate-700 dark:hover:text-slate-200">
-                              Tgl: {col.date || '-'}
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal hover:text-slate-700 dark:hover:text-slate-200 truncate">
+                              {col.date || '-'}
                             </div>
                           </div>
-                          <div className="flex items-center gap-0.5 shrink-0">
+                          <div className="flex items-center shrink-0">
                             <button
                               type="button"
                               onClick={() => handleOpenEditColumn(col)}
-                              className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 p-1 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors cursor-pointer"
+                              className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 p-0.5 rounded hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors cursor-pointer"
                               title={`Edit deskripsi teks & tanggal "${col.title}"`}
                             >
-                              <Pencil className="w-3.5 h-3.5" />
+                              <Pencil className="w-3 h-3" />
                             </button>
                           </div>
                         </div>
                       </th>
                     ))
                   ) : (
-                    <th className="py-2.5 px-3 text-center text-xs text-slate-400 italic">
+                    <th className="py-2 px-2 text-center text-xs text-slate-400 italic w-28 min-w-[105px]">
                       Belum ada kolom SAS
                     </th>
                   ))}
@@ -3054,24 +2803,24 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                         className="hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 transition-colors divide-x divide-slate-100 dark:divide-slate-800"
                       >
                         {/* 1. Nomor */}
-                        <td className="py-2.5 px-3 text-center font-medium text-slate-500 dark:text-slate-400 sticky left-0 z-10 bg-white dark:bg-slate-900">
+                        <td className="py-2 px-2 text-center font-medium text-slate-500 dark:text-slate-400 w-10 min-w-[40px] max-w-[40px] sticky left-0 z-10 bg-white dark:bg-slate-900">
                           {evalItem.no}
                         </td>
 
                         {/* 2. NISN / NIS */}
-                        <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600 dark:text-slate-400 sticky left-12 z-10 bg-white dark:bg-slate-900 truncate">
+                        <td className="py-2 px-2 font-mono text-[11px] text-slate-600 dark:text-slate-400 w-24 min-w-[96px] max-w-[96px] sticky left-10 z-10 bg-white dark:bg-slate-900 truncate">
                           {student.nisnNis || student.nisn || student.nis || '-'}
                         </td>
 
                         {/* 3. NAMA SISWA */}
-                        <td className="py-2.5 px-4 sticky left-40 z-10 bg-white dark:bg-slate-900 shadow-r">
+                        <td className="py-2 px-3 min-w-[170px] max-w-[210px] sticky left-[136px] z-10 bg-white dark:bg-slate-900 shadow-r">
                           <div className="font-semibold text-slate-900 dark:text-white truncate">
                             {student.name}
                           </div>
                         </td>
 
                         {/* 4. JENIS KELAMIN */}
-                        <td className="py-2.5 px-3 text-center">
+                        <td className="py-2 px-2 text-center w-14 min-w-[50px]">
                           <span
                             className={`inline-flex items-center justify-center px-2 py-0.5 rounded-md text-xs font-bold ${
                               student.gender === 'L'
@@ -3092,36 +2841,34 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                               const isWarning = isFilled && currentScore < 75;
 
                               return (
-                                <td key={col.key} className="py-2 px-2.5">
-                                  <div className="relative">
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      max="100"
-                                      placeholder="—"
-                                      value={currentScore}
-                                      onChange={(e) =>
-                                        handleScoreChange(student.id, col.key, e.target.value)
-                                      }
-                                      className={`w-full text-center text-xs font-bold rounded-lg px-2 py-1.5 border transition-all ${
-                                        isFilled
-                                          ? isWarning
-                                            ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300'
-                                            : 'bg-slate-50 dark:bg-slate-800/90 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:bg-white'
-                                          : 'bg-slate-50/40 dark:bg-slate-800/30 border-dashed border-slate-200 dark:border-slate-700 text-slate-400'
-                                      } focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
-                                    />
-                                  </div>
+                                <td key={col.key} className="py-1.5 px-1 text-center w-28 min-w-[105px] max-w-[125px]">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    placeholder="—"
+                                    value={currentScore}
+                                    onChange={(e) =>
+                                      handleScoreChange(student.id, col.key, e.target.value)
+                                    }
+                                    className={`w-16 h-8 text-center text-xs font-bold rounded-lg border mx-auto block transition-all ${
+                                      isFilled
+                                        ? isWarning
+                                          ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300'
+                                          : 'bg-slate-50 dark:bg-slate-800/90 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:bg-white'
+                                        : 'bg-slate-50/40 dark:bg-slate-800/30 border-dashed border-slate-200 dark:border-slate-700 text-slate-400'
+                                    } focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
+                                  />
                                 </td>
                               );
                             })
                           ) : (
-                            <td className="py-2.5 px-3 text-center text-slate-400 italic text-xs">—</td>
+                            <td className="py-2 px-1 text-center text-slate-400 italic text-xs w-28 min-w-[105px]">—</td>
                           ))}
 
                         {/* KOLOM 2: Kolom Khusus RATA-RATA TUGAS (Tepat setelah Tugas, Sebelum Formatif) */}
                         {showAvgTugasCol && (
-                          <td className="py-2.5 px-3 text-center bg-sky-100/60 dark:bg-sky-950/40 border-x-2 border-sky-300 dark:border-sky-800 font-mono">
+                          <td className="py-2 px-2 text-center bg-sky-100/60 dark:bg-sky-950/40 border-x-2 border-sky-300 dark:border-sky-800 font-mono w-28 min-w-[105px] max-w-[120px]">
                             {evalItem.rataRataTugas !== null ? (
                               <div className="space-y-0.5">
                                 <div className="inline-flex items-center justify-center">
@@ -3155,31 +2902,29 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                               const isWarning = isFilled && currentScore < 75;
 
                               return (
-                                <td key={col.key} className="py-2 px-2.5">
-                                  <div className="relative">
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      max="100"
-                                      placeholder="—"
-                                      value={currentScore}
-                                      onChange={(e) =>
-                                        handleScoreChange(student.id, col.key, e.target.value)
-                                      }
-                                      className={`w-full text-center text-xs font-bold rounded-lg px-2 py-1.5 border transition-all ${
-                                        isFilled
-                                          ? isWarning
-                                            ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300'
-                                            : 'bg-slate-50 dark:bg-slate-800/90 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:bg-white'
-                                          : 'bg-slate-50/40 dark:bg-slate-800/30 border-dashed border-slate-200 dark:border-slate-700 text-slate-400'
-                                      } focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
-                                    />
-                                  </div>
+                                <td key={col.key} className="py-1.5 px-1 text-center w-28 min-w-[105px] max-w-[125px]">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    placeholder="—"
+                                    value={currentScore}
+                                    onChange={(e) =>
+                                      handleScoreChange(student.id, col.key, e.target.value)
+                                    }
+                                    className={`w-16 h-8 text-center text-xs font-bold rounded-lg border mx-auto block transition-all ${
+                                      isFilled
+                                        ? isWarning
+                                          ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300'
+                                          : 'bg-slate-50 dark:bg-slate-800/90 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:bg-white'
+                                        : 'bg-slate-50/40 dark:bg-slate-800/30 border-dashed border-slate-200 dark:border-slate-700 text-slate-400'
+                                    } focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
+                                  />
                                 </td>
                               );
                             })
                           ) : (
-                            <td className="py-2.5 px-3 text-center text-slate-400 italic text-xs">—</td>
+                            <td className="py-2 px-1 text-center text-slate-400 italic text-xs w-28 min-w-[105px]">—</td>
                           ))}
 
                         {/* SUMATIF LINGKUP MATERI (TP) */}
@@ -3191,31 +2936,29 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                               const isWarning = isFilled && currentScore < 75;
 
                               return (
-                                <td key={col.key} className="py-2 px-2.5">
-                                  <div className="relative">
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      max="100"
-                                      placeholder="—"
-                                      value={currentScore}
-                                      onChange={(e) =>
-                                        handleScoreChange(student.id, col.key, e.target.value)
-                                      }
-                                      className={`w-full text-center text-xs font-bold rounded-lg px-2 py-1.5 border transition-all ${
-                                        isFilled
-                                          ? isWarning
-                                            ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300'
-                                            : 'bg-slate-50 dark:bg-slate-800/90 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:bg-white'
-                                          : 'bg-slate-50/40 dark:bg-slate-800/30 border-dashed border-slate-200 dark:border-slate-700 text-slate-400'
-                                      } focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
-                                    />
-                                  </div>
+                                <td key={col.key} className="py-1.5 px-1 text-center w-28 min-w-[105px] max-w-[125px]">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    placeholder="—"
+                                    value={currentScore}
+                                    onChange={(e) =>
+                                      handleScoreChange(student.id, col.key, e.target.value)
+                                    }
+                                    className={`w-16 h-8 text-center text-xs font-bold rounded-lg border mx-auto block transition-all ${
+                                      isFilled
+                                        ? isWarning
+                                          ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300'
+                                          : 'bg-slate-50 dark:bg-slate-800/90 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:bg-white'
+                                        : 'bg-slate-50/40 dark:bg-slate-800/30 border-dashed border-slate-200 dark:border-slate-700 text-slate-400'
+                                    } focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
+                                  />
                                 </td>
                               );
                             })
                           ) : (
-                            <td className="py-2.5 px-3 text-center text-slate-400 italic text-xs">—</td>
+                            <td className="py-2 px-1 text-center text-slate-400 italic text-xs w-28 min-w-[105px]">—</td>
                           ))}
 
                         {/* SUMATIF TENGAH SEMESTER (STS) */}
@@ -3227,31 +2970,29 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                               const isWarning = isFilled && currentScore < 75;
 
                               return (
-                                <td key={col.key} className="py-2 px-2.5">
-                                  <div className="relative">
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      max="100"
-                                      placeholder="—"
-                                      value={currentScore}
-                                      onChange={(e) =>
-                                        handleScoreChange(student.id, col.key, e.target.value)
-                                      }
-                                      className={`w-full text-center text-xs font-bold rounded-lg px-2 py-1.5 border transition-all ${
-                                        isFilled
-                                          ? isWarning
-                                            ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300'
-                                            : 'bg-slate-50 dark:bg-slate-800/90 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:bg-white'
-                                          : 'bg-slate-50/40 dark:bg-slate-800/30 border-dashed border-slate-200 dark:border-slate-700 text-slate-400'
-                                      } focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
-                                    />
-                                  </div>
+                                <td key={col.key} className="py-1.5 px-1 text-center w-28 min-w-[105px] max-w-[125px]">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    placeholder="—"
+                                    value={currentScore}
+                                    onChange={(e) =>
+                                      handleScoreChange(student.id, col.key, e.target.value)
+                                    }
+                                    className={`w-16 h-8 text-center text-xs font-bold rounded-lg border mx-auto block transition-all ${
+                                      isFilled
+                                        ? isWarning
+                                          ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300'
+                                          : 'bg-slate-50 dark:bg-slate-800/90 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:bg-white'
+                                        : 'bg-slate-50/40 dark:bg-slate-800/30 border-dashed border-slate-200 dark:border-slate-700 text-slate-400'
+                                    } focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
+                                  />
                                 </td>
                               );
                             })
                           ) : (
-                            <td className="py-2.5 px-3 text-center text-slate-400 italic text-xs">—</td>
+                            <td className="py-2 px-1 text-center text-slate-400 italic text-xs w-28 min-w-[105px]">—</td>
                           ))}
 
                         {/* SUMATIF AKHIR SEMESTER (SAS) */}
@@ -3263,31 +3004,29 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                               const isWarning = isFilled && currentScore < 75;
 
                               return (
-                                <td key={col.key} className="py-2 px-2.5">
-                                  <div className="relative">
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      max="100"
-                                      placeholder="—"
-                                      value={currentScore}
-                                      onChange={(e) =>
-                                        handleScoreChange(student.id, col.key, e.target.value)
-                                      }
-                                      className={`w-full text-center text-xs font-bold rounded-lg px-2 py-1.5 border transition-all ${
-                                        isFilled
-                                          ? isWarning
-                                            ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300'
-                                            : 'bg-slate-50 dark:bg-slate-800/90 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:bg-white'
-                                          : 'bg-slate-50/40 dark:bg-slate-800/30 border-dashed border-slate-200 dark:border-slate-700 text-slate-400'
-                                      } focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
-                                    />
-                                  </div>
+                                <td key={col.key} className="py-1.5 px-1 text-center w-28 min-w-[105px] max-w-[125px]">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    placeholder="—"
+                                    value={currentScore}
+                                    onChange={(e) =>
+                                      handleScoreChange(student.id, col.key, e.target.value)
+                                    }
+                                    className={`w-16 h-8 text-center text-xs font-bold rounded-lg border mx-auto block transition-all ${
+                                      isFilled
+                                        ? isWarning
+                                          ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300'
+                                          : 'bg-slate-50 dark:bg-slate-800/90 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:bg-white'
+                                        : 'bg-slate-50/40 dark:bg-slate-800/30 border-dashed border-slate-200 dark:border-slate-700 text-slate-400'
+                                    } focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
+                                  />
                                 </td>
                               );
                             })
                           ) : (
-                            <td className="py-2.5 px-3 text-center text-slate-400 italic text-xs">—</td>
+                            <td className="py-2 px-1 text-center text-slate-400 italic text-xs w-28 min-w-[105px]">—</td>
                           ))}
 
                         {/* Nilai Akhir Otomatis (Menggunakan Rata-Rata Tugas Sebagai Bobot Tugas) */}
