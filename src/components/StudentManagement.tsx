@@ -168,8 +168,15 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
   onReorderStudents,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedClassFilter, setSelectedClassFilter] = useState<string>('all');
+  const [selectedClassFilter, setSelectedClassFilter] = useState<string>(() => classes[0]?.id || '');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // Keep selectedClassFilter valid when classes load
+  useEffect(() => {
+    if ((!selectedClassFilter || !classes.some((c) => c.id === selectedClassFilter)) && classes.length > 0) {
+      setSelectedClassFilter(classes[0].id);
+    }
+  }, [classes, selectedClassFilter]);
 
   // DRAG AND DROP REORDER STATE
   const [draggedStudentId, setDraggedStudentId] = useState<string | null>(null);
@@ -185,7 +192,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
   const [isQuickPasteBoxOpen, setIsQuickPasteBoxOpen] = useState(false);
   const [quickPasteText, setQuickPasteText] = useState('');
   const [quickPasteClassId, setQuickPasteClassId] = useState(
-    selectedClassFilter !== 'all' ? selectedClassFilter : classes[0]?.id || ''
+    selectedClassFilter || classes[0]?.id || ''
   );
   const [quickPasteOverwriteDuplicates, setQuickPasteOverwriteDuplicates] = useState(true);
 
@@ -195,7 +202,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
     Array<Omit<Student, 'id'>>
   >([]);
   const [detectedClassId, setDetectedClassId] = useState(
-    selectedClassFilter !== 'all' ? selectedClassFilter : classes[0]?.id || ''
+    selectedClassFilter || classes[0]?.id || ''
   );
   const [detectedOverwriteDuplicates, setDetectedOverwriteDuplicates] = useState(true);
 
@@ -233,7 +240,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
 
   // Keep target class in sync when filter changes
   useEffect(() => {
-    if (selectedClassFilter !== 'all') {
+    if (selectedClassFilter) {
       setPasteTargetClassId(selectedClassFilter);
       setQuickPasteClassId(selectedClassFilter);
       setDetectedClassId(selectedClassFilter);
@@ -260,8 +267,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
       }
 
       // Check if text looks like student data
-      const defaultCls =
-        selectedClassFilter !== 'all' ? selectedClassFilter : classes[0]?.id || '';
+      const defaultCls = selectedClassFilter || classes[0]?.id || '';
       const parsed = parseExternalStudentText(text, defaultCls, classes);
 
       if (parsed.length >= 1) {
@@ -290,7 +296,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
 
   // Filter students
   const filteredStudents = students.filter((s) => {
-    const matchesClass = selectedClassFilter === 'all' || s.classId === selectedClassFilter;
+    const matchesClass = !selectedClassFilter ? true : s.classId === selectedClassFilter;
     const combinedId = s.nisnNis || `${s.nisn || ''} ${s.nis || ''}`;
     const matchesSearch =
       s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -821,20 +827,6 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-          {/* Quick Paste External Data Button */}
-          <button
-            type="button"
-            onClick={handleReadClipboard}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-50 dark:bg-indigo-950/70 hover:bg-indigo-100 dark:hover:bg-indigo-900/70 text-indigo-700 dark:text-indigo-300 text-xs font-semibold rounded-lg transition-colors cursor-pointer border border-indigo-200 dark:border-indigo-800 shadow-2xs"
-            title="Tempel data siswa dari clipboard (Ctrl+V)"
-          >
-            <ClipboardPaste className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-            <span>Paste dari Luar</span>
-            <kbd className="hidden md:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-indigo-200/60 dark:bg-indigo-900/90 text-indigo-800 dark:text-indigo-200 rounded">
-              Ctrl+V
-            </kbd>
-          </button>
-
           {/* Toggle Direct Inline Edit Mode */}
           <button
             type="button"
@@ -1018,18 +1010,17 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
 
           {/* Filter Kelas */}
           <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
               Kelas:
             </label>
             <select
               value={selectedClassFilter}
               onChange={(e) => setSelectedClassFilter(e.target.value)}
-              className="px-3 py-1.5 text-xs font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+              className="px-3 py-1.5 text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-2xs"
             >
-              <option value="all">Semua Kelas ({students.length})</option>
               {classes.map((cls) => (
                 <option key={cls.id} value={cls.id}>
-                  {cls.name} ({students.filter((s) => s.classId === cls.id).length})
+                  {cls.name}
                 </option>
               ))}
             </select>
@@ -1045,14 +1036,6 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
             >
               <ArrowUpDown className="w-3.5 h-3.5 text-indigo-500" />
               <span>Urut A-Z</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleSortByNisn}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors cursor-pointer border border-slate-200 dark:border-slate-700 shadow-2xs"
-              title="Urutkan daftar siswa berdasarkan NISN terkecil"
-            >
-              <span>Urut NISN</span>
             </button>
           </div>
 
@@ -1082,39 +1065,17 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
         )}
       </div>
 
-      {/* Drag & Drop Reorder Guidance Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-3.5 py-2.5 bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900/60 rounded-xl text-xs text-indigo-950 dark:text-indigo-200 shadow-2xs">
-        <div className="flex items-center gap-2">
-          <div className="p-1 rounded bg-indigo-200/60 dark:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300">
-            <GripVertical className="w-4 h-4" />
-          </div>
-          <span>
-            <strong>Atur Urutan Siswa:</strong> Tahan &amp; geser (drag) ikon <span className="font-mono font-bold bg-indigo-100 dark:bg-indigo-900/80 px-1 py-0.5 rounded text-[11px]">⠿</span> pada kolom nomor untuk memindahkan baris siswa ke posisi urut yang diinginkan pada tabel.
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5 text-[11px] text-indigo-600 dark:text-indigo-400 font-medium">
-          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-          <span>Tersimpan otomatis ke leger &amp; rekap nilai</span>
-        </div>
-      </div>
-
       {/* Main Table with Direct Inline Editing & Drag Reorder */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-semibold uppercase tracking-wider">
               <tr>
-                {/* No & Drag Header */}
-                <th className="p-3.5 w-24 text-center">
-                  <div
-                    className="flex items-center justify-center gap-1 text-slate-600 dark:text-slate-300"
-                    title="Nomor Urut Siswa. Tahan & drag ikon ⠿ pada baris untuk mengatur posisi urutan."
-                  >
-                    <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
-                    <span>No</span>
-                  </div>
+                {/* No Header */}
+                <th className="py-3 px-2 w-14 text-center whitespace-nowrap">
+                  No
                 </th>
-                <th className="p-3.5 w-10 text-center">
+                <th className="py-3 px-2 w-10 text-center">
                   <button
                     onClick={handleToggleSelectAll}
                     className="text-slate-500 hover:text-slate-800 dark:hover:text-white cursor-pointer"
@@ -1128,7 +1089,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                     )}
                   </button>
                 </th>
-                <th className="p-3.5 w-44">
+                <th className="py-3 px-3 w-40 min-w-[140px] whitespace-nowrap">
                   <div className="flex items-center gap-1">
                     <span>NISN / NIS</span>
                     {isInlineEditMode && (
@@ -1138,7 +1099,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                     )}
                   </div>
                 </th>
-                <th className="p-3.5">
+                <th className="py-3 px-3 min-w-[200px] whitespace-nowrap">
                   <div className="flex items-center gap-1">
                     <span>Nama Lengkap Siswa</span>
                     {isInlineEditMode && (
@@ -1148,7 +1109,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                     )}
                   </div>
                 </th>
-                <th className="p-3.5 text-center w-28">
+                <th className="py-3 px-2 text-center w-36 min-w-[130px] whitespace-nowrap">
                   <div className="flex items-center justify-center gap-1">
                     <span>L/P</span>
                     {isInlineEditMode && (
@@ -1158,10 +1119,10 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                     )}
                   </div>
                 </th>
-                <th className="p-3.5 w-36">Rombel / Kelas</th>
-                <th className="p-3.5 w-36">Kontak Ortu (WA)</th>
-                <th className="p-3.5 w-20">Status</th>
-                <th className="p-3.5 text-right w-24">Aksi</th>
+                <th className="py-3 px-3 w-28 min-w-[90px] whitespace-nowrap">Rombel / Kelas</th>
+                <th className="py-3 px-3 w-36 min-w-[125px] whitespace-nowrap">Kontak Ortu (WA)</th>
+                <th className="py-3 px-2 text-center w-20 whitespace-nowrap">Status</th>
+                <th className="py-3 px-2 text-center w-24 whitespace-nowrap">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-200">
@@ -1238,7 +1199,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                       } ${isRowEditing ? 'bg-amber-50/20 dark:bg-amber-950/10' : ''} ${dragStyleClasses}`}
                     >
                       {/* No & Drag Grip Handle */}
-                      <td className="p-3 text-center select-none" draggable={false}>
+                      <td className="py-2.5 px-2 text-center select-none w-14" draggable={false}>
                         <div className="flex items-center justify-center gap-1.5">
                           <div
                             draggable={!isInlineEditMode && !editingRowId}
@@ -1251,44 +1212,16 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                             className="p-1 rounded text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-100/70 dark:hover:bg-indigo-950/60 cursor-grab active:cursor-grabbing transition-colors"
                             title="Tahan & geser untuk memindahkan posisi urut siswa ini"
                           >
-                            <GripVertical className="w-4 h-4 shrink-0" />
+                            <GripVertical className="w-3.5 h-3.5 shrink-0" />
                           </div>
-                          <span className="font-mono text-xs font-bold text-slate-600 dark:text-slate-300 w-5 text-center">
+                          <span className="font-mono text-xs font-bold text-slate-600 dark:text-slate-300 min-w-[20px] text-center">
                             {idx + 1}
                           </span>
-                          <div className="flex flex-col -space-y-1 ml-0.5">
-                            <button
-                              type="button"
-                              disabled={idx === 0}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleMoveSingleStep(student.id, 'up');
-                              }}
-                              className="p-0.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-20 disabled:hover:text-slate-400 cursor-pointer transition-colors"
-                              title="Pindahkan 1 baris ke atas"
-                              draggable={false}
-                            >
-                              <ChevronUp className="w-3 h-3" />
-                            </button>
-                            <button
-                              type="button"
-                              disabled={idx === filteredStudents.length - 1}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleMoveSingleStep(student.id, 'down');
-                              }}
-                              className="p-0.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-20 disabled:hover:text-slate-400 cursor-pointer transition-colors"
-                              title="Pindahkan 1 baris ke bawah"
-                              draggable={false}
-                            >
-                              <ChevronDown className="w-3 h-3" />
-                            </button>
-                          </div>
                         </div>
                       </td>
 
                       {/* Checkbox */}
-                      <td className="p-3.5 text-center">
+                      <td className="py-2.5 px-2 text-center w-10">
                         <button
                           onClick={() => handleToggleSelect(student.id)}
                           className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer"
@@ -1305,7 +1238,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                       </td>
 
                       {/* NISN / NIS (BISA DIEDIT LANGSUNG) */}
-                      <td className="p-3.5 font-mono">
+                      <td className="py-2.5 px-3 font-mono text-xs whitespace-nowrap w-40 min-w-[140px]">
                         {isRowEditing ? (
                           <input
                             type="text"
@@ -1328,7 +1261,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                       </td>
 
                       {/* NAMA SISWA (BISA DIEDIT LANGSUNG) */}
-                      <td className="p-3.5">
+                      <td className="py-2.5 px-3 min-w-[200px]">
                         {isRowEditing ? (
                           <input
                             type="text"
@@ -1351,7 +1284,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                       </td>
 
                       {/* JENIS KELAMIN (BISA DIKLIK & DIUBAH LANGSUNG DENGAN 1 KLIK) */}
-                      <td className="p-3.5 text-center">
+                      <td className="py-2.5 px-2 text-center w-36 min-w-[130px] whitespace-nowrap">
                         {isRowEditing ? (
                           <div className="inline-flex items-center rounded-lg border border-slate-300 dark:border-slate-700 p-0.5 bg-slate-100 dark:bg-slate-800">
                             <button
@@ -1383,20 +1316,20 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                           <button
                             type="button"
                             onClick={() => handleToggleGender(student)}
-                            className={`px-2.5 py-0.5 rounded-full text-xs font-bold transition-all cursor-pointer hover:scale-105 active:scale-95 ${
+                            className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer hover:scale-105 active:scale-95 whitespace-nowrap inline-flex items-center justify-center ${
                               student.gender === 'L'
                                 ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
                                 : 'bg-pink-50 dark:bg-pink-950/60 text-pink-700 dark:text-pink-300 border border-pink-200 dark:border-pink-800'
                             }`}
                             title="Klik untuk ubah L / P dengan cepat"
                           >
-                            {student.gender === 'L' ? 'L (Laki)' : 'P (Perempuan)'}
+                            <span className="whitespace-nowrap">{student.gender === 'L' ? 'L (Laki-laki)' : 'P (Perempuan)'}</span>
                           </button>
                         )}
                       </td>
 
                       {/* KELAS */}
-                      <td className="p-3.5 font-medium">
+                      <td className="py-2.5 px-3 font-medium text-xs whitespace-nowrap w-28 min-w-[90px]">
                         {isRowEditing ? (
                           <select
                             value={student.classId}
@@ -1417,7 +1350,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                       </td>
 
                       {/* KONTAK ORTU */}
-                      <td className="p-3.5 font-mono text-slate-700 dark:text-slate-200">
+                      <td className="py-2.5 px-3 font-mono text-xs whitespace-nowrap w-36 min-w-[125px] text-slate-700 dark:text-slate-200">
                         {isRowEditing ? (
                           <input
                             type="text"
@@ -1434,7 +1367,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                       </td>
 
                       {/* STATUS */}
-                      <td className="p-3.5">
+                      <td className="py-2.5 px-2 text-center w-20 whitespace-nowrap">
                         <span
                           className={`text-[11px] font-semibold ${
                             student.status === 'Aktif'
@@ -1447,8 +1380,8 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                       </td>
 
                       {/* AKSI */}
-                      <td className="p-3.5 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                      <td className="py-2.5 px-2 text-center w-24 whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-1.5">
                           {editingRowId === student.id ? (
                             <button
                               onClick={() => {
