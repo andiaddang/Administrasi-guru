@@ -59,7 +59,13 @@ function safeSet<T>(key: string, value: T): void {
 
 export const StorageService = {
   getSchool(): SchoolProfile {
-    return safeGet<SchoolProfile>(KEYS.SCHOOL, DEFAULT_SCHOOL);
+    const data = safeGet<SchoolProfile>(KEYS.SCHOOL, DEFAULT_SCHOOL);
+    return {
+      ...DEFAULT_SCHOOL,
+      ...data,
+      logoKiriSize: data.logoKiriSize ?? 80,
+      logoKananSize: data.logoKananSize ?? 80,
+    };
   },
   saveSchool(school: SchoolProfile): void {
     safeSet(KEYS.SCHOOL, school);

@@ -47,6 +47,8 @@ export const DEFAULT_SCHOOL: SchoolProfile = {
   kopContact: 'Telepon: (0411) 861234 | Laman: sman1gowa.sch.id | Pos-el: info@sman1gowa.sch.id',
   logoKiri: DEFAULT_LOGO_KIRI,
   logoKanan: DEFAULT_LOGO_KANAN,
+  logoKiriSize: 80,
+  logoKananSize: 80,
 };
 
 export const DEFAULT_CLASSES: ClassRoom[] = [

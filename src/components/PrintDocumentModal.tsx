@@ -68,16 +68,23 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
           <div className="border-kop-dinas pb-3 mb-6">
             <div className="flex items-center justify-between gap-4">
               {/* Logo Kiri */}
-              <div className="w-20 h-20 flex-shrink-0 flex items-center justify-center">
+              <div
+                className="flex-shrink-0 flex items-center justify-center"
+                style={{ width: `${school.logoKiriSize || 80}px`, height: `${school.logoKiriSize || 80}px` }}
+              >
                 {school.logoKiri ? (
                   <img
                     src={school.logoKiri}
                     alt="Logo Pemda"
-                    className="max-h-20 max-w-20 object-contain"
+                    style={{ maxHeight: `${school.logoKiriSize || 80}px`, maxWidth: `${school.logoKiriSize || 80}px` }}
+                    className="object-contain"
                     referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <div className="w-16 h-16 bg-slate-100 border border-slate-300 rounded flex items-center justify-center text-[10px] text-slate-400">
+                  <div
+                    className="bg-slate-100 border border-slate-300 rounded flex items-center justify-center text-[10px] text-slate-400"
+                    style={{ width: `${Math.min(64, school.logoKiriSize || 80)}px`, height: `${Math.min(64, school.logoKiriSize || 80)}px` }}
+                  >
                     Logo 1
                   </div>
                 )}
@@ -108,16 +115,23 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
               </div>
 
               {/* Logo Kanan */}
-              <div className="w-20 h-20 flex-shrink-0 flex items-center justify-center">
+              <div
+                className="flex-shrink-0 flex items-center justify-center"
+                style={{ width: `${school.logoKananSize || 80}px`, height: `${school.logoKananSize || 80}px` }}
+              >
                 {school.logoKanan ? (
                   <img
                     src={school.logoKanan}
                     alt="Logo Sekolah"
-                    className="max-h-20 max-w-20 object-contain"
+                    style={{ maxHeight: `${school.logoKananSize || 80}px`, maxWidth: `${school.logoKananSize || 80}px` }}
+                    className="object-contain"
                     referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <div className="w-16 h-16 bg-slate-100 border border-slate-300 rounded flex items-center justify-center text-[10px] text-slate-400">
+                  <div
+                    className="bg-slate-100 border border-slate-300 rounded flex items-center justify-center text-[10px] text-slate-400"
+                    style={{ width: `${Math.min(64, school.logoKananSize || 80)}px`, height: `${Math.min(64, school.logoKananSize || 80)}px` }}
+                  >
                     Logo 2
                   </div>
                 )}

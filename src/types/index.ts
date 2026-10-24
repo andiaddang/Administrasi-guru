@@ -39,6 +39,8 @@ export interface SchoolProfile {
   kopContact: string;
   logoKiri: string;
   logoKanan: string;
+  logoKiriSize?: number;
+  logoKananSize?: number;
 }
 
 export interface ClassRoom {

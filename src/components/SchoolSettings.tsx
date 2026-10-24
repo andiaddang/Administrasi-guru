@@ -75,7 +75,7 @@ export const SchoolSettings: React.FC<SchoolSettingsProps> = ({
     reader.readAsDataURL(file);
   };
 
-  const handleChange = (field: keyof SchoolProfile, value: string) => {
+  const handleChange = (field: keyof SchoolProfile, value: string | number) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
@@ -420,12 +420,22 @@ export const SchoolSettings: React.FC<SchoolSettingsProps> = ({
               <div className="border-kop-dinas pb-3">
                 <div className="flex items-center justify-between gap-4">
                   {/* Logo Kiri */}
-                  <div className="w-20 h-20 flex-shrink-0 flex items-center justify-center bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700 p-1">
+                  <div
+                    className="flex-shrink-0 flex items-center justify-center bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700 p-1 transition-all"
+                    style={{
+                      width: `${formData.logoKiriSize || 80}px`,
+                      height: `${formData.logoKiriSize || 80}px`,
+                    }}
+                  >
                     {formData.logoKiri ? (
                       <img
                         src={formData.logoKiri}
                         alt="Logo Kiri"
-                        className="max-h-full max-w-full object-contain"
+                        style={{
+                          maxHeight: `${formData.logoKiriSize || 80}px`,
+                          maxWidth: `${formData.logoKiriSize || 80}px`,
+                        }}
+                        className="object-contain"
                       />
                     ) : (
                       <ImageIcon className="w-8 h-8 text-slate-300" />
@@ -449,12 +459,22 @@ export const SchoolSettings: React.FC<SchoolSettingsProps> = ({
                   </div>
 
                   {/* Logo Kanan */}
-                  <div className="w-20 h-20 flex-shrink-0 flex items-center justify-center bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700 p-1">
+                  <div
+                    className="flex-shrink-0 flex items-center justify-center bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700 p-1 transition-all"
+                    style={{
+                      width: `${formData.logoKananSize || 80}px`,
+                      height: `${formData.logoKananSize || 80}px`,
+                    }}
+                  >
                     {formData.logoKanan ? (
                       <img
                         src={formData.logoKanan}
                         alt="Logo Kanan"
-                        className="max-h-full max-w-full object-contain"
+                        style={{
+                          maxHeight: `${formData.logoKananSize || 80}px`,
+                          maxWidth: `${formData.logoKananSize || 80}px`,
+                        }}
+                        className="object-contain"
                         referrerPolicy="no-referrer"
                       />
                     ) : (
@@ -574,18 +594,37 @@ export const SchoolSettings: React.FC<SchoolSettingsProps> = ({
 
             {/* Logo Settings: Left and Right Logo */}
             <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 text-xs">
-              <h2 className="font-bold text-slate-800 dark:text-slate-200 text-sm pb-2 border-b border-slate-100 dark:border-slate-800">
-                2. Pengaturan Logo Kiri & Logo Kanan
-              </h2>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+                <div>
+                  <h2 className="font-bold text-slate-800 dark:text-slate-200 text-sm">
+                    2. Pengaturan Logo Kiri &amp; Logo Kanan
+                  </h2>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Besar kecil ukuran logo dapat diatur secara presisi dengan slider atau pilihan cepat (skala piksel)
+                  </p>
+                </div>
+              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Logo Kiri */}
-                <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3 bg-slate-50/50 dark:bg-slate-800/40">
-                  <span className="font-bold text-slate-800 dark:text-slate-200 block">
-                    Logo Kiri (Pemprov / Tut Wuri Handayani)
-                  </span>
+                <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3.5 bg-slate-50/50 dark:bg-slate-800/40">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-800 dark:text-slate-200 block">
+                      Logo Kiri (Pemerintah Provinsi / Tut Wuri Handayani)
+                    </span>
+                    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                      Ukuran: {formData.logoKiriSize || 80}px
+                    </span>
+                  </div>
+
                   <div className="flex items-center gap-3">
-                    <div className="w-16 h-16 bg-white dark:bg-slate-900 rounded border border-slate-300 dark:border-slate-700 flex items-center justify-center p-1">
+                    <div
+                      className="bg-white dark:bg-slate-900 rounded border border-slate-300 dark:border-slate-700 flex items-center justify-center p-1 shrink-0 overflow-hidden transition-all shadow-2xs"
+                      style={{
+                        width: `${Math.min(96, Math.max(52, formData.logoKiriSize || 80))}px`,
+                        height: `${Math.min(96, Math.max(52, formData.logoKiriSize || 80))}px`,
+                      }}
+                    >
                       {formData.logoKiri ? (
                         <img
                           src={formData.logoKiri}
@@ -596,17 +635,83 @@ export const SchoolSettings: React.FC<SchoolSettingsProps> = ({
                         <ImageIcon className="w-6 h-6 text-slate-300" />
                       )}
                     </div>
-                    <label className="inline-flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg cursor-pointer font-medium text-slate-700 dark:text-slate-200">
-                      <Upload className="w-3.5 h-3.5" />
-                      Unggah Logo Kiri
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => handleFileUpload(e, 'logoKiri')}
-                      />
-                    </label>
+                    <div className="space-y-1.5 flex-1">
+                      <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg cursor-pointer font-medium text-slate-700 dark:text-slate-200 text-xs shadow-2xs">
+                        <Upload className="w-3.5 h-3.5 text-indigo-500" />
+                        Unggah File Logo Kiri
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => handleFileUpload(e, 'logoKiri')}
+                        />
+                      </label>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                        Didukung: PNG transparan, JPG, WebP, SVG
+                      </p>
+                    </div>
                   </div>
+
+                  {/* Pengaturan Besar / Kecil Ukuran Logo Kiri */}
+                  <div className="p-3 bg-white dark:bg-slate-900/90 rounded-lg border border-slate-200 dark:border-slate-700/80 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                        Atur Ukuran Logo Kiri:
+                      </label>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          min="40"
+                          max="160"
+                          value={formData.logoKiriSize || 80}
+                          onChange={(e) =>
+                            handleChange('logoKiriSize', Math.max(30, Math.min(200, Number(e.target.value) || 80)))
+                          }
+                          className="w-16 px-2 py-1 text-center font-mono font-bold text-xs border border-slate-300 dark:border-slate-600 rounded bg-slate-50 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        />
+                        <span className="text-xs font-bold text-slate-500">px</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <span className="text-[10px] text-slate-400 font-mono">40px</span>
+                      <input
+                        type="range"
+                        min="40"
+                        max="160"
+                        step="2"
+                        value={formData.logoKiriSize || 80}
+                        onChange={(e) => handleChange('logoKiriSize', Number(e.target.value))}
+                        className="flex-1 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                      />
+                      <span className="text-[10px] text-slate-400 font-mono">160px</span>
+                    </div>
+
+                    {/* Presets */}
+                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                      <span className="text-[10px] text-slate-400 font-medium">Pilihan cepat:</span>
+                      {[
+                        { label: 'Kecil (60px)', size: 60 },
+                        { label: 'Standar (80px)', size: 80 },
+                        { label: 'Besar (100px)', size: 100 },
+                        { label: 'Ekstra (120px)', size: 120 },
+                      ].map((preset) => (
+                        <button
+                          key={preset.size}
+                          type="button"
+                          onClick={() => handleChange('logoKiriSize', preset.size)}
+                          className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all cursor-pointer border ${
+                            (formData.logoKiriSize || 80) === preset.size
+                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">
                       Atau Tautan URL Logo Kiri:
@@ -622,12 +727,24 @@ export const SchoolSettings: React.FC<SchoolSettingsProps> = ({
                 </div>
 
                 {/* Logo Kanan */}
-                <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3 bg-slate-50/50 dark:bg-slate-800/40">
-                  <span className="font-bold text-slate-800 dark:text-slate-200 block">
-                    Logo Kanan (Logo Satuan Pendidikan SMAN 1 Gowa)
-                  </span>
+                <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3.5 bg-slate-50/50 dark:bg-slate-800/40">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-800 dark:text-slate-200 block">
+                      Logo Kanan (Logo Satuan Pendidikan SMAN 1 Gowa)
+                    </span>
+                    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                      Ukuran: {formData.logoKananSize || 80}px
+                    </span>
+                  </div>
+
                   <div className="flex items-center gap-3">
-                    <div className="w-16 h-16 bg-white dark:bg-slate-900 rounded border border-slate-300 dark:border-slate-700 flex items-center justify-center p-1">
+                    <div
+                      className="bg-white dark:bg-slate-900 rounded border border-slate-300 dark:border-slate-700 flex items-center justify-center p-1 shrink-0 overflow-hidden transition-all shadow-2xs"
+                      style={{
+                        width: `${Math.min(96, Math.max(52, formData.logoKananSize || 80))}px`,
+                        height: `${Math.min(96, Math.max(52, formData.logoKananSize || 80))}px`,
+                      }}
+                    >
                       {formData.logoKanan ? (
                         <img
                           src={formData.logoKanan}
@@ -639,17 +756,83 @@ export const SchoolSettings: React.FC<SchoolSettingsProps> = ({
                         <ImageIcon className="w-6 h-6 text-slate-300" />
                       )}
                     </div>
-                    <label className="inline-flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg cursor-pointer font-medium text-slate-700 dark:text-slate-200">
-                      <Upload className="w-3.5 h-3.5" />
-                      Unggah Logo Kanan
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => handleFileUpload(e, 'logoKanan')}
-                      />
-                    </label>
+                    <div className="space-y-1.5 flex-1">
+                      <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg cursor-pointer font-medium text-slate-700 dark:text-slate-200 text-xs shadow-2xs">
+                        <Upload className="w-3.5 h-3.5 text-indigo-500" />
+                        Unggah File Logo Kanan
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => handleFileUpload(e, 'logoKanan')}
+                        />
+                      </label>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                        Didukung: PNG transparan, JPG, WebP, SVG
+                      </p>
+                    </div>
                   </div>
+
+                  {/* Pengaturan Besar / Kecil Ukuran Logo Kanan */}
+                  <div className="p-3 bg-white dark:bg-slate-900/90 rounded-lg border border-slate-200 dark:border-slate-700/80 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                        Atur Ukuran Logo Kanan:
+                      </label>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          min="40"
+                          max="160"
+                          value={formData.logoKananSize || 80}
+                          onChange={(e) =>
+                            handleChange('logoKananSize', Math.max(30, Math.min(200, Number(e.target.value) || 80)))
+                          }
+                          className="w-16 px-2 py-1 text-center font-mono font-bold text-xs border border-slate-300 dark:border-slate-600 rounded bg-slate-50 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        />
+                        <span className="text-xs font-bold text-slate-500">px</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <span className="text-[10px] text-slate-400 font-mono">40px</span>
+                      <input
+                        type="range"
+                        min="40"
+                        max="160"
+                        step="2"
+                        value={formData.logoKananSize || 80}
+                        onChange={(e) => handleChange('logoKananSize', Number(e.target.value))}
+                        className="flex-1 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                      />
+                      <span className="text-[10px] text-slate-400 font-mono">160px</span>
+                    </div>
+
+                    {/* Presets */}
+                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                      <span className="text-[10px] text-slate-400 font-medium">Pilihan cepat:</span>
+                      {[
+                        { label: 'Kecil (60px)', size: 60 },
+                        { label: 'Standar (80px)', size: 80 },
+                        { label: 'Besar (100px)', size: 100 },
+                        { label: 'Ekstra (120px)', size: 120 },
+                      ].map((preset) => (
+                        <button
+                          key={preset.size}
+                          type="button"
+                          onClick={() => handleChange('logoKananSize', preset.size)}
+                          className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all cursor-pointer border ${
+                            (formData.logoKananSize || 80) === preset.size
+                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">
                       Atau Tautan URL Logo Kanan:
