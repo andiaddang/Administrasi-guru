@@ -32,6 +32,7 @@ import {
   ChevronUp,
   Pencil,
   Download,
+  ArrowLeft,
 } from 'lucide-react';
 import { PrintDocumentModal } from './PrintDocumentModal';
 import { GradeTrendAnalytics } from './GradeTrendAnalytics';
@@ -221,26 +222,26 @@ const saveStoredColumnsByClass = (map: Record<string, AssessmentColumn[]>) => {
 };
 
 export const GRADE_TYPE_LABELS: Record<GradeType, string> = {
-  Tugas: 'Tugas Mandiri / Kelompok',
-  Harian: 'Formatif / Ulangan Harian',
-  Sumatif: 'Sumatif Lingkup Materi (TP)',
-  STS: 'Sumatif Tengah Semester (STS)',
-  SAS: 'Sumatif Akhir Semester (SAS)',
+  Tugas: 'TUGAS (25%)',
+  Harian: 'FORMATIF / ULANGAN (20%)',
+  Sumatif: 'SUMATIF TP (LINGKUP MATERI (20%)',
+  STS: 'SUMATIF TENGAH SEMESTER / STS (20%)',
+  SAS: 'SUMATIF AKHIR SEMESTER SAS (20%)',
 };
 
 export const GRADE_TYPE_SHORT: Record<GradeType, string> = {
-  Tugas: 'Tugas',
-  Harian: 'Formatif',
-  Sumatif: 'Sumatif TP',
-  STS: 'STS',
-  SAS: 'SAS',
+  Tugas: 'TUGAS (25%)',
+  Harian: 'FORMATIF / ULANGAN (20%)',
+  Sumatif: 'SUMATIF TP (20%)',
+  STS: 'STS (20%)',
+  SAS: 'SAS (20%)',
 };
 
 const DEFAULT_WEIGHTS: Record<GradeType, number> = {
-  Tugas: 20,
+  Tugas: 25,
   Harian: 20,
-  Sumatif: 25,
-  STS: 15,
+  Sumatif: 20,
+  STS: 20,
   SAS: 20,
 };
 
@@ -325,9 +326,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
   const [editColDate, setEditColDate] = useState<string>('');
 
   // Mode Tampilan Tabel Penilaian:
-  // '3komponen': Format Excel 3 Komponen (Kognitif, Afektif, Psikomotorik) persis gambar referensi user
-  // '5pilar': Format Kurikulum Merdeka (Tugas, Formatif, Sumatif TP, STS, SAS)
-  const [viewMode, setViewMode] = useState<'3komponen' | '5pilar'>('3komponen');
+  const [viewMode, setViewMode] = useState<'3komponen' | '5pilar'>('5pilar');
   const [threeCompScoresMap, setThreeCompScoresMap] = useState<Record<string, Record<string, ThreeComponentStudentScore>>>(getInitial3KomponenScores);
 
   const saveThreeCompScores = (next: Record<string, Record<string, ThreeComponentStudentScore>>) => {
@@ -886,7 +885,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
     );
   }, [weights]);
 
-  const isWeightValid = totalWeight === 100;
+  const isWeightValid = totalWeight === 100 || totalWeight === 105;
 
   // PERHITUNGAN NILAI AKHIR OTOMATIS & OBJEKTIF:
   // "Hitung komponen yang kosong, Jumlahkan langsung semua komponen dengan bobot nilai tugas yang ditetapkan untuk mendapatkan nilai hasil akhir"
@@ -990,7 +989,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
         (avgSTS * (Number(weights.STS) || 0)) +
         (avgSAS * (Number(weights.SAS) || 0));
 
-      const finalScore = Math.round((weightedSum / 100) * 10) / 10;
+      const finalScore = Math.round((weightedSum / (totalWeight || 100)) * 10) / 10;
 
       const isComplete = allColumns.length > 0 && filledCount === allColumns.length;
       const isPassing = finalScore >= 75;
@@ -1220,23 +1219,26 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
 
   // Buka Modal Tambah Sub-Kolom
   const handleOpenAddModal = (defaultType: GradeType = 'Tugas') => {
-    setNewColType(defaultType);
+    const safeType: GradeType = defaultType === 'STS' || defaultType === 'SAS' ? 'Tugas' : defaultType;
+    setNewColType(safeType);
     let defaultTitle = '';
-    if (defaultType === 'Tugas') defaultTitle = `Tugas ${tugasCols.length + 1}: Pendalaman Materi`;
-    else if (defaultType === 'Harian') defaultTitle = `Formatif ${formatifCols.length + 1}: Ulangan Harian`;
-    else if (defaultType === 'Sumatif') defaultTitle = `Sumatif TP ${sumatifCols.length + 1}: Capaian Pembelajaran`;
-    else if (defaultType === 'STS') defaultTitle = `Sumatif Tengah Semester (STS) ${stsCols.length + 1}`;
-    else if (defaultType === 'SAS') defaultTitle = `Sumatif Akhir Semester (SAS) ${sasCols.length + 1}`;
+    if (safeType === 'Tugas') defaultTitle = `Tugas ${tugasCols.length + 1}: Pendalaman Materi`;
+    else if (safeType === 'Harian') defaultTitle = `Formatif ${formatifCols.length + 1}: Ulangan Harian`;
+    else if (safeType === 'Sumatif') defaultTitle = `Sumatif TP ${sumatifCols.length + 1}: Capaian Pembelajaran`;
     setNewColTitle(defaultTitle);
     setNewColDate(new Date().toISOString().slice(0, 10));
     setIsAddColumnModalOpen(true);
   };
 
-  // Tambah Sub-Kolom Baru (Dapat ditambah untuk Tugas, Formatif, Sumatif TP, STS, SAS)
+  // Tambah Penilaian Baru (Tugas, Formatif, Sumatif TP)
   const handleCreateNewColumn = (e: React.FormEvent) => {
     e.preventDefault();
+    if (newColType === 'STS' || newColType === 'SAS') {
+      alert('Kolom STS dan SAS adalah kolom tetap dan tidak dapat ditambah.');
+      return;
+    }
     if (!newColTitle.trim()) {
-      alert('Silakan isi deskripsi materi atau judul sub-kolom.');
+      alert('Silakan isi deskripsi materi atau judul penilaian.');
       return;
     }
 
@@ -1258,15 +1260,19 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
     setIsAddColumnModalOpen(false);
     setNewColTitle('');
     setIsDirty(true);
-    showToast(`Sub-kolom [${GRADE_TYPE_SHORT[newColType]}] "${cleanTitle}" berhasil ditambahkan.`);
+    showToast(`Penilaian [${GRADE_TYPE_SHORT[newColType]}] "${cleanTitle}" berhasil ditambahkan.`);
   };
 
-  // Hapus Sub-Kolom Penilaian (Bisa dihapus / dikurangi untuk semua komponen)
+  // Hapus Komponen Penilaian
   const handleDeleteColumn = (col: AssessmentColumn) => {
+    if (col.type === 'STS' || col.type === 'SAS') {
+      alert('Kolom STS dan SAS tidak dapat dihapus, namun deskripsi dan tanggalnya tetap dapat diedit.');
+      return;
+    }
     const confirmDelete = window.confirm(
-      `Apakah Anda yakin ingin menghapus sub-kolom:\n\n` +
+      `Apakah Anda yakin ingin menghapus penilaian:\n\n` +
       `[${GRADE_TYPE_LABELS[col.type]}]\n"${col.title}" (Tanggal: ${col.date})?\n\n` +
-      `Semua nilai siswa pada sub-kolom ini akan dihapus dari tabel.`
+      `Semua nilai siswa pada penilaian ini akan dihapus dari tabel.`
     );
 
     if (!confirmDelete) return;
@@ -1443,7 +1449,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
 
   // Total colspan tabel (untuk baris kosong)
   const totalTableColSpan =
-    3 + // No, NISN, Nama
+    4 + // No, NISN, Nama, Jenis Kelamin
     (showTugasSection ? Math.max(1, tugasCols.length) : 0) +
     (showAvgTugasCol ? 1 : 0) +
     (showFormatifSection ? Math.max(1, formatifCols.length) : 0) +
@@ -1521,67 +1527,6 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
           </div>
         </div>
 
-        {/* TAB PILIHAN FORMAT TABEL PENILAIAN */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-          <button
-            type="button"
-            onClick={() => setViewMode('3komponen')}
-            className={`py-3 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer border ${
-              viewMode === '3komponen'
-                ? 'bg-emerald-700 text-white border-emerald-800 shadow-md ring-2 ring-emerald-400/40'
-                : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <Table className="w-4 h-4 text-emerald-300" />
-              <div className="text-left">
-                <span className="block text-xs font-bold">1. Penilaian Psikomotorik & Sikap</span>
-                <span className={`text-[10px] block ${viewMode === '3komponen' ? 'text-emerald-100' : 'text-slate-400'}`}>
-                  Komponen Afektif (Sikap) · Komponen Psikomotorik (Keterampilan)
-                </span>
-              </div>
-            </div>
-            <span
-              className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider shrink-0 ${
-                viewMode === '3komponen'
-                  ? 'bg-emerald-900 text-emerald-100 border border-emerald-600'
-                  : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-              }`}
-            >
-              Psikomotorik & Sikap
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setViewMode('5pilar')}
-            className={`py-3 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer border ${
-              viewMode === '5pilar'
-                ? 'bg-indigo-600 text-white border-indigo-700 shadow-md ring-2 ring-indigo-400/40'
-                : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <SlidersHorizontal className="w-4 h-4 text-indigo-300" />
-              <div className="text-left">
-                <span className="block text-xs font-bold">2. Tabel 5 Pilar (Model Kurikulum Merdeka)</span>
-                <span className={`text-[10px] block ${viewMode === '5pilar' ? 'text-indigo-100' : 'text-slate-400'}`}>
-                  Tugas · Rata-Rata Tugas · Formatif · Sumatif TP · STS · SAS
-                </span>
-              </div>
-            </div>
-            <span
-              className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider shrink-0 ${
-                viewMode === '5pilar'
-                  ? 'bg-indigo-800 text-indigo-100 border border-indigo-500'
-                  : 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300'
-              }`}
-            >
-              5 Pilar
-            </span>
-          </button>
-        </div>
-
         {/* FILTER SEBELUM INPUT */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* 1. Filter Dropdown Kelas */}
@@ -1622,12 +1567,12 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
               onChange={(e) => setAssessmentTypeFilter(e.target.value)}
               className="w-full text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-xs"
             >
-              <option value="all">Semua Komponen ({allColumns.length} Tugas & Asesmen)</option>
-              <option value="Tugas">Tugas Mandiri / Kelompok ({allColumns.filter((c) => c.type === 'Tugas').length})</option>
-              <option value="Harian">Formatif / Ulangan Harian ({allColumns.filter((c) => c.type === 'Harian').length})</option>
-              <option value="Sumatif">Sumatif Lingkup Materi TP ({allColumns.filter((c) => c.type === 'Sumatif').length})</option>
-              <option value="STS">Sumatif Tengah Semester STS ({allColumns.filter((c) => c.type === 'STS').length})</option>
-              <option value="SAS">Sumatif Akhir Semester SAS ({allColumns.filter((c) => c.type === 'SAS').length})</option>
+              <option value="all">Semua Komponen ({allColumns.length} Penilaian)</option>
+              <option value="Tugas">TUGAS (25%) ({allColumns.filter((c) => c.type === 'Tugas').length})</option>
+              <option value="Harian">FORMATIF / ULANGAN (20%) ({allColumns.filter((c) => c.type === 'Harian').length})</option>
+              <option value="Sumatif">SUMATIF TP (LINGKUP MATERI (20%) ({allColumns.filter((c) => c.type === 'Sumatif').length})</option>
+              <option value="STS">SUMATIF TENGAH SEMESTER / STS (20%) ({allColumns.filter((c) => c.type === 'STS').length})</option>
+              <option value="SAS">SUMATIF AKHIR SEMESTER SAS (20%) ({allColumns.filter((c) => c.type === 'SAS').length})</option>
             </select>
           </div>
 
@@ -1998,6 +1943,15 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
 
               {/* Tombol Aksi Format Psikomotorik & Sikap */}
               <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('5pilar')}
+                  className="px-3.5 py-2 text-xs font-bold rounded-xl bg-white text-emerald-950 hover:bg-emerald-50 transition-all cursor-pointer flex items-center gap-1.5 shadow-md"
+                  title="Kembali ke Tabel Penilaian Utama"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>Kembali ke Tabel Penilaian</span>
+                </button>
                 <button
                   type="button"
                   onClick={handleLoadSampleFromImage}
@@ -2620,52 +2574,30 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
         </div>
       )}
 
-      {/* BILAH AKSI: RINGKASAN STRUKTUR 5 KOLOM & TAMBAH SUB-KOLOM */}
+      {/* BILAH AKSI DI SAMPING TABEL PENILAIAN */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 px-5 py-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-            Struktur 5 Kolom Penilaian:
-          </span>
-          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-900 flex items-center gap-1.5">
-            <span>Kolom 1: Tugas ({tugasCols.length})</span>
-            <span>·</span>
-            <span className="text-sky-700 dark:text-sky-300 font-extrabold">Kolom 2: Rata-Rata Tugas</span>
-            <span>·</span>
-            <span>Kolom 3: Formatif ({formatifCols.length})</span>
-            <span>·</span>
-            <span>Sumatif TP ({sumatifCols.length})</span>
-            <span>·</span>
-            <span>STS ({stsCols.length})</span>
-            <span>·</span>
-            <span>SAS ({sasCols.length})</span>
-          </span>
-          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-sky-50 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-300 dark:border-sky-800 flex items-center gap-1.5">
-            <span>Bobot Tugas: {weights.Tugas}%</span>
-            {classAnalytics.avgClassTugas !== null && (
-              <span className="px-1.5 py-0.2 bg-sky-200 dark:bg-sky-800 text-sky-900 dark:text-sky-100 rounded text-[11px] font-extrabold">
-                Rerata Kelas: {classAnalytics.avgClassTugas.toFixed(1)}
-              </span>
-            )}
-          </span>
+          {/* Tombol Penilaian Psikomotorik & Sikap di samping tabel penilaian */}
+          <button
+            type="button"
+            onClick={() => setViewMode('3komponen')}
+            className="px-4 py-2 text-xs font-bold text-emerald-800 dark:text-emerald-200 bg-emerald-50 dark:bg-emerald-950/70 hover:bg-emerald-100 dark:hover:bg-emerald-900/80 border border-emerald-300 dark:border-emerald-800 rounded-xl transition-all cursor-pointer flex items-center gap-2 shadow-xs"
+            title="Buka Lembar Penilaian Psikomotorik & Sikap"
+          >
+            <Table className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span>Penilaian Psikomotorik & Sikap</span>
+          </button>
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleResetDefaultColumns}
-            className="px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
-            title="Atur ulang struktur ke konfigurasi default (3 Tugas, 2 Formatif, 1 Sumatif TP, 1 STS, 1 SAS)"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Reset Struktur Default</span>
-          </button>
+          {/* Tombol Tambah Penilaian */}
           <button
             type="button"
             onClick={() => handleOpenAddModal('Tugas')}
-            className="px-3.5 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+            className="px-4 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4" />
-            <span>Tambah Sub-Kolom</span>
+            <span>Tambah Penilaian</span>
           </button>
         </div>
       </div>
@@ -2693,198 +2625,132 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                   NISN / NIS
                 </th>
 
-                {/* 3. Nama Siswa */}
+                {/* 3. NAMA SISWA */}
                 <th
                   rowSpan={2}
                   className="py-3 px-4 font-bold text-slate-700 dark:text-slate-200 min-w-[190px] sticky left-40 z-30 bg-slate-100 dark:bg-slate-800 shadow-r border-b border-slate-300 dark:border-slate-700"
                 >
-                  Nama Siswa ({filteredStudents.length})
+                  NAMA SISWA
                 </th>
 
-                {/* KOLOM 1: TUGAS */}
+                {/* 4. JENIS KELAMIN */}
+                <th
+                  rowSpan={2}
+                  className="py-3 px-3 font-bold text-center text-slate-700 dark:text-slate-200 w-24 border-b border-slate-300 dark:border-slate-700"
+                >
+                  JENIS KELAMIN
+                </th>
+
+                {/* TUGAS (25%) */}
                 {showTugasSection && (
                   <th
                     colSpan={Math.max(1, tugasCols.length)}
                     className="py-2.5 px-3 bg-sky-100/95 dark:bg-sky-950/90 border-b border-x border-sky-300 dark:border-sky-800 text-sky-950 dark:text-sky-100 text-center"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <div className="text-left">
-                        <div className="flex items-center gap-1.5">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-black bg-sky-600 text-white uppercase tracking-wider">
-                            Kolom 1: Tugas
-                          </span>
-                          <span className="text-[11px] font-bold text-sky-800 dark:text-sky-200">
-                            (Bobot: {weights.Tugas}%)
-                          </span>
-                        </div>
-                        <div className="text-[10px] text-sky-700 dark:text-sky-300 font-medium mt-0.5">
-                          {tugasCols.length} Sub-Kolom (Dapat diedit, ditambah, dihapus)
-                        </div>
-                      </div>
+                      <span className="font-extrabold text-xs text-sky-950 dark:text-sky-100 uppercase tracking-tight">
+                        TUGAS (25%)
+                      </span>
                       <button
                         type="button"
                         onClick={() => handleOpenAddModal('Tugas')}
-                        className="px-2.5 py-1 text-[11px] font-bold bg-sky-600 hover:bg-sky-700 text-white rounded-lg shadow-xs transition-colors flex items-center gap-1 cursor-pointer shrink-0"
-                        title="Tambah Sub-Kolom Tugas Baru"
+                        className="px-2 py-0.5 text-[10px] font-bold bg-sky-600 hover:bg-sky-700 text-white rounded-lg shadow-xs transition-colors flex items-center gap-1 cursor-pointer shrink-0"
+                        title="Tambah Penilaian Tugas"
                       >
                         <Plus className="w-3 h-3" />
-                        <span>+ Sub-Kolom</span>
+                        <span>+ Penilaian</span>
                       </button>
                     </div>
                   </th>
                 )}
 
-                {/* KOLOM 2: RATA-RATA TUGAS (Tepat setelah Tugas, Sebelum Formatif) */}
+                {/* RATA-RATA TUGAS */}
                 {showAvgTugasCol && (
                   <th
                     rowSpan={2}
-                    className="py-3 px-3.5 font-bold text-center bg-sky-200/90 dark:bg-sky-900/90 border-x-2 border-b border-sky-400 dark:border-sky-700 text-sky-950 dark:text-sky-50 min-w-[155px] max-w-[190px] shadow-xs align-middle"
+                    className="py-3 px-3 font-bold text-center bg-sky-200/90 dark:bg-sky-900/90 border-x-2 border-b border-sky-400 dark:border-sky-700 text-sky-950 dark:text-sky-50 min-w-[140px] shadow-xs align-middle"
                   >
-                    <div className="space-y-1">
-                      <span className="inline-block px-2 py-0.5 rounded text-[10px] font-black bg-sky-700 text-white border border-sky-600 uppercase tracking-wider">
-                        KOLOM 2
-                      </span>
-                      <div className="font-black text-xs text-sky-950 dark:text-sky-50 leading-tight uppercase tracking-tight">
+                    <div className="space-y-0.5">
+                      <div className="font-extrabold text-xs text-sky-950 dark:text-sky-50 leading-tight uppercase tracking-tight">
                         RATA-RATA TUGAS
                       </div>
-                      <div className="text-[10px] text-sky-900 dark:text-sky-200 font-bold">
-                        {tugasCols.length > 0 ? `Σ Nilai ÷ ${tugasCols.length} Tugas` : 'Belum Ada Tugas'}
-                      </div>
-                      <div className="text-[9px] text-sky-800 dark:text-sky-300 font-medium">
-                        (Kosong = 0 · Bobot {weights.Tugas}%)
+                      <div className="text-[10px] text-sky-900 dark:text-sky-200 font-medium">
+                        (Bobot: 25%)
                       </div>
                     </div>
                   </th>
                 )}
 
-                {/* KOLOM 3: FORMATIF / ULANGAN */}
+                {/* FORMATIF / ULANGAN (20%) */}
                 {showFormatifSection && (
                   <th
                     colSpan={Math.max(1, formatifCols.length)}
                     className="py-2.5 px-3 bg-emerald-100/95 dark:bg-emerald-950/90 border-b border-x border-emerald-300 dark:border-emerald-800 text-emerald-950 dark:text-emerald-100 text-center"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <div className="text-left">
-                        <div className="flex items-center gap-1.5">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-600 text-white uppercase tracking-wider">
-                            Kolom 3: Formatif / Ulangan
-                          </span>
-                          <span className="text-[11px] font-bold text-emerald-800 dark:text-emerald-200">
-                            (Bobot: {weights.Harian}%)
-                          </span>
-                        </div>
-                        <div className="text-[10px] text-emerald-700 dark:text-emerald-300 font-medium mt-0.5">
-                          {formatifCols.length} Sub-Kolom (Dapat diedit, ditambah, dihapus)
-                        </div>
-                      </div>
+                      <span className="font-extrabold text-xs text-emerald-950 dark:text-emerald-100 uppercase tracking-tight">
+                        FORMATIF / ULANGAN (20%)
+                      </span>
                       <button
                         type="button"
                         onClick={() => handleOpenAddModal('Harian')}
-                        className="px-2.5 py-1 text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs transition-colors flex items-center gap-1 cursor-pointer shrink-0"
-                        title="Tambah Sub-Kolom Formatif Baru"
+                        className="px-2 py-0.5 text-[10px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs transition-colors flex items-center gap-1 cursor-pointer shrink-0"
+                        title="Tambah Penilaian Formatif / Ulangan"
                       >
                         <Plus className="w-3 h-3" />
-                        <span>+ Sub-Kolom</span>
+                        <span>+ Penilaian</span>
                       </button>
                     </div>
                   </th>
                 )}
 
-                {/* SUMATIF LINGKUP MATERI (TP) */}
+                {/* SUMATIF TP (LINGKUP MATERI (20%) */}
                 {showSumatifSection && (
                   <th
                     colSpan={Math.max(1, sumatifCols.length)}
                     className="py-2.5 px-3 bg-purple-100/95 dark:bg-purple-950/90 border-b border-x border-purple-300 dark:border-purple-800 text-purple-950 dark:text-purple-100 text-center"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <div className="text-left">
-                        <div className="flex items-center gap-1.5">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-black bg-purple-600 text-white uppercase tracking-wider">
-                            Sumatif TP
-                          </span>
-                          <span className="text-[11px] font-bold text-purple-800 dark:text-purple-200">
-                            (Bobot: {weights.Sumatif}%)
-                          </span>
-                        </div>
-                        <div className="text-[10px] text-purple-700 dark:text-purple-300 font-medium mt-0.5">
-                          Lingkup Materi ({sumatifCols.length} Sub-Kolom)
-                        </div>
-                      </div>
+                      <span className="font-extrabold text-xs text-purple-950 dark:text-purple-100 uppercase tracking-tight">
+                        SUMATIF TP (LINGKUP MATERI (20%)
+                      </span>
                       <button
                         type="button"
                         onClick={() => handleOpenAddModal('Sumatif')}
-                        className="px-2.5 py-1 text-[11px] font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-xs transition-colors flex items-center gap-1 cursor-pointer shrink-0"
-                        title="Tambah Sub-Kolom Sumatif TP Baru"
+                        className="px-2 py-0.5 text-[10px] font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-xs transition-colors flex items-center gap-1 cursor-pointer shrink-0"
+                        title="Tambah Penilaian Sumatif TP"
                       >
                         <Plus className="w-3 h-3" />
-                        <span>+ Sub-Kolom</span>
+                        <span>+ Penilaian</span>
                       </button>
                     </div>
                   </th>
                 )}
 
-                {/* SUMATIF TENGAH SEMESTER (STS) */}
+                {/* SUMATIF TENGAH SEMESTER / STS (20%) */}
                 {showSTSSection && (
                   <th
                     colSpan={Math.max(1, stsCols.length)}
                     className="py-2.5 px-3 bg-amber-100/95 dark:bg-amber-950/90 border-b border-x border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-100 text-center"
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="text-left">
-                        <div className="flex items-center gap-1.5">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-black bg-amber-600 text-white uppercase tracking-wider">
-                            STS
-                          </span>
-                          <span className="text-[11px] font-bold text-amber-800 dark:text-amber-200">
-                            (Bobot: {weights.STS}%)
-                          </span>
-                        </div>
-                        <div className="text-[10px] text-amber-700 dark:text-amber-300 font-medium mt-0.5">
-                          Tengah Semester ({stsCols.length} Kolom)
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenAddModal('STS')}
-                        className="px-2.5 py-1 text-[11px] font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-lg shadow-xs transition-colors flex items-center gap-1 cursor-pointer shrink-0"
-                        title="Tambah Kolom STS Baru"
-                      >
-                        <Plus className="w-3 h-3" />
-                        <span>+ Kolom</span>
-                      </button>
+                    <div className="flex items-center justify-center">
+                      <span className="font-extrabold text-xs text-amber-950 dark:text-amber-100 uppercase tracking-tight text-center">
+                        SUMATIF TENGAH SEMESTER / STS (20%)
+                      </span>
                     </div>
                   </th>
                 )}
 
-                {/* SUMATIF AKHIR SEMESTER (SAS) */}
+                {/* SUMATIF AKHIR SEMESTER SAS (20%) */}
                 {showSASSection && (
                   <th
                     colSpan={Math.max(1, sasCols.length)}
                     className="py-2.5 px-3 bg-rose-100/95 dark:bg-rose-950/90 border-b border-x border-rose-300 dark:border-rose-800 text-rose-950 dark:text-rose-100 text-center"
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="text-left">
-                        <div className="flex items-center gap-1.5">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-black bg-rose-600 text-white uppercase tracking-wider">
-                            SAS
-                          </span>
-                          <span className="text-[11px] font-bold text-rose-800 dark:text-rose-200">
-                            (Bobot: {weights.SAS}%)
-                          </span>
-                        </div>
-                        <div className="text-[10px] text-rose-700 dark:text-rose-300 font-medium mt-0.5">
-                          Akhir Semester ({sasCols.length} Kolom)
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenAddModal('SAS')}
-                        className="px-2.5 py-1 text-[11px] font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-lg shadow-xs transition-colors flex items-center gap-1 cursor-pointer shrink-0"
-                        title="Tambah Kolom SAS Baru"
-                      >
-                        <Plus className="w-3 h-3" />
-                        <span>+ Kolom</span>
-                      </button>
+                    <div className="flex items-center justify-center">
+                      <span className="font-extrabold text-xs text-rose-950 dark:text-rose-100 uppercase tracking-tight text-center">
+                        SUMATIF AKHIR SEMESTER SAS (20%)
+                      </span>
                     </div>
                   </th>
                 )}
@@ -3107,14 +2973,6 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                             >
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteColumn(col)}
-                              className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 p-1 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
-                              title={`Hapus kolom "${col.title}"`}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
                           </div>
                         </div>
                       </th>
@@ -3158,14 +3016,6 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                               title={`Edit deskripsi teks & tanggal "${col.title}"`}
                             >
                               <Pencil className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteColumn(col)}
-                              className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 p-1 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
-                              title={`Hapus kolom "${col.title}"`}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </div>
@@ -3213,22 +3063,24 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                           {student.nisnNis || student.nisn || student.nis || '-'}
                         </td>
 
-                        {/* 3. Nama Siswa */}
+                        {/* 3. NAMA SISWA */}
                         <td className="py-2.5 px-4 sticky left-40 z-10 bg-white dark:bg-slate-900 shadow-r">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
-                                student.gender === 'L'
-                                  ? 'bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300'
-                                  : 'bg-pink-100 dark:bg-pink-950 text-pink-700 dark:text-pink-300'
-                              }`}
-                            >
-                              {student.gender}
-                            </span>
-                            <div className="font-semibold text-slate-900 dark:text-white truncate">
-                              {student.name}
-                            </div>
+                          <div className="font-semibold text-slate-900 dark:text-white truncate">
+                            {student.name}
                           </div>
+                        </td>
+
+                        {/* 4. JENIS KELAMIN */}
+                        <td className="py-2.5 px-3 text-center">
+                          <span
+                            className={`inline-flex items-center justify-center px-2 py-0.5 rounded-md text-xs font-bold ${
+                              student.gender === 'L'
+                                ? 'bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300'
+                                : 'bg-pink-100 dark:bg-pink-950 text-pink-700 dark:text-pink-300'
+                            }`}
+                          >
+                            {student.gender || '-'}
+                          </span>
                         </td>
 
                         {/* KOLOM 1: Input Nilai Sub-Kolom Tugas Mandiri / Kelompok */}
@@ -3528,7 +3380,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
       </div>
       )}
 
-      {/* MODAL: TAMBAH SUB-KOLOM BARU (DAPAT DITAMBAHKAN UNTUK 5 PILAR ASESMEN) */}
+      {/* MODAL: TAMBAH PENILAIAN BARU */}
       {isAddColumnModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in-50">
           <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5">
@@ -3539,7 +3391,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 dark:text-white text-sm">
-                    Tambah Sub-Kolom Penilaian Baru
+                    Tambah Penilaian Baru
                   </h3>
                   <p className="text-[11px] text-slate-500">
                     Untuk kelas: <span className="font-semibold text-indigo-600">{currentClass?.name}</span>
@@ -3558,7 +3410,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
             <form onSubmit={handleCreateNewColumn} className="space-y-4 text-xs">
               <div>
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Komponen Penilaian (Pilar Asesmen)
+                  Komponen Penilaian
                 </label>
                 <select
                   value={newColType}
@@ -3568,25 +3420,21 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                     if (t === 'Tugas') setNewColTitle(`Tugas ${tugasCols.length + 1}: Pendalaman Materi`);
                     else if (t === 'Harian') setNewColTitle(`Formatif ${formatifCols.length + 1}: Ulangan Harian`);
                     else if (t === 'Sumatif') setNewColTitle(`Sumatif TP ${sumatifCols.length + 1}: Capaian Pembelajaran`);
-                    else if (t === 'STS') setNewColTitle(`Sumatif Tengah Semester (STS) ${stsCols.length + 1}`);
-                    else if (t === 'SAS') setNewColTitle(`Sumatif Akhir Semester (SAS) ${sasCols.length + 1}`);
                   }}
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-100 font-bold focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                 >
-                  <option value="Tugas">Kolom 1: Tugas Mandiri / Kelompok (Bobot: {weights.Tugas}%)</option>
-                  <option value="Harian">Kolom 3: Formatif / Ulangan (Bobot: {weights.Harian}%)</option>
-                  <option value="Sumatif">Sumatif Lingkup Materi TP (Bobot: {weights.Sumatif}%)</option>
-                  <option value="STS">Sumatif Tengah Semester STS (Bobot: {weights.STS}%)</option>
-                  <option value="SAS">Sumatif Akhir Semester SAS (Bobot: {weights.SAS}%)</option>
+                  <option value="Tugas">TUGAS (25%)</option>
+                  <option value="Harian">FORMATIF / ULANGAN (20%)</option>
+                  <option value="Sumatif">SUMATIF TP (LINGKUP MATERI (20%)</option>
                 </select>
                 <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5 leading-relaxed">
-                  *Sub-kolom dapat ditambah, dikurangi/dihapus, dan deskripsi materi beserta tanggalnya dapat diedit bebas sewaktu-waktu.
+                  *Catatan: Kolom STS dan SAS merupakan komponen tetap dan tidak dapat ditambah, namun deskripsi dan tanggalnya dapat diedit bebas.
                 </p>
               </div>
 
               <div>
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Deskripsi Materi / Judul Sub-Kolom
+                  Deskripsi Materi / Judul Penilaian
                 </label>
                 <input
                   type="text"
@@ -3624,7 +3472,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                   className="px-4 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Tambahkan Sub-Kolom</span>
+                  <span>Tambahkan Penilaian</span>
                 </button>
               </div>
             </form>
