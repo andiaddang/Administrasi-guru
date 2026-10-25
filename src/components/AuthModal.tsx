@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { User, SchoolProfile } from '../types';
 import { StorageService } from '../services/storageService';
-import { LogIn, UserPlus, KeyRound, Mail, UserCheck, BookOpen, ShieldCheck } from 'lucide-react';
+import { LogIn, UserPlus, KeyRound, Mail, UserCheck, BookOpen, ShieldCheck, Loader2 } from 'lucide-react';
+import { signInWithGoogle } from '../firebase';
+import { FirestoreSyncService } from '../services/firestoreSync';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -23,6 +25,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [nip, setNip] = useState('');
   const [subject, setSubject] = useState('Matematika & Informatika');
   const [error, setError] = useState<string | null>(null);
+  const [isLoadingGoogle, setIsLoadingGoogle] = useState(false);
 
   if (!isOpen) return null;
 

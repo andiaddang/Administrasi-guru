@@ -1,0 +1,163 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isDocOwner(teacherId) {
+      return isSignedIn() && request.auth.uid == teacherId;
+    }
+
+    // User Profile
+    match /users/{userId} {
+      function isValidUser(data) {
+        return data.keys().hasAll(['id', 'name', 'email', 'role']) &&
+          data.id is string && data.id == request.auth.uid &&
+          data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+          data.email is string && data.email.size() > 0 && data.email.size() <= 100 &&
+          data.role is string && data.role.size() > 0 && data.role.size() <= 50;
+      }
+
+      allow get: if isOwner(userId);
+      allow create: if isValidId(userId) && isOwner(userId) && isValidUser(incoming());
+      allow update: if isValidId(userId) && isOwner(userId) && isValidUser(incoming()) && incoming().id == existing().id;
+      allow delete: if isOwner(userId);
+    }
+
+    // Classrooms
+    match /classes/{classId} {
+      function isValidClass(data) {
+        return data.keys().hasAll(['id', 'name', 'level', 'teacherId']) &&
+          data.id is string && data.id.size() > 0 && data.id.size() <= 50 &&
+          data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+          data.level is string && data.level.size() > 0 && data.level.size() <= 20 &&
+          data.teacherId is string && data.teacherId == request.auth.uid;
+      }
+
+      allow get: if isSignedIn() && (existing().teacherId == request.auth.uid);
+      allow list: if isSignedIn() && resource.data.teacherId == request.auth.uid;
+      allow create: if isValidId(classId) && isSignedIn() && isValidClass(incoming());
+      allow update: if isValidId(classId) && isSignedIn() && existing().teacherId == request.auth.uid && isValidClass(incoming()) && incoming().id == existing().id;
+      allow delete: if isValidId(classId) && isSignedIn() && existing().teacherId == request.auth.uid;
+    }
+
+    // Students
+    match /students/{studentId} {
+      function isValidStudent(data) {
+        return data.keys().hasAll(['id', 'name', 'gender', 'classId', 'teacherId']) &&
+          data.id is string && data.id.size() > 0 && data.id.size() <= 50 &&
+          data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+          data.gender in ['L', 'P'] &&
+          data.classId is string && data.classId.size() > 0 && data.classId.size() <= 50 &&
+          data.teacherId is string && data.teacherId == request.auth.uid;
+      }
+
+      allow get: if isSignedIn() && existing().teacherId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.teacherId == request.auth.uid;
+      allow create: if isValidId(studentId) && isSignedIn() && isValidStudent(incoming());
+      allow update: if isValidId(studentId) && isSignedIn() && existing().teacherId == request.auth.uid && isValidStudent(incoming()) && incoming().id == existing().id;
+      allow delete: if isValidId(studentId) && isSignedIn() && existing().teacherId == request.auth.uid;
+    }
+
+    // Attendance Records
+    match /attendances/{attendanceId} {
+      function isValidAttendance(data) {
+        return data.keys().hasAll(['id', 'date', 'classId', 'studentId', 'status', 'teacherId']) &&
+          data.id is string && data.id.size() > 0 && data.id.size() <= 50 &&
+          data.date is string && data.date.size() > 0 && data.date.size() <= 20 &&
+          data.classId is string && data.classId.size() > 0 && data.classId.size() <= 50 &&
+          data.studentId is string && data.studentId.size() > 0 && data.studentId.size() <= 50 &&
+          data.status in ['HADIR', 'IZIN', 'SAKIT', 'ALPA'] &&
+          data.teacherId is string && data.teacherId == request.auth.uid;
+      }
+
+      allow get: if isSignedIn() && existing().teacherId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.teacherId == request.auth.uid;
+      allow create: if isValidId(attendanceId) && isSignedIn() && isValidAttendance(incoming());
+      allow update: if isValidId(attendanceId) && isSignedIn() && existing().teacherId == request.auth.uid && isValidAttendance(incoming()) && incoming().id == existing().id;
+      allow delete: if isValidId(attendanceId) && isSignedIn() && existing().teacherId == request.auth.uid;
+    }
+
+    // Grade Records
+    match /grades/{gradeId} {
+      function isValidGrade(data) {
+        return data.keys().hasAll(['id', 'studentId', 'classId', 'subject', 'type', 'title', 'score', 'teacherId']) &&
+          data.id is string && data.id.size() > 0 && data.id.size() <= 50 &&
+          data.studentId is string && data.studentId.size() > 0 && data.studentId.size() <= 50 &&
+          data.classId is string && data.classId.size() > 0 && data.classId.size() <= 50 &&
+          data.subject is string && data.subject.size() > 0 && data.subject.size() <= 100 &&
+          data.type in ['Tugas', 'Harian', 'Sumatif', 'STS', 'SAS'] &&
+          data.title is string && data.title.size() > 0 && data.title.size() <= 150 &&
+          data.score is number &&
+          data.teacherId is string && data.teacherId == request.auth.uid;
+      }
+
+      allow get: if isSignedIn() && existing().teacherId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.teacherId == request.auth.uid;
+      allow create: if isValidId(gradeId) && isSignedIn() && isValidGrade(incoming());
+      allow update: if isValidId(gradeId) && isSignedIn() && existing().teacherId == request.auth.uid && isValidGrade(incoming()) && incoming().id == existing().id;
+      allow delete: if isValidId(gradeId) && isSignedIn() && existing().teacherId == request.auth.uid;
+    }
+
+    // Teaching Journals
+    match /journals/{journalId} {
+      function isValidJournal(data) {
+        return data.keys().hasAll(['id', 'date', 'meetingNumber', 'classId', 'topic', 'teacherId']) &&
+          data.id is string && data.id.size() > 0 && data.id.size() <= 50 &&
+          data.date is string && data.date.size() > 0 && data.date.size() <= 20 &&
+          data.meetingNumber is number &&
+          data.classId is string && data.classId.size() > 0 && data.classId.size() <= 50 &&
+          data.topic is string && data.topic.size() > 0 && data.topic.size() <= 200 &&
+          data.teacherId is string && data.teacherId == request.auth.uid;
+      }
+
+      allow get: if isSignedIn() && existing().teacherId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.teacherId == request.auth.uid;
+      allow create: if isValidId(journalId) && isSignedIn() && isValidJournal(incoming());
+      allow update: if isValidId(journalId) && isSignedIn() && existing().teacherId == request.auth.uid && isValidJournal(incoming()) && incoming().id == existing().id;
+      allow delete: if isValidId(journalId) && isSignedIn() && existing().teacherId == request.auth.uid;
+    }
+
+    // Schedules
+    match /schedules/{scheduleId} {
+      function isValidSchedule(data) {
+        return data.keys().hasAll(['id', 'day', 'timeStart', 'timeEnd', 'classId', 'subject', 'teacherId']) &&
+          data.id is string && data.id.size() > 0 && data.id.size() <= 50 &&
+          data.day in ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'] &&
+          data.timeStart is string && data.timeStart.size() > 0 && data.timeStart.size() <= 10 &&
+          data.timeEnd is string && data.timeEnd.size() > 0 && data.timeEnd.size() <= 10 &&
+          data.classId is string && data.classId.size() > 0 && data.classId.size() <= 50 &&
+          data.subject is string && data.subject.size() > 0 && data.subject.size() <= 100 &&
+          data.teacherId is string && data.teacherId == request.auth.uid;
+      }
+
+      allow get: if isSignedIn() && existing().teacherId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.teacherId == request.auth.uid;
+      allow create: if isValidId(scheduleId) && isSignedIn() && isValidSchedule(incoming());
+      allow update: if isValidId(scheduleId) && isSignedIn() && existing().teacherId == request.auth.uid && isValidSchedule(incoming()) && incoming().id == existing().id;
+      allow delete: if isValidId(scheduleId) && isSignedIn() && existing().teacherId == request.auth.uid;
+    }
+  }
+}

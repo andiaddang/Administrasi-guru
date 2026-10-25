@@ -944,9 +944,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
           submittedTugasCount++;
         }
       });
-      const rataRataTugas = totalTugasCount > 0
+      const rataRataTugas = submittedTugasCount > 0
         ? Math.round((sumTugasWithZero / totalTugasCount) * 10) / 10
-        : 0;
+        : null;
 
       // 2. FORMATIF / ULANGAN HARIAN (Nilai kosong dihitung 0)
       let sumHarianWithZero = 0;
@@ -1005,7 +1005,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
         : 0;
 
       const typeAverages: Record<GradeType, number> = {
-        Tugas: rataRataTugas,
+        Tugas: rataRataTugas ?? 0,
         Harian: avgHarian,
         Sumatif: avgSumatif,
         STS: avgSTS,
@@ -1013,24 +1013,26 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
       };
 
       // Jumlahkan langsung semua komponen dengan bobot nilai yang ditetapkan untuk mendapatkan nilai hasil akhir:
-      // (Komponen kosong dihitung bernilai 0)
+      // (Komponen kosong dihitung bernilai 0 jika ada nilai yang diinput; jika sama sekali belum diisi bernilai null)
       const weightedSum =
-        (rataRataTugas * (Number(weights.Tugas) || 0)) +
+        ((rataRataTugas ?? 0) * (Number(weights.Tugas) || 0)) +
         (avgHarian * (Number(weights.Harian) || 0)) +
         (avgSumatif * (Number(weights.Sumatif) || 0)) +
         (avgSTS * (Number(weights.STS) || 0)) +
         (avgSAS * (Number(weights.SAS) || 0));
 
-      const finalScore = Math.round((weightedSum / (totalWeight || 100)) * 10) / 10;
+      const finalScore = filledCount > 0 ? Math.round((weightedSum / (totalWeight || 100)) * 10) / 10 : null;
 
       const isComplete = allColumns.length > 0 && filledCount === allColumns.length;
-      const isPassing = finalScore >= 75;
+      const isPassing = finalScore !== null ? finalScore >= 75 : false;
 
-      let predikat = 'D';
-      if (finalScore >= 90) predikat = 'A';
-      else if (finalScore >= 80) predikat = 'B';
-      else if (finalScore >= 70) predikat = 'C';
-      else predikat = 'D';
+      let predikat = '—';
+      if (finalScore !== null) {
+        if (finalScore >= 90) predikat = 'A';
+        else if (finalScore >= 80) predikat = 'B';
+        else if (finalScore >= 70) predikat = 'C';
+        else predikat = 'D';
+      }
 
       return {
         student,
@@ -1248,6 +1250,27 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
       })
     );
     showToast(`Berhasil menyimpan ${recordsToSave.length} nilai untuk kelas ${currentClass?.name || ''}!`);
+  };
+
+  // Kosongkan Seluruh Isian Nilai pada Kelas yang Dipilih (Bisa tidak diisi / kosong tanpa angka)
+  const handleClearAllScores = () => {
+    if (
+      window.confirm(
+        `Kosongkan seluruh nilai pada kelas ${currentClass?.name || ''}?\n\n` +
+        `Semua kolom penilaian akan dikosongkan (tidak ada angka) sehingga tabel dapat dibiarkan kosong atau belum dinilai.`
+      )
+    ) {
+      const cleared: Record<string, Record<string, number | ''>> = {};
+      classStudents.forEach((student) => {
+        cleared[student.id] = {};
+        allColumns.forEach((col) => {
+          cleared[student.id][col.key] = '';
+        });
+      });
+      setTableScores(cleared);
+      setIsDirty(true);
+      showToast(`Tabel penilaian kelas ${currentClass?.name || ''} berhasil dikosongkan.`);
+    }
   };
 
   // Buka Modal Tambah Sub-Kolom
@@ -2438,6 +2461,17 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
             <span>Penilaian Psikomotorik & Sikap</span>
           </button>
 
+          {/* Tombol Kosongkan Nilai (Tabel bisa tidak diisi) */}
+          <button
+            type="button"
+            onClick={handleClearAllScores}
+            className="px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+            title="Kosongkan seluruh isian nilai pada kelas ini agar tabel bisa tidak diisi (tanpa angka)"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+            <span>Kosongkan Nilai</span>
+          </button>
+
           {/* Tombol Tambah Penilaian */}
           <button
             type="button"
@@ -2651,22 +2685,22 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                     tugasCols.map((col) => (
                       <th
                         key={col.key}
-                        className="py-2 px-2 w-28 min-w-[105px] max-w-[125px] font-bold text-slate-800 dark:text-slate-100 align-top group hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors border-x border-slate-200 dark:border-slate-700"
+                        className="py-2 px-2.5 w-32 min-w-[115px] max-w-[145px] font-bold text-slate-800 dark:text-slate-100 align-top group hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors border-x border-slate-200 dark:border-slate-700"
                       >
                         <div className="flex items-start justify-between gap-1">
                           <div
-                            className="space-y-0.5 flex-1 min-w-0 cursor-pointer text-left"
+                            className="space-y-1 flex-1 min-w-0 cursor-pointer text-left"
                             onClick={() => handleOpenEditColumn(col)}
-                            title="Klik untuk mengedit deskripsi materi & tanggal penilaian"
+                            title={`Klik untuk mengedit deskripsi materi & tanggal: ${col.title}`}
                           >
                             <div
-                              className="font-bold text-slate-900 dark:text-white leading-tight truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1 group/title text-xs"
+                              className="font-bold text-slate-900 dark:text-white leading-snug hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-start gap-1 group/title text-[11px] whitespace-normal break-words"
                               title={`Klik untuk edit: ${col.title}`}
                             >
-                              <span className="truncate">{col.title}</span>
-                              <Pencil className="w-2.5 h-2.5 opacity-0 group-hover/title:opacity-100 text-indigo-500 shrink-0 transition-opacity" />
+                              <span className="whitespace-normal break-words hyphens-auto flex-1">{col.title}</span>
+                              <Pencil className="w-2.5 h-2.5 mt-0.5 opacity-0 group-hover/title:opacity-100 text-indigo-500 shrink-0 transition-opacity" />
                             </div>
-                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal hover:text-slate-700 dark:hover:text-slate-200 truncate">
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal hover:text-slate-700 dark:hover:text-slate-200 whitespace-nowrap">
                               {col.date || '-'}
                             </div>
                           </div>
@@ -2692,7 +2726,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                       </th>
                     ))
                   ) : (
-                    <th className="py-2 px-2 text-center text-xs text-slate-400 italic w-28 min-w-[105px]">
+                    <th className="py-2 px-2 text-center text-xs text-slate-400 italic w-32 min-w-[115px]">
                       Belum ada sub-kolom
                     </th>
                   ))}
@@ -2703,22 +2737,22 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                     formatifCols.map((col) => (
                       <th
                         key={col.key}
-                        className="py-2 px-2 w-28 min-w-[105px] max-w-[125px] font-bold text-slate-800 dark:text-slate-100 align-top group hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors border-x border-slate-200 dark:border-slate-700"
+                        className="py-2 px-2.5 w-32 min-w-[115px] max-w-[145px] font-bold text-slate-800 dark:text-slate-100 align-top group hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors border-x border-slate-200 dark:border-slate-700"
                       >
                         <div className="flex items-start justify-between gap-1">
                           <div
-                            className="space-y-0.5 flex-1 min-w-0 cursor-pointer text-left"
+                            className="space-y-1 flex-1 min-w-0 cursor-pointer text-left"
                             onClick={() => handleOpenEditColumn(col)}
-                            title="Klik untuk mengedit deskripsi materi & tanggal penilaian"
+                            title={`Klik untuk mengedit deskripsi materi & tanggal: ${col.title}`}
                           >
                             <div
-                              className="font-bold text-slate-900 dark:text-white leading-tight truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1 group/title text-xs"
+                              className="font-bold text-slate-900 dark:text-white leading-snug hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-start gap-1 group/title text-[11px] whitespace-normal break-words"
                               title={`Klik untuk edit: ${col.title}`}
                             >
-                              <span className="truncate">{col.title}</span>
-                              <Pencil className="w-2.5 h-2.5 opacity-0 group-hover/title:opacity-100 text-indigo-500 shrink-0 transition-opacity" />
+                              <span className="whitespace-normal break-words hyphens-auto flex-1">{col.title}</span>
+                              <Pencil className="w-2.5 h-2.5 mt-0.5 opacity-0 group-hover/title:opacity-100 text-indigo-500 shrink-0 transition-opacity" />
                             </div>
-                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal hover:text-slate-700 dark:hover:text-slate-200 truncate">
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal hover:text-slate-700 dark:hover:text-slate-200 whitespace-nowrap">
                               {col.date || '-'}
                             </div>
                           </div>
@@ -2744,7 +2778,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                       </th>
                     ))
                   ) : (
-                    <th className="py-2 px-2 text-center text-xs text-slate-400 italic w-28 min-w-[105px]">
+                    <th className="py-2 px-2 text-center text-xs text-slate-400 italic w-32 min-w-[115px]">
                       Belum ada sub-kolom
                     </th>
                   ))}
@@ -2755,22 +2789,22 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                     sumatifCols.map((col) => (
                       <th
                         key={col.key}
-                        className="py-2 px-2 w-28 min-w-[105px] max-w-[125px] font-bold text-slate-800 dark:text-slate-100 align-top group hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors border-x border-slate-200 dark:border-slate-700"
+                        className="py-2 px-2.5 w-32 min-w-[115px] max-w-[145px] font-bold text-slate-800 dark:text-slate-100 align-top group hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors border-x border-slate-200 dark:border-slate-700"
                       >
                         <div className="flex items-start justify-between gap-1">
                           <div
-                            className="space-y-0.5 flex-1 min-w-0 cursor-pointer text-left"
+                            className="space-y-1 flex-1 min-w-0 cursor-pointer text-left"
                             onClick={() => handleOpenEditColumn(col)}
-                            title="Klik untuk mengedit deskripsi materi & tanggal penilaian"
+                            title={`Klik untuk mengedit deskripsi materi & tanggal: ${col.title}`}
                           >
                             <div
-                              className="font-bold text-slate-900 dark:text-white leading-tight truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1 group/title text-xs"
+                              className="font-bold text-slate-900 dark:text-white leading-snug hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-start gap-1 group/title text-[11px] whitespace-normal break-words"
                               title={`Klik untuk edit: ${col.title}`}
                             >
-                              <span className="truncate">{col.title}</span>
-                              <Pencil className="w-2.5 h-2.5 opacity-0 group-hover/title:opacity-100 text-indigo-500 shrink-0 transition-opacity" />
+                              <span className="whitespace-normal break-words hyphens-auto flex-1">{col.title}</span>
+                              <Pencil className="w-2.5 h-2.5 mt-0.5 opacity-0 group-hover/title:opacity-100 text-indigo-500 shrink-0 transition-opacity" />
                             </div>
-                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal hover:text-slate-700 dark:hover:text-slate-200 truncate">
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal hover:text-slate-700 dark:hover:text-slate-200 whitespace-nowrap">
                               {col.date || '-'}
                             </div>
                           </div>
@@ -2796,7 +2830,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                       </th>
                     ))
                   ) : (
-                    <th className="py-2 px-2 text-center text-xs text-slate-400 italic w-28 min-w-[105px]">
+                    <th className="py-2 px-2 text-center text-xs text-slate-400 italic w-32 min-w-[115px]">
                       Belum ada sub-kolom
                     </th>
                   ))}
@@ -2807,22 +2841,22 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                     stsCols.map((col) => (
                       <th
                         key={col.key}
-                        className="py-2 px-2 w-28 min-w-[105px] max-w-[125px] font-bold text-slate-800 dark:text-slate-100 align-top group hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors border-x border-slate-200 dark:border-slate-700"
+                        className="py-2 px-2.5 w-32 min-w-[115px] max-w-[145px] font-bold text-slate-800 dark:text-slate-100 align-top group hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors border-x border-slate-200 dark:border-slate-700"
                       >
                         <div className="flex items-start justify-between gap-1">
                           <div
-                            className="space-y-0.5 flex-1 min-w-0 cursor-pointer text-left"
+                            className="space-y-1 flex-1 min-w-0 cursor-pointer text-left"
                             onClick={() => handleOpenEditColumn(col)}
-                            title="Klik untuk mengedit deskripsi materi & tanggal penilaian"
+                            title={`Klik untuk mengedit deskripsi materi & tanggal: ${col.title}`}
                           >
                             <div
-                              className="font-bold text-slate-900 dark:text-white leading-tight truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1 group/title text-xs"
+                              className="font-bold text-slate-900 dark:text-white leading-snug hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-start gap-1 group/title text-[11px] whitespace-normal break-words"
                               title={`Klik untuk edit: ${col.title}`}
                             >
-                              <span className="truncate">{col.title}</span>
-                              <Pencil className="w-2.5 h-2.5 opacity-0 group-hover/title:opacity-100 text-indigo-500 shrink-0 transition-opacity" />
+                              <span className="whitespace-normal break-words hyphens-auto flex-1">{col.title}</span>
+                              <Pencil className="w-2.5 h-2.5 mt-0.5 opacity-0 group-hover/title:opacity-100 text-indigo-500 shrink-0 transition-opacity" />
                             </div>
-                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal hover:text-slate-700 dark:hover:text-slate-200 truncate">
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal hover:text-slate-700 dark:hover:text-slate-200 whitespace-nowrap">
                               {col.date || '-'}
                             </div>
                           </div>
@@ -2840,7 +2874,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                       </th>
                     ))
                   ) : (
-                    <th className="py-2 px-2 text-center text-xs text-slate-400 italic w-28 min-w-[105px]">
+                    <th className="py-2 px-2 text-center text-xs text-slate-400 italic w-32 min-w-[115px]">
                       Belum ada kolom STS
                     </th>
                   ))}
@@ -2851,22 +2885,22 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                     sasCols.map((col) => (
                       <th
                         key={col.key}
-                        className="py-2 px-2 w-28 min-w-[105px] max-w-[125px] font-bold text-slate-800 dark:text-slate-100 align-top group hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors border-x border-slate-200 dark:border-slate-700"
+                        className="py-2 px-2.5 w-32 min-w-[115px] max-w-[145px] font-bold text-slate-800 dark:text-slate-100 align-top group hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors border-x border-slate-200 dark:border-slate-700"
                       >
                         <div className="flex items-start justify-between gap-1">
                           <div
-                            className="space-y-0.5 flex-1 min-w-0 cursor-pointer text-left"
+                            className="space-y-1 flex-1 min-w-0 cursor-pointer text-left"
                             onClick={() => handleOpenEditColumn(col)}
-                            title="Klik untuk mengedit deskripsi materi & tanggal penilaian"
+                            title={`Klik untuk mengedit deskripsi materi & tanggal: ${col.title}`}
                           >
                             <div
-                              className="font-bold text-slate-900 dark:text-white leading-tight truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1 group/title text-xs"
+                              className="font-bold text-slate-900 dark:text-white leading-snug hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-start gap-1 group/title text-[11px] whitespace-normal break-words"
                               title={`Klik untuk edit: ${col.title}`}
                             >
-                              <span className="truncate">{col.title}</span>
-                              <Pencil className="w-2.5 h-2.5 opacity-0 group-hover/title:opacity-100 text-indigo-500 shrink-0 transition-opacity" />
+                              <span className="whitespace-normal break-words hyphens-auto flex-1">{col.title}</span>
+                              <Pencil className="w-2.5 h-2.5 mt-0.5 opacity-0 group-hover/title:opacity-100 text-indigo-500 shrink-0 transition-opacity" />
                             </div>
-                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal hover:text-slate-700 dark:hover:text-slate-200 truncate">
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal hover:text-slate-700 dark:hover:text-slate-200 whitespace-nowrap">
                               {col.date || '-'}
                             </div>
                           </div>
@@ -2884,7 +2918,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                       </th>
                     ))
                   ) : (
-                    <th className="py-2 px-2 text-center text-xs text-slate-400 italic w-28 min-w-[105px]">
+                    <th className="py-2 px-2 text-center text-xs text-slate-400 italic w-32 min-w-[115px]">
                       Belum ada kolom SAS
                     </th>
                   ))}

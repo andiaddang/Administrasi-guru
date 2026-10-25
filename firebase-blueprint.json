@@ -1,0 +1,166 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User profile containing teacher or staff identity information.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 100 },
+        "nip": { "type": "string", "maxLength": 50 },
+        "subject": { "type": "string", "maxLength": 100 },
+        "role": { "type": "string", "maxLength": 50 },
+        "avatar": { "type": "string", "maxLength": 500 }
+      },
+      "required": ["id", "name", "email", "role"]
+    },
+    "SchoolProfile": {
+      "title": "School Profile",
+      "description": "School institutional data, letterhead configuration, and academic period.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 150 },
+        "npsn": { "type": "string", "maxLength": 30 },
+        "academicYear": { "type": "string", "maxLength": 20 },
+        "semester": { "type": "string", "enum": ["Ganjil", "Genap"] },
+        "headmaster": { "type": "string", "maxLength": 100 },
+        "headmasterNip": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["name", "academicYear", "semester"]
+    },
+    "ClassRoom": {
+      "title": "Class Room",
+      "description": "Classroom or study group within the school.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 50 },
+        "name": { "type": "string", "maxLength": 100 },
+        "level": { "type": "string", "maxLength": 20 },
+        "major": { "type": "string", "maxLength": 100 },
+        "homeroomTeacher": { "type": "string", "maxLength": 100 },
+        "academicYear": { "type": "string", "maxLength": 20 },
+        "teacherId": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "name", "level", "teacherId"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "Student record in a class.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 50 },
+        "nisnNis": { "type": "string", "maxLength": 50 },
+        "name": { "type": "string", "maxLength": 100 },
+        "gender": { "type": "string", "enum": ["L", "P"] },
+        "classId": { "type": "string", "maxLength": 50 },
+        "parentPhone": { "type": "string", "maxLength": 30 },
+        "status": { "type": "string", "enum": ["Aktif", "Mutasi", "Alumni"] },
+        "teacherId": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "name", "gender", "classId", "teacherId"]
+    },
+    "AttendanceRecord": {
+      "title": "Attendance Record",
+      "description": "Daily or meeting attendance record for a student.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 50 },
+        "date": { "type": "string", "maxLength": 20 },
+        "classId": { "type": "string", "maxLength": 50 },
+        "studentId": { "type": "string", "maxLength": 50 },
+        "status": { "type": "string", "enum": ["HADIR", "IZIN", "SAKIT", "ALPA"] },
+        "notes": { "type": "string", "maxLength": 200 },
+        "teacherId": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "date", "classId", "studentId", "status", "teacherId"]
+    },
+    "GradeRecord": {
+      "title": "Grade Record",
+      "description": "Assessment score record (Tugas, Formatif, Sumatif, STS, SAS).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 50 },
+        "studentId": { "type": "string", "maxLength": 50 },
+        "classId": { "type": "string", "maxLength": 50 },
+        "subject": { "type": "string", "maxLength": 100 },
+        "type": { "type": "string", "enum": ["Tugas", "Harian", "Sumatif", "STS", "SAS"] },
+        "title": { "type": "string", "maxLength": 150 },
+        "score": { "type": "number" },
+        "maxScore": { "type": "number" },
+        "date": { "type": "string", "maxLength": 20 },
+        "semester": { "type": "string", "enum": ["Ganjil", "Genap"] },
+        "teacherId": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "studentId", "classId", "subject", "type", "title", "score", "teacherId"]
+    },
+    "TeachingJournal": {
+      "title": "Teaching Journal",
+      "description": "Teacher daily classroom teaching journal and agenda.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 50 },
+        "date": { "type": "string", "maxLength": 20 },
+        "meetingNumber": { "type": "number" },
+        "classId": { "type": "string", "maxLength": 50 },
+        "subject": { "type": "string", "maxLength": 100 },
+        "time": { "type": "string", "maxLength": 50 },
+        "topic": { "type": "string", "maxLength": 200 },
+        "learningActivities": { "type": "string", "maxLength": 1000 },
+        "obstacles": { "type": "string", "maxLength": 500 },
+        "solutions": { "type": "string", "maxLength": 500 },
+        "presentCount": { "type": "number" },
+        "absentCount": { "type": "number" },
+        "teacherId": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "date", "meetingNumber", "classId", "topic", "teacherId"]
+    },
+    "Schedule": {
+      "title": "Schedule",
+      "description": "Weekly teaching schedule entry.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 50 },
+        "day": { "type": "string", "enum": ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"] },
+        "timeStart": { "type": "string", "maxLength": 10 },
+        "timeEnd": { "type": "string", "maxLength": 10 },
+        "period": { "type": "string", "maxLength": 20 },
+        "classId": { "type": "string", "maxLength": 50 },
+        "subject": { "type": "string", "maxLength": 100 },
+        "room": { "type": "string", "maxLength": 50 },
+        "teacherId": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "day", "timeStart", "timeEnd", "classId", "subject", "teacherId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "#/entities/UserProfile",
+      "description": "Teacher profile documents indexed by Firebase Auth UID."
+    },
+    "/classes/{classId}": {
+      "schema": "#/entities/ClassRoom",
+      "description": "Classrooms managed by teachers."
+    },
+    "/students/{studentId}": {
+      "schema": "#/entities/Student",
+      "description": "Students enrolled in classrooms."
+    },
+    "/attendances/{attendanceId}": {
+      "schema": "#/entities/AttendanceRecord",
+      "description": "Attendance entries."
+    },
+    "/grades/{gradeId}": {
+      "schema": "#/entities/GradeRecord",
+      "description": "Assessment score records."
+    },
+    "/journals/{journalId}": {
+      "schema": "#/entities/TeachingJournal",
+      "description": "Teaching journals."
+    },
+    "/schedules/{scheduleId}": {
+      "schema": "#/entities/Schedule",
+      "description": "Teacher weekly schedules."
+    }
+  }
+}
