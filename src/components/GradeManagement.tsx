@@ -247,6 +247,34 @@ const DEFAULT_WEIGHTS: Record<GradeType, number> = {
   SAS: 20,
 };
 
+/**
+ * Efek latar warna saat mengetik angka di kolom penilaian:
+ * - Hijau: 100 - 90
+ * - Biru: 83 - 89
+ * - Kuning: 75 - 82
+ * - Merah: 0 - 74
+ */
+export const getScoreInputColorClass = (val: number | '' | undefined | null): string => {
+  if (val === '' || val === undefined || val === null || isNaN(Number(val))) {
+    return 'bg-slate-50/40 dark:bg-slate-800/30 border-dashed border-slate-200 dark:border-slate-700 text-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-400';
+  }
+  const num = Number(val);
+  if (num >= 90) {
+    // 100 - 90: Hijau
+    return 'bg-emerald-100 dark:bg-emerald-950/80 border-emerald-400 dark:border-emerald-600 text-emerald-950 dark:text-emerald-100 font-extrabold focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-2xs';
+  }
+  if (num >= 83) {
+    // 83 - 89: Biru
+    return 'bg-sky-100 dark:bg-sky-950/80 border-sky-400 dark:border-sky-600 text-sky-950 dark:text-sky-100 font-extrabold focus:ring-2 focus:ring-sky-500 focus:border-sky-500 shadow-2xs';
+  }
+  if (num >= 75) {
+    // 75 - 82: Kuning
+    return 'bg-amber-100 dark:bg-amber-950/80 border-amber-400 dark:border-amber-600 text-amber-950 dark:text-amber-100 font-extrabold focus:ring-2 focus:ring-amber-500 focus:border-amber-500 shadow-2xs';
+  }
+  // 0 - 74: Merah
+  return 'bg-rose-100 dark:bg-rose-950/80 border-rose-400 dark:border-rose-600 text-rose-950 dark:text-rose-100 font-extrabold focus:ring-2 focus:ring-rose-500 focus:border-rose-500 shadow-2xs';
+};
+
 interface GradeManagementProps {
   students: Student[];
   classes: ClassRoom[];
@@ -1951,6 +1979,18 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
             </div>
           </div>
 
+          {/* Indikator Efek Latar Warna Nilai */}
+          <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+            <span className="font-semibold text-slate-700 dark:text-slate-300">Efek Warna Nilai (0-100):</span>
+            <span className="text-emerald-700 dark:text-emerald-400 font-bold">100–90 Hijau</span>
+            <span aria-hidden="true" className="text-slate-300 dark:text-slate-600">·</span>
+            <span className="text-sky-700 dark:text-sky-400 font-bold">83–89 Biru</span>
+            <span aria-hidden="true" className="text-slate-300 dark:text-slate-600">·</span>
+            <span className="text-amber-700 dark:text-amber-400 font-bold">75–82 Kuning</span>
+            <span aria-hidden="true" className="text-slate-300 dark:text-slate-600">·</span>
+            <span className="text-rose-700 dark:text-rose-400 font-bold">0–74 Merah</span>
+          </div>
+
           {/* TABEL EXCEL PENILAIAN PSIKOMOTORIK DAN SIKAP (TANPA KOGNITIF) */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-300 dark:border-slate-800 shadow-sm overflow-hidden">
             <div className="overflow-x-auto max-h-[750px] relative">
@@ -2147,7 +2187,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                               value={s.proses}
                               placeholder="—"
                               onChange={(e) => handleThreeCompScoreChange(std.id, 'proses', e.target.value)}
-                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1.5 text-purple-900 dark:text-purple-200 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                              className={`w-full text-center text-xs font-bold rounded-md py-1.5 border transition-colors duration-150 ${getScoreInputColorClass(
+                                s.proses
+                              )} focus:outline-none`}
                             />
                           </td>
 
@@ -2160,7 +2202,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                               value={s.produk}
                               placeholder="—"
                               onChange={(e) => handleThreeCompScoreChange(std.id, 'produk', e.target.value)}
-                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1.5 text-purple-900 dark:text-purple-200 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                              className={`w-full text-center text-xs font-bold rounded-md py-1.5 border transition-colors duration-150 ${getScoreInputColorClass(
+                                s.produk
+                              )} focus:outline-none`}
                             />
                           </td>
 
@@ -2173,7 +2217,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                               value={s.presentasi}
                               placeholder="—"
                               onChange={(e) => handleThreeCompScoreChange(std.id, 'presentasi', e.target.value)}
-                              className="w-full text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md py-1.5 text-purple-900 dark:text-purple-200 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                              className={`w-full text-center text-xs font-bold rounded-md py-1.5 border transition-colors duration-150 ${getScoreInputColorClass(
+                                s.presentasi
+                              )} focus:outline-none`}
                             />
                           </td>
 
@@ -2369,6 +2415,18 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Indikator Efek Latar Warna Nilai */}
+          <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-slate-800">
+            <span className="font-semibold text-slate-700 dark:text-slate-300">Efek Warna Nilai:</span>
+            <span className="text-emerald-700 dark:text-emerald-400 font-bold">100–90 Hijau</span>
+            <span aria-hidden="true" className="text-slate-300 dark:text-slate-600">·</span>
+            <span className="text-sky-700 dark:text-sky-400 font-bold">83–89 Biru</span>
+            <span aria-hidden="true" className="text-slate-300 dark:text-slate-600">·</span>
+            <span className="text-amber-700 dark:text-amber-400 font-bold">75–82 Kuning</span>
+            <span aria-hidden="true" className="text-slate-300 dark:text-slate-600">·</span>
+            <span className="text-rose-700 dark:text-rose-400 font-bold">0–74 Merah</span>
+          </div>
+
           {/* Tombol Penilaian Psikomotorik & Sikap di samping tabel penilaian */}
           <button
             type="button"
@@ -2938,8 +2996,6 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                           (tugasCols.length > 0 ? (
                             tugasCols.map((col) => {
                               const currentScore = studentScores[col.key] ?? '';
-                              const isFilled = typeof currentScore === 'number' && !isNaN(currentScore);
-                              const isWarning = isFilled && currentScore < 75;
 
                               return (
                                 <td key={col.key} className="py-1.5 px-1 text-center w-28 min-w-[105px] max-w-[125px]">
@@ -2952,13 +3008,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                                     onChange={(e) =>
                                       handleScoreChange(student.id, col.key, e.target.value)
                                     }
-                                    className={`w-16 h-8 text-center text-xs font-bold rounded-lg border mx-auto block transition-all ${
-                                      isFilled
-                                        ? isWarning
-                                          ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300'
-                                          : 'bg-slate-50 dark:bg-slate-800/90 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:bg-white'
-                                        : 'bg-slate-50/40 dark:bg-slate-800/30 border-dashed border-slate-200 dark:border-slate-700 text-slate-400'
-                                    } focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
+                                    className={`w-16 h-8 text-center text-xs font-bold rounded-lg border mx-auto block transition-colors duration-150 ${getScoreInputColorClass(
+                                      currentScore
+                                    )} focus:outline-none`}
                                   />
                                 </td>
                               );
@@ -2999,8 +3051,6 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                           (formatifCols.length > 0 ? (
                             formatifCols.map((col) => {
                               const currentScore = studentScores[col.key] ?? '';
-                              const isFilled = typeof currentScore === 'number' && !isNaN(currentScore);
-                              const isWarning = isFilled && currentScore < 75;
 
                               return (
                                 <td key={col.key} className="py-1.5 px-1 text-center w-28 min-w-[105px] max-w-[125px]">
@@ -3013,13 +3063,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                                     onChange={(e) =>
                                       handleScoreChange(student.id, col.key, e.target.value)
                                     }
-                                    className={`w-16 h-8 text-center text-xs font-bold rounded-lg border mx-auto block transition-all ${
-                                      isFilled
-                                        ? isWarning
-                                          ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300'
-                                          : 'bg-slate-50 dark:bg-slate-800/90 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:bg-white'
-                                        : 'bg-slate-50/40 dark:bg-slate-800/30 border-dashed border-slate-200 dark:border-slate-700 text-slate-400'
-                                    } focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
+                                    className={`w-16 h-8 text-center text-xs font-bold rounded-lg border mx-auto block transition-colors duration-150 ${getScoreInputColorClass(
+                                      currentScore
+                                    )} focus:outline-none`}
                                   />
                                 </td>
                               );
@@ -3033,8 +3079,6 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                           (sumatifCols.length > 0 ? (
                             sumatifCols.map((col) => {
                               const currentScore = studentScores[col.key] ?? '';
-                              const isFilled = typeof currentScore === 'number' && !isNaN(currentScore);
-                              const isWarning = isFilled && currentScore < 75;
 
                               return (
                                 <td key={col.key} className="py-1.5 px-1 text-center w-28 min-w-[105px] max-w-[125px]">
@@ -3047,13 +3091,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                                     onChange={(e) =>
                                       handleScoreChange(student.id, col.key, e.target.value)
                                     }
-                                    className={`w-16 h-8 text-center text-xs font-bold rounded-lg border mx-auto block transition-all ${
-                                      isFilled
-                                        ? isWarning
-                                          ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300'
-                                          : 'bg-slate-50 dark:bg-slate-800/90 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:bg-white'
-                                        : 'bg-slate-50/40 dark:bg-slate-800/30 border-dashed border-slate-200 dark:border-slate-700 text-slate-400'
-                                    } focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
+                                    className={`w-16 h-8 text-center text-xs font-bold rounded-lg border mx-auto block transition-colors duration-150 ${getScoreInputColorClass(
+                                      currentScore
+                                    )} focus:outline-none`}
                                   />
                                 </td>
                               );
@@ -3067,8 +3107,6 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                           (stsCols.length > 0 ? (
                             stsCols.map((col) => {
                               const currentScore = studentScores[col.key] ?? '';
-                              const isFilled = typeof currentScore === 'number' && !isNaN(currentScore);
-                              const isWarning = isFilled && currentScore < 75;
 
                               return (
                                 <td key={col.key} className="py-1.5 px-1 text-center w-28 min-w-[105px] max-w-[125px]">
@@ -3081,13 +3119,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                                     onChange={(e) =>
                                       handleScoreChange(student.id, col.key, e.target.value)
                                     }
-                                    className={`w-16 h-8 text-center text-xs font-bold rounded-lg border mx-auto block transition-all ${
-                                      isFilled
-                                        ? isWarning
-                                          ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300'
-                                          : 'bg-slate-50 dark:bg-slate-800/90 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:bg-white'
-                                        : 'bg-slate-50/40 dark:bg-slate-800/30 border-dashed border-slate-200 dark:border-slate-700 text-slate-400'
-                                    } focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
+                                    className={`w-16 h-8 text-center text-xs font-bold rounded-lg border mx-auto block transition-colors duration-150 ${getScoreInputColorClass(
+                                      currentScore
+                                    )} focus:outline-none`}
                                   />
                                 </td>
                               );
@@ -3101,8 +3135,6 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                           (sasCols.length > 0 ? (
                             sasCols.map((col) => {
                               const currentScore = studentScores[col.key] ?? '';
-                              const isFilled = typeof currentScore === 'number' && !isNaN(currentScore);
-                              const isWarning = isFilled && currentScore < 75;
 
                               return (
                                 <td key={col.key} className="py-1.5 px-1 text-center w-28 min-w-[105px] max-w-[125px]">
@@ -3115,13 +3147,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                                     onChange={(e) =>
                                       handleScoreChange(student.id, col.key, e.target.value)
                                     }
-                                    className={`w-16 h-8 text-center text-xs font-bold rounded-lg border mx-auto block transition-all ${
-                                      isFilled
-                                        ? isWarning
-                                          ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300'
-                                          : 'bg-slate-50 dark:bg-slate-800/90 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:bg-white'
-                                        : 'bg-slate-50/40 dark:bg-slate-800/30 border-dashed border-slate-200 dark:border-slate-700 text-slate-400'
-                                    } focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
+                                    className={`w-16 h-8 text-center text-xs font-bold rounded-lg border mx-auto block transition-colors duration-150 ${getScoreInputColorClass(
+                                      currentScore
+                                    )} focus:outline-none`}
                                   />
                                 </td>
                               );
@@ -3200,7 +3228,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                                 onChange={(e) =>
                                   handleThreeCompScoreChange(student.id, 'proses', e.target.value)
                                 }
-                                className="w-14 h-7 text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md mx-auto block text-purple-900 dark:text-purple-200 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                                className={`w-14 h-7 text-center text-xs font-bold rounded-md border mx-auto block transition-colors duration-150 ${getScoreInputColorClass(
+                                  threeCompStudentItem?.scores.proses
+                                )} focus:outline-none`}
                               />
                             </td>
 
@@ -3215,7 +3245,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                                 onChange={(e) =>
                                   handleThreeCompScoreChange(student.id, 'produk', e.target.value)
                                 }
-                                className="w-14 h-7 text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md mx-auto block text-purple-900 dark:text-purple-200 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                                className={`w-14 h-7 text-center text-xs font-bold rounded-md border mx-auto block transition-colors duration-150 ${getScoreInputColorClass(
+                                  threeCompStudentItem?.scores.produk
+                                )} focus:outline-none`}
                               />
                             </td>
 
@@ -3230,7 +3262,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                                 onChange={(e) =>
                                   handleThreeCompScoreChange(student.id, 'presentasi', e.target.value)
                                 }
-                                className="w-14 h-7 text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md mx-auto block text-purple-900 dark:text-purple-200 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                                className={`w-14 h-7 text-center text-xs font-bold rounded-md border mx-auto block transition-colors duration-150 ${getScoreInputColorClass(
+                                  threeCompStudentItem?.scores.presentasi
+                                )} focus:outline-none`}
                               />
                             </td>
 
