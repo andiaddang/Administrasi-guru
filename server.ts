@@ -386,9 +386,10 @@ Berikan respons dalam format JSON valid persis seperti berikut:
 // Setup Vite middleware in dev or static serving in production
 async function startServer() {
   if (process.env.NODE_ENV === 'production') {
-    app.use(express.static(path.resolve(__dirname, 'dist')));
+    const distPath = path.resolve(process.cwd(), 'dist');
+    app.use(express.static(distPath));
     app.get('*', (req, res) => {
-      res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
+      res.sendFile(path.resolve(distPath, 'index.html'));
     });
   } else {
     const vite = await createViteServer({
