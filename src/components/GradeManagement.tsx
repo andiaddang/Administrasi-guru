@@ -33,6 +33,8 @@ import {
   Pencil,
   Download,
   ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { PrintDocumentModal } from './PrintDocumentModal';
 import { GradeTrendAnalytics } from './GradeTrendAnalytics';
@@ -327,6 +329,8 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
 
   // Mode Tampilan Tabel Penilaian:
   const [viewMode, setViewMode] = useState<'3komponen' | '5pilar'>('5pilar');
+  // State tampilkan / sembunyikan kolom Psikomotorik & Sikap yang disisipkan setelah SAS
+  const [showPsikomotorikSikap, setShowPsikomotorikSikap] = useState<boolean>(true);
   const [threeCompScoresMap, setThreeCompScoresMap] = useState<Record<string, Record<string, ThreeComponentStudentScore>>>(getInitial3KomponenScores);
 
   const saveThreeCompScores = (next: Record<string, Record<string, ThreeComponentStudentScore>>) => {
@@ -1205,6 +1209,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
     }
 
     onSaveBatchGrades(recordsToSave);
+    saveThreeCompScores(threeCompScoresMap);
     setIsDirty(false);
     setAutoSaveStatus('saved');
     setLastSavedTime(
@@ -1456,6 +1461,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
     (showSumatifSection ? Math.max(1, sumatifCols.length) : 0) +
     (showSTSSection ? Math.max(1, stsCols.length) : 0) +
     (showSASSection ? Math.max(1, sasCols.length) : 0) +
+    (showPsikomotorikSikap ? 9 : 1) + // 4 Afektif + 5 Psikomotorik
     3; // Nilai Akhir, Ketercapaian, Kelengkapan
 
   return (
@@ -1502,13 +1508,13 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
             {/* Tombol Simpan Semua Nilai */}
             <button
               type="button"
-              onClick={viewMode === '3komponen' ? handleSaveAll3CompGrades : handleSaveAllClassGrades}
-              disabled={viewMode === '5pilar' && !isWeightValid}
+              onClick={handleSaveAllClassGrades}
+              disabled={!isWeightValid}
               className={`px-4 py-2 text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2 ${
                 isDirty
                   ? 'bg-indigo-600 hover:bg-indigo-700 text-white ring-2 ring-indigo-400/50 animate-pulse'
                   : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-              } ${viewMode === '5pilar' && !isWeightValid ? 'opacity-50 cursor-not-allowed' : ''}`}
+              } ${!isWeightValid ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <Save className="w-4 h-4" />
               <span>Simpan Semua Nilai ({currentClass?.name || 'Kelas'})</span>
@@ -1551,31 +1557,29 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
               </span>
             </label>
 
-            {viewMode === '5pilar' && (
-              <button
-                type="button"
-                onClick={() => setIsWeightSettingsOpen(!isWeightSettingsOpen)}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 cursor-pointer"
+            <button
+              type="button"
+              onClick={() => setIsWeightSettingsOpen(!isWeightSettingsOpen)}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 cursor-pointer"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-500" />
+              <span>Atur Bobot Komponen</span>
+              <span
+                className={`px-1.5 py-0.2 rounded text-[10px] font-extrabold ${
+                  isWeightValid
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                    : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                }`}
               >
-                <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-500" />
-                <span>Atur Bobot Komponen</span>
-                <span
-                  className={`px-1.5 py-0.2 rounded text-[10px] font-extrabold ${
-                    isWeightValid
-                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                      : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
-                  }`}
-                >
-                  {totalWeight}%
-                </span>
-              </button>
-            )}
+                {totalWeight}%
+              </span>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* PANEL PENGATURAN BOBOT (COLLAPSIBLE - HANYA UNTUK 5 PILAR) */}
-      {viewMode === '5pilar' && isWeightSettingsOpen && (
+      {/* PANEL PENGATURAN BOBOT (COLLAPSIBLE) */}
+      {isWeightSettingsOpen && (
         <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 animate-in fade-in-50 duration-200">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
             <div>
@@ -2504,6 +2508,57 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                   </th>
                 )}
 
+                {/* GABUNGAN PENILAIAN PSIKOMOTORIK DAN SIKAP (DISETELAH SAS) */}
+                {showPsikomotorikSikap ? (
+                  <>
+                    {/* 1. KOMPONEN AFEKTIF (SIKAP) (4 KOLOM) */}
+                    <th
+                      colSpan={4}
+                      className="py-2 px-2 bg-amber-800 text-white border-b border-x border-amber-900 text-center relative"
+                    >
+                      <div className="flex items-center justify-between gap-1 px-1">
+                        <span className="font-extrabold text-xs uppercase tracking-tight flex-1 text-center">
+                          1. KOMPONEN AFEKTIF (SIKAP)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowPsikomotorikSikap(false)}
+                          className="px-1.5 py-0.5 rounded bg-black/30 hover:bg-black/50 text-[10px] font-bold text-amber-200 hover:text-white transition-colors cursor-pointer flex items-center gap-0.5 shrink-0"
+                          title="Sembunyikan Kolom Sikap & Keterampilan"
+                        >
+                          <ChevronLeft className="w-3 h-3" />
+                          <span className="hidden sm:inline">Tutup</span>
+                        </button>
+                      </div>
+                    </th>
+
+                    {/* 2. KOMPONEN PSIKOMOTORIK (KETERAMPILAN) (5 KOLOM) */}
+                    <th
+                      colSpan={5}
+                      className="py-2 px-2 bg-purple-800 text-white border-b border-x border-purple-900 text-center"
+                    >
+                      <span className="font-extrabold text-xs uppercase tracking-tight block text-center">
+                        2. KOMPONEN PSIKOMOTORIK (KETERAMPILAN)
+                      </span>
+                    </th>
+                  </>
+                ) : (
+                  /* TOMBOL KECIL DIGARIS TABEL UNTUK MEMUNCULKAN KEMBALI */
+                  <th
+                    rowSpan={2}
+                    onClick={() => setShowPsikomotorikSikap(true)}
+                    className="py-1 px-1 text-center bg-emerald-50 dark:bg-emerald-950/60 border-b border-x-2 border-emerald-500 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 cursor-pointer transition-all select-none w-9 min-w-[36px] max-w-[42px] group"
+                    title="Klik untuk memunculkan kolom Penilaian Psikomotorik & Sikap (Disisipkan setelah SAS)"
+                  >
+                    <div className="flex flex-col items-center justify-center gap-1 py-1">
+                      <ChevronRight className="w-4 h-4 text-emerald-700 dark:text-emerald-300 group-hover:scale-125 transition-transform" />
+                      <span className="text-[10px] font-black text-emerald-800 dark:text-emerald-200 [writing-mode:vertical-rl] rotate-180 tracking-wider uppercase whitespace-nowrap">
+                        + Sikap &amp; Keterampilan
+                      </span>
+                    </div>
+                  </th>
+                )}
+
                 {/* Nilai Akhir Otomatis */}
                 <th
                   rowSpan={2}
@@ -2775,6 +2830,51 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                       Belum ada kolom SAS
                     </th>
                   ))}
+
+                {/* SUB-KOLOM PENILAIAN PSIKOMOTORIK DAN SIKAP (DISETELAH SAS) */}
+                {showPsikomotorikSikap && (
+                  <>
+                    {/* AFEKTIF (SIKAP) */}
+                    <th className="py-2 px-2 bg-amber-50 dark:bg-amber-950/70 text-amber-900 dark:text-amber-200 text-center w-20 min-w-[75px] max-w-[90px] font-bold text-[10px] border-l border-amber-200 dark:border-amber-900">
+                      <div>DISIPLIN</div>
+                      <div className="text-[9px] font-normal text-amber-600 dark:text-amber-400">(Skala 1-4)</div>
+                    </th>
+                    <th className="py-2 px-2 bg-amber-50 dark:bg-amber-950/70 text-amber-900 dark:text-amber-200 text-center w-20 min-w-[75px] max-w-[90px] font-bold text-[10px] border-l border-amber-200 dark:border-amber-900">
+                      <div>KERJASAMA</div>
+                      <div className="text-[9px] font-normal text-amber-600 dark:text-amber-400">(Skala 1-4)</div>
+                    </th>
+                    <th className="py-2 px-2 bg-amber-50 dark:bg-amber-950/70 text-amber-900 dark:text-amber-200 text-center w-20 min-w-[75px] max-w-[90px] font-bold text-[10px] border-l border-amber-200 dark:border-amber-900">
+                      <div>TNG JAWAB</div>
+                      <div className="text-[9px] font-normal text-amber-600 dark:text-amber-400">(Skala 1-4)</div>
+                    </th>
+                    <th className="py-2 px-2 bg-amber-100 dark:bg-amber-900/60 text-amber-950 dark:text-amber-100 text-center w-22 min-w-[80px] max-w-[95px] font-extrabold text-[10px] border-x-2 border-amber-300 dark:border-amber-800">
+                      <div>TOTAL SKOR</div>
+                      <div className="text-[9px] font-normal text-amber-700 dark:text-amber-300">(Otomatis)</div>
+                    </th>
+
+                    {/* PSIKOMOTORIK (KETERAMPILAN) */}
+                    <th className="py-2 px-2 bg-purple-50 dark:bg-purple-950/70 text-purple-900 dark:text-purple-200 text-center w-22 min-w-[80px] max-w-[95px] font-bold text-[10px] border-l border-purple-200 dark:border-purple-900">
+                      <div>PROSES/PRAKTIK</div>
+                      <div className="text-[9px] font-normal text-purple-600 dark:text-purple-400">(0-100)</div>
+                    </th>
+                    <th className="py-2 px-2 bg-purple-50 dark:bg-purple-950/70 text-purple-900 dark:text-purple-200 text-center w-22 min-w-[80px] max-w-[95px] font-bold text-[10px] border-l border-purple-200 dark:border-purple-900">
+                      <div>PRODUK</div>
+                      <div className="text-[9px] font-normal text-purple-600 dark:text-purple-400">(0-100)</div>
+                    </th>
+                    <th className="py-2 px-2 bg-purple-50 dark:bg-purple-950/70 text-purple-900 dark:text-purple-200 text-center w-22 min-w-[80px] max-w-[95px] font-bold text-[10px] border-l border-purple-200 dark:border-purple-900">
+                      <div>PRESENTASI</div>
+                      <div className="text-[9px] font-normal text-purple-600 dark:text-purple-400">(0-100)</div>
+                    </th>
+                    <th className="py-2 px-2 bg-purple-100 dark:bg-purple-900/60 text-purple-950 dark:text-purple-100 text-center w-24 min-w-[85px] max-w-[100px] font-extrabold text-[10px] border-x border-purple-300 dark:border-purple-800">
+                      <div>NA PSIKOMOTOR</div>
+                      <div className="text-[9px] font-normal text-purple-700 dark:text-purple-300">(Rata-Rata)</div>
+                    </th>
+                    <th className="py-2 px-2 bg-purple-100/70 dark:bg-purple-950/50 text-purple-950 dark:text-purple-100 text-center w-26 min-w-[90px] max-w-[110px] font-extrabold text-[10px]">
+                      <div>PREDIKAT</div>
+                      <div className="text-[9px] font-normal text-purple-700 dark:text-purple-300">(A/B/C/D)</div>
+                    </th>
+                  </>
+                )}
               </tr>
             </thead>
 
@@ -2796,6 +2896,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                   .map((evalItem) => {
                     const student = evalItem.student;
                     const studentScores = evalItem.studentScores;
+                    const threeCompStudentItem = threeCompEvaluations.find((e) => e.student.id === student.id);
 
                     return (
                       <tr
@@ -3029,6 +3130,153 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                             <td className="py-2 px-1 text-center text-slate-400 italic text-xs w-28 min-w-[105px]">—</td>
                           ))}
 
+                        {/* CELL PENILAIAN PSIKOMOTORIK DAN SIKAP (DISISIPKAN SETELAH SAS) */}
+                        {showPsikomotorikSikap ? (
+                          <>
+                            {/* AFEKTIF: DISIPLIN */}
+                            <td className="p-1 text-center bg-amber-50/20 dark:bg-amber-950/10 w-20 min-w-[75px] max-w-[90px] border-l border-amber-200 dark:border-amber-900">
+                              <input
+                                type="number"
+                                min="1"
+                                max="4"
+                                value={threeCompStudentItem?.scores.disiplin ?? ''}
+                                placeholder="—"
+                                onChange={(e) =>
+                                  handleThreeCompScoreChange(student.id, 'disiplin', e.target.value)
+                                }
+                                className="w-12 h-7 text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md mx-auto block text-amber-900 dark:text-amber-200 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                              />
+                            </td>
+
+                            {/* AFEKTIF: KERJASAMA */}
+                            <td className="p-1 text-center bg-amber-50/20 dark:bg-amber-950/10 w-20 min-w-[75px] max-w-[90px] border-l border-amber-200 dark:border-amber-900">
+                              <input
+                                type="number"
+                                min="1"
+                                max="4"
+                                value={threeCompStudentItem?.scores.kerjasama ?? ''}
+                                placeholder="—"
+                                onChange={(e) =>
+                                  handleThreeCompScoreChange(student.id, 'kerjasama', e.target.value)
+                                }
+                                className="w-12 h-7 text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md mx-auto block text-amber-900 dark:text-amber-200 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                              />
+                            </td>
+
+                            {/* AFEKTIF: TNG JAWAB */}
+                            <td className="p-1 text-center bg-amber-50/20 dark:bg-amber-950/10 w-20 min-w-[75px] max-w-[90px] border-l border-amber-200 dark:border-amber-900">
+                              <input
+                                type="number"
+                                min="1"
+                                max="4"
+                                value={threeCompStudentItem?.scores.tngJawab ?? ''}
+                                placeholder="—"
+                                onChange={(e) =>
+                                  handleThreeCompScoreChange(student.id, 'tngJawab', e.target.value)
+                                }
+                                className="w-12 h-7 text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md mx-auto block text-amber-900 dark:text-amber-200 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                              />
+                            </td>
+
+                            {/* AFEKTIF: TOTAL SKOR */}
+                            <td className="py-1 px-1 text-center font-mono font-bold text-xs text-amber-900 dark:text-amber-200 bg-amber-100/40 dark:bg-amber-900/20 border-x-2 border-amber-300 dark:border-amber-800 w-22 min-w-[80px] max-w-[95px]">
+                              {threeCompStudentItem?.totalSkorAfektif !== null && threeCompStudentItem?.totalSkorAfektif !== undefined ? (
+                                <span className="px-2 py-0.5 rounded bg-amber-200 dark:bg-amber-800 text-amber-950 dark:text-white font-extrabold text-xs">
+                                  {threeCompStudentItem.totalSkorAfektif}
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 italic font-normal text-xs">—</span>
+                              )}
+                            </td>
+
+                            {/* PSIKOMOTORIK: PROSES/PRAKTIK */}
+                            <td className="p-1 text-center bg-purple-50/20 dark:bg-purple-950/10 w-22 min-w-[80px] max-w-[95px] border-l border-purple-200 dark:border-purple-900">
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                value={threeCompStudentItem?.scores.proses ?? ''}
+                                placeholder="—"
+                                onChange={(e) =>
+                                  handleThreeCompScoreChange(student.id, 'proses', e.target.value)
+                                }
+                                className="w-14 h-7 text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md mx-auto block text-purple-900 dark:text-purple-200 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                              />
+                            </td>
+
+                            {/* PSIKOMOTORIK: PRODUK */}
+                            <td className="p-1 text-center bg-purple-50/20 dark:bg-purple-950/10 w-22 min-w-[80px] max-w-[95px] border-l border-purple-200 dark:border-purple-900">
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                value={threeCompStudentItem?.scores.produk ?? ''}
+                                placeholder="—"
+                                onChange={(e) =>
+                                  handleThreeCompScoreChange(student.id, 'produk', e.target.value)
+                                }
+                                className="w-14 h-7 text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md mx-auto block text-purple-900 dark:text-purple-200 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                              />
+                            </td>
+
+                            {/* PSIKOMOTORIK: PRESENTASI */}
+                            <td className="p-1 text-center bg-purple-50/20 dark:bg-purple-950/10 w-22 min-w-[80px] max-w-[95px] border-l border-purple-200 dark:border-purple-900">
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                value={threeCompStudentItem?.scores.presentasi ?? ''}
+                                placeholder="—"
+                                onChange={(e) =>
+                                  handleThreeCompScoreChange(student.id, 'presentasi', e.target.value)
+                                }
+                                className="w-14 h-7 text-center text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md mx-auto block text-purple-900 dark:text-purple-200 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                              />
+                            </td>
+
+                            {/* PSIKOMOTORIK: NA PSIKOMOTOR */}
+                            <td className="py-1 px-1 text-center font-mono font-bold text-xs text-purple-950 dark:text-white bg-purple-100/60 dark:bg-purple-900/30 border-x border-purple-300 dark:border-purple-800 w-24 min-w-[85px] max-w-[100px]">
+                              {threeCompStudentItem?.naPsikomotor !== null && threeCompStudentItem?.naPsikomotor !== undefined ? (
+                                <span className="px-2 py-0.5 rounded bg-purple-600 text-white font-extrabold text-xs shadow-2xs">
+                                  {threeCompStudentItem.naPsikomotor}
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 italic font-normal text-xs">—</span>
+                              )}
+                            </td>
+
+                            {/* PSIKOMOTORIK: PREDIKAT */}
+                            <td className="py-1 px-1 text-center bg-purple-100/30 dark:bg-purple-950/20 w-26 min-w-[90px] max-w-[110px]">
+                              {threeCompStudentItem?.predikat && threeCompStudentItem.predikat !== '—' ? (
+                                <span
+                                  className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-extrabold shadow-2xs ${
+                                    threeCompStudentItem.predikat.startsWith('Sangat Baik')
+                                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700'
+                                      : threeCompStudentItem.predikat.startsWith('Baik')
+                                      ? 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200 border border-sky-300 dark:border-sky-700'
+                                      : threeCompStudentItem.predikat.startsWith('Cukup')
+                                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-700'
+                                      : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200 border border-rose-300 dark:border-rose-700'
+                                  }`}
+                                >
+                                  {threeCompStudentItem.predikat}
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 italic text-xs">—</span>
+                              )}
+                            </td>
+                          </>
+                        ) : (
+                          /* CELL KECIL KETIKA DISEMBUNYIKAN */
+                          <td
+                            onClick={() => setShowPsikomotorikSikap(true)}
+                            className="py-1 px-0.5 text-center bg-slate-50 dark:bg-slate-800/40 border-x border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-emerald-50 dark:hover:bg-emerald-950/40 select-none"
+                            title="Klik untuk memunculkan kolom Sikap & Keterampilan"
+                          >
+                            <span className="text-[10px] text-slate-400 hover:text-emerald-600 font-bold">›</span>
+                          </td>
+                        )}
+
                         {/* Nilai Akhir Otomatis (Menggunakan Rata-Rata Tugas Sebagai Bobot Tugas) */}
                         <td className="py-2.5 px-4 text-center bg-indigo-50/40 dark:bg-indigo-950/30 font-bold">
                           {evalItem.finalScore !== null ? (
@@ -3092,6 +3340,181 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                   })
               )}
             </tbody>
+
+            {/* FOOTER TABEL: RATA-RATA KELAS */}
+            {filteredStudents.length > 0 && (
+              <tfoot className="bg-slate-100 dark:bg-slate-800 border-t-2 border-slate-300 dark:border-slate-700 font-bold text-center text-[11px] sticky bottom-0 z-20 shadow-xs">
+                <tr className="divide-x divide-slate-200 dark:divide-slate-700">
+                  <td colSpan={4} className="py-2.5 px-3 text-right uppercase tracking-wider font-extrabold text-slate-800 dark:text-slate-200 sticky left-0 z-30 bg-slate-100 dark:bg-slate-800">
+                    RATA-RATA KELAS:
+                  </td>
+
+                  {/* Sub-kolom Tugas Averages */}
+                  {showTugasSection &&
+                    tugasCols.map((col) => {
+                      const scores = studentEvaluations
+                        .map((e) => e.studentScores[col.key])
+                        .filter((v): v is number => typeof v === 'number' && !isNaN(v));
+                      const avg = scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : '-';
+                      return (
+                        <td key={col.key} className="py-2 px-1 text-center font-mono text-slate-700 dark:text-slate-300">
+                          {avg}
+                        </td>
+                      );
+                    })}
+
+                  {/* Rata-rata Tugas Col */}
+                  {showAvgTugasCol && (
+                    <td className="py-2 px-1 text-center font-mono font-black text-sky-900 dark:text-sky-200 bg-sky-100 dark:bg-sky-950/60">
+                      {(() => {
+                        const list = studentEvaluations.map((e) => e.rataRataTugas).filter((v): v is number => v !== null);
+                        return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
+                      })()}
+                    </td>
+                  )}
+
+                  {/* Sub-kolom Formatif Averages */}
+                  {showFormatifSection &&
+                    formatifCols.map((col) => {
+                      const scores = studentEvaluations
+                        .map((e) => e.studentScores[col.key])
+                        .filter((v): v is number => typeof v === 'number' && !isNaN(v));
+                      const avg = scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : '-';
+                      return (
+                        <td key={col.key} className="py-2 px-1 text-center font-mono text-slate-700 dark:text-slate-300">
+                          {avg}
+                        </td>
+                      );
+                    })}
+
+                  {/* Sub-kolom Sumatif TP Averages */}
+                  {showSumatifSection &&
+                    sumatifCols.map((col) => {
+                      const scores = studentEvaluations
+                        .map((e) => e.studentScores[col.key])
+                        .filter((v): v is number => typeof v === 'number' && !isNaN(v));
+                      const avg = scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : '-';
+                      return (
+                        <td key={col.key} className="py-2 px-1 text-center font-mono text-slate-700 dark:text-slate-300">
+                          {avg}
+                        </td>
+                      );
+                    })}
+
+                  {/* STS Averages */}
+                  {showSTSSection &&
+                    stsCols.map((col) => {
+                      const scores = studentEvaluations
+                        .map((e) => e.studentScores[col.key])
+                        .filter((v): v is number => typeof v === 'number' && !isNaN(v));
+                      const avg = scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : '-';
+                      return (
+                        <td key={col.key} className="py-2 px-1 text-center font-mono text-slate-700 dark:text-slate-300">
+                          {avg}
+                        </td>
+                      );
+                    })}
+
+                  {/* SAS Averages */}
+                  {showSASSection &&
+                    sasCols.map((col) => {
+                      const scores = studentEvaluations
+                        .map((e) => e.studentScores[col.key])
+                        .filter((v): v is number => typeof v === 'number' && !isNaN(v));
+                      const avg = scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : '-';
+                      return (
+                        <td key={col.key} className="py-2 px-1 text-center font-mono text-slate-700 dark:text-slate-300">
+                          {avg}
+                        </td>
+                      );
+                    })}
+
+                  {/* FOOTER PSIKOMOTORIK DAN SIKAP (DISETELAH SAS) */}
+                  {showPsikomotorikSikap ? (
+                    <>
+                      {/* Afektif: Disiplin */}
+                      <td className="py-2 px-1 text-center text-amber-900 dark:text-amber-200 font-mono">
+                        {(() => {
+                          const list = threeCompEvaluations.map((e) => e.scores.disiplin).filter((v): v is number => typeof v === 'number');
+                          return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
+                        })()}
+                      </td>
+                      {/* Afektif: Kerjasama */}
+                      <td className="py-2 px-1 text-center text-amber-900 dark:text-amber-200 font-mono">
+                        {(() => {
+                          const list = threeCompEvaluations.map((e) => e.scores.kerjasama).filter((v): v is number => typeof v === 'number');
+                          return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
+                        })()}
+                      </td>
+                      {/* Afektif: Tng Jawab */}
+                      <td className="py-2 px-1 text-center text-amber-900 dark:text-amber-200 font-mono">
+                        {(() => {
+                          const list = threeCompEvaluations.map((e) => e.scores.tngJawab).filter((v): v is number => typeof v === 'number');
+                          return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
+                        })()}
+                      </td>
+                      {/* Afektif: Total Skor */}
+                      <td className="py-2 px-1 text-center text-amber-950 dark:text-white font-mono font-black bg-amber-200 dark:bg-amber-800 border-x-2 border-amber-300 dark:border-amber-800">
+                        {threeCompStats.avgAfektif !== null ? threeCompStats.avgAfektif.toFixed(1) : '-'}
+                      </td>
+
+                      {/* Psikomotorik: Proses */}
+                      <td className="py-2 px-1 text-center text-purple-900 dark:text-purple-200 font-mono">
+                        {(() => {
+                          const list = threeCompEvaluations.map((e) => e.scores.proses).filter((v): v is number => typeof v === 'number');
+                          return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
+                        })()}
+                      </td>
+                      {/* Psikomotorik: Produk */}
+                      <td className="py-2 px-1 text-center text-purple-900 dark:text-purple-200 font-mono">
+                        {(() => {
+                          const list = threeCompEvaluations.map((e) => e.scores.produk).filter((v): v is number => typeof v === 'number');
+                          return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
+                        })()}
+                      </td>
+                      {/* Psikomotorik: Presentasi */}
+                      <td className="py-2 px-1 text-center text-purple-900 dark:text-purple-200 font-mono">
+                        {(() => {
+                          const list = threeCompEvaluations.map((e) => e.scores.presentasi).filter((v): v is number => typeof v === 'number');
+                          return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
+                        })()}
+                      </td>
+                      {/* Psikomotorik: NA */}
+                      <td className="py-2 px-1 text-center text-purple-950 dark:text-white font-mono font-black bg-purple-200 dark:bg-purple-800 border-x border-purple-300 dark:border-purple-800">
+                        {threeCompStats.avgPsikomotor !== null ? Math.round(threeCompStats.avgPsikomotor) : '-'}
+                      </td>
+                      {/* Psikomotorik: Predikat */}
+                      <td className="py-2 px-1 text-center bg-purple-100 dark:bg-purple-950/40 text-purple-900 dark:text-purple-200 text-[10px]">
+                        {threeCompStats.avgPsikomotor !== null && threeCompStats.avgPsikomotor >= 70
+                          ? 'A (Sangat Baik)'
+                          : threeCompStats.avgPsikomotor !== null && threeCompStats.avgPsikomotor >= 60
+                          ? 'B (Baik)'
+                          : '-'}
+                      </td>
+                    </>
+                  ) : (
+                    <td className="bg-slate-100 dark:bg-slate-800 border-x border-slate-200 dark:border-slate-700"></td>
+                  )}
+
+                  {/* Nilai Akhir Rata-Rata */}
+                  <td className="py-2 px-2 text-center font-mono font-black text-xs text-indigo-700 dark:text-indigo-300 bg-indigo-50/80 dark:bg-indigo-950/60">
+                    {(() => {
+                      const validScores = studentEvaluations
+                        .map((e) => e.finalScore)
+                        .filter((v): v is number => v !== null);
+                      return validScores.length > 0
+                        ? (validScores.reduce((a, b) => a + b, 0) / validScores.length).toFixed(1)
+                        : '-';
+                    })()}
+                  </td>
+
+                  {/* Ketercapaian & Kelengkapan summary */}
+                  <td colSpan={2} className="py-2 px-2 text-center text-slate-500 dark:text-slate-400 text-[10px]">
+                    {studentEvaluations.filter((e) => e.isPassing).length}/{studentEvaluations.length} Siswa Tuntas
+                  </td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
 

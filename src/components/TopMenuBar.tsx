@@ -12,6 +12,7 @@ import {
   RotateCcw,
   ChevronLeft,
   ChevronRight,
+  Sparkles,
 } from 'lucide-react';
 
 interface TopMenuBarProps {
@@ -36,6 +37,7 @@ export const TopMenuBar: React.FC<TopMenuBarProps> = ({
     { id: 'schedules', label: 'Jadwal Mengajar', icon: CalendarDays },
     { id: 'attendance', label: 'Presensi & Rekap', icon: CheckSquare },
     { id: 'grades', label: 'Manajemen Nilai', icon: GraduationCap },
+    { id: 'ai-assistant', label: 'Asisten Guru AI', icon: Sparkles },
     { id: 'journals', label: 'Jurnal Harian Guru', icon: BookOpenCheck },
     { id: 'settings', label: 'Profil & Kop Surat', icon: Building },
   ];

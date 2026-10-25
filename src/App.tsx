@@ -20,6 +20,7 @@ import { StudentManagement } from './components/StudentManagement';
 import { ScheduleManagement } from './components/ScheduleManagement';
 import { AttendanceManagement } from './components/AttendanceManagement';
 import { GradeManagement } from './components/GradeManagement';
+import { AIAssistant } from './components/AIAssistant';
 import { JournalManagement } from './components/JournalManagement';
 import { SchoolSettings } from './components/SchoolSettings';
 import { AuthModal } from './components/AuthModal';
@@ -67,7 +68,7 @@ export default function App() {
       const tabParam = params.get('tab');
       if (
         tabParam &&
-        ['dashboard', 'classes', 'students', 'schedules', 'attendance', 'grades', 'journals', 'settings'].includes(
+        ['dashboard', 'classes', 'students', 'schedules', 'attendance', 'grades', 'ai-assistant', 'journals', 'settings'].includes(
           tabParam
         )
       ) {
@@ -430,6 +431,30 @@ export default function App() {
               onDeleteBatchGrades={handleDeleteBatchGrades}
               school={school}
               currentUser={currentUser}
+            />
+          )}
+
+          {activeTab === 'ai-assistant' && (
+            <AIAssistant
+              classes={classes}
+              students={students}
+              school={school}
+              currentUser={currentUser}
+              onApplyGradeToStudent={(studentId, classId, gradeType, score, topicName) => {
+                const newGrade: GradeRecord = {
+                  id: `grade-${Date.now()}`,
+                  studentId,
+                  classId,
+                  subject: currentUser?.subject || 'Umum',
+                  type: gradeType,
+                  title: topicName,
+                  score,
+                  maxScore: 100,
+                  date: new Date().toISOString().slice(0, 10),
+                  semester: school.semester,
+                };
+                setGrades((prev) => [...prev, newGrade]);
+              }}
             />
           )}
 

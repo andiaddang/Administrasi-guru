@@ -15,6 +15,7 @@ import {
   QrCode,
   Palette,
   Edit3,
+  Sparkles,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -51,6 +52,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'schedules', label: 'Jadwal Mengajar', icon: CalendarDays },
     { id: 'attendance', label: 'Presensi & Rekap', icon: CheckSquare },
     { id: 'grades', label: 'Manajemen Nilai', icon: GraduationCap },
+    { id: 'ai-assistant', label: 'Asisten Guru AI', icon: Sparkles },
     { id: 'journals', label: 'Jurnal Harian Guru', icon: BookOpenCheck },
     { id: 'settings', label: 'Profil & Kop Surat', icon: Building },
   ];
