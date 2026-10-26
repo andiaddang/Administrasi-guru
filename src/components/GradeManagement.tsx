@@ -7,6 +7,7 @@ import {
   SchoolProfile,
   User,
 } from '../types';
+import { DEFAULT_GRADES } from '../data/initialData';
 import {
   Table,
   Plus,
@@ -253,12 +254,26 @@ const DEFAULT_WEIGHTS: Record<GradeType, number> = {
  * - Biru: 83 - 89
  * - Kuning: 75 - 82
  * - Merah: 0 - 74
+ * - Setelan Awal / Default (Netral): Jika nilai/kotak nilai dikosongkan atau tabel penilaian kosong,
+ *   warna efek otomatis kembali ke setelan default (putih bersih/slate netral tanpa warna merah/hijau/biru/kuning).
  */
 export const getScoreInputColorClass = (val: number | '' | undefined | null): string => {
-  if (val === '' || val === undefined || val === null || isNaN(Number(val))) {
-    return 'bg-slate-50/40 dark:bg-slate-800/30 border-dashed border-slate-200 dark:border-slate-700 text-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-400';
+  // Jika kotak nilai dikosongkan (empty string, null, undefined, spasi, atau bukan angka)
+  // Kembalikan efek warna ke setelan awal (default)
+  if (
+    val === '' ||
+    val === undefined ||
+    val === null ||
+    String(val).trim() === '' ||
+    (typeof val === 'number' && isNaN(val))
+  ) {
+    return 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-100 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30';
   }
-  const num = Number(val);
+  const str = String(val).trim();
+  const num = Number(str);
+  if (isNaN(num)) {
+    return 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-100 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30';
+  }
   if (num >= 90) {
     // 100 - 90: Hijau
     return 'bg-emerald-100 dark:bg-emerald-950/80 border-emerald-400 dark:border-emerald-600 text-emerald-950 dark:text-emerald-100 font-extrabold focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-2xs';
@@ -271,7 +286,7 @@ export const getScoreInputColorClass = (val: number | '' | undefined | null): st
     // 75 - 82: Kuning
     return 'bg-amber-100 dark:bg-amber-950/80 border-amber-400 dark:border-amber-600 text-amber-950 dark:text-amber-100 font-extrabold focus:ring-2 focus:ring-amber-500 focus:border-amber-500 shadow-2xs';
   }
-  // 0 - 74: Merah
+  // 0 - 74: Merah (Hanya jika benar-benar angka 0 sampai 74, bukan kotak kosong)
   return 'bg-rose-100 dark:bg-rose-950/80 border-rose-400 dark:border-rose-600 text-rose-950 dark:text-rose-100 font-extrabold focus:ring-2 focus:ring-rose-500 focus:border-rose-500 shadow-2xs';
 };
 
@@ -1252,12 +1267,12 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
     showToast(`Berhasil menyimpan ${recordsToSave.length} nilai untuk kelas ${currentClass?.name || ''}!`);
   };
 
-  // Kosongkan Seluruh Isian Nilai pada Kelas yang Dipilih (Bisa tidak diisi / kosong tanpa angka)
+  // Kosongkan Seluruh Isian Nilai pada Kelas yang Dipilih (Bisa tidak diisi / kosong tanpa angka & warna kembali ke default)
   const handleClearAllScores = () => {
     if (
       window.confirm(
         `Kosongkan seluruh nilai pada kelas ${currentClass?.name || ''}?\n\n` +
-        `Semua kolom penilaian akan dikosongkan (tidak ada angka) sehingga tabel dapat dibiarkan kosong atau belum dinilai.`
+        `Semua kolom penilaian akan dikosongkan (tanpa angka) dan efek warna akan kembali ke setelan default.`
       )
     ) {
       const cleared: Record<string, Record<string, number | ''>> = {};
@@ -1268,8 +1283,89 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
         });
       });
       setTableScores(cleared);
+
+      // Kosongkan juga penilaian afektif & psikomotorik untuk kelas ini agar warnanya kembali ke setelan default
+      const clearedThreeComp: Record<string, ThreeComponentStudentScore> = {};
+      classStudents.forEach((student) => {
+        clearedThreeComp[student.id] = {
+          tugas1: '',
+          tugas2: '',
+          uh1: '',
+          uh2: '',
+          disiplin: '',
+          kerjasama: '',
+          tngJawab: '',
+          proses: '',
+          produk: '',
+          presentasi: '',
+        };
+      });
+      const nextThreeMap = { ...threeCompScoresMap, [selectedClassId]: clearedThreeComp };
+      saveThreeCompScores(nextThreeMap);
+
       setIsDirty(true);
-      showToast(`Tabel penilaian kelas ${currentClass?.name || ''} berhasil dikosongkan.`);
+      showToast(`Tabel penilaian kelas ${currentClass?.name || ''} dikosongkan — seluruh kotak nilai dan efek warna kembali ke setelan default.`);
+    }
+  };
+
+  // Kembalikan Seluruh Nilai Tabel ke Setelan Awal (Default)
+  const handleResetAllToDefault = () => {
+    if (
+      window.confirm(
+        `Kembalikan tabel penilaian kelas ${currentClass?.name || ''} ke setelan awal (default)?\n\n` +
+        `Data nilai awal bawaan kurikulum akan dimuat kembali beserta efek warna nilainya.`
+      )
+    ) {
+      const resetMap: Record<string, Record<string, number | ''>> = {};
+      classStudents.forEach((student) => {
+        resetMap[student.id] = {};
+        allColumns.forEach((col) => {
+          const studentGradesOfType = DEFAULT_GRADES.filter(
+            (g) => g.studentId === student.id && g.type === col.type
+          );
+          const colIndexInType = currentClassColumns
+            .filter((c) => c.type === col.type)
+            .findIndex((c) => c.key === col.key);
+
+          const defaultRecord =
+            (colIndexInType >= 0 ? studentGradesOfType[colIndexInType] : undefined) ||
+            grades.find(
+              (g) =>
+                g.classId === selectedClassId &&
+                g.studentId === student.id &&
+                g.type === col.type
+            );
+
+          if (defaultRecord && typeof defaultRecord.score === 'number') {
+            resetMap[student.id][col.key] = defaultRecord.score;
+          } else if (student.id === 'std-100a' || student.name.toLowerCase().includes('ahmad fauzi')) {
+            if (col.type === 'Tugas') resetMap[student.id][col.key] = colIndexInType === 0 ? 85 : 90;
+            else if (col.type === 'Harian') resetMap[student.id][col.key] = colIndexInType === 0 ? 80 : 85;
+            else if (col.type === 'Sumatif') resetMap[student.id][col.key] = 85;
+            else if (col.type === 'STS') resetMap[student.id][col.key] = 88;
+            else if (col.type === 'SAS') resetMap[student.id][col.key] = 90;
+          } else if (student.id === 'std-100b' || student.name.toLowerCase().includes('budi santoso')) {
+            if (col.type === 'Tugas') resetMap[student.id][col.key] = colIndexInType === 0 ? 75 : 80;
+            else if (col.type === 'Harian') resetMap[student.id][col.key] = colIndexInType === 0 ? 70 : 78;
+            else if (col.type === 'Sumatif') resetMap[student.id][col.key] = 76;
+            else if (col.type === 'STS') resetMap[student.id][col.key] = 78;
+            else if (col.type === 'SAS') resetMap[student.id][col.key] = 80;
+          } else {
+            resetMap[student.id][col.key] = 80;
+          }
+        });
+      });
+
+      setTableScores(resetMap);
+
+      // Kembalikan juga penilaian psikomotorik & sikap ke setelan default
+      const default3Comp = getInitial3KomponenScores();
+      const currentClass3Comp = default3Comp[selectedClassId] || default3Comp['cls-1'] || {};
+      const nextThreeMap = { ...threeCompScoresMap, [selectedClassId]: currentClass3Comp };
+      saveThreeCompScores(nextThreeMap);
+
+      setIsDirty(true);
+      showToast(`Tabel penilaian kelas ${currentClass?.name || ''} berhasil dikembalikan ke setelan awal (default).`);
     }
   };
 
@@ -2012,6 +2108,10 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
             <span className="text-amber-700 dark:text-amber-400 font-bold">75–82 Kuning</span>
             <span aria-hidden="true" className="text-slate-300 dark:text-slate-600">·</span>
             <span className="text-rose-700 dark:text-rose-400 font-bold">0–74 Merah</span>
+            <span aria-hidden="true" className="text-slate-300 dark:text-slate-600">·</span>
+            <span className="text-slate-600 dark:text-slate-300 font-bold bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+              Kosong: Setelan Default
+            </span>
           </div>
 
           {/* TABEL EXCEL PENILAIAN PSIKOMOTORIK DAN SIKAP (TANPA KOGNITIF) */}
@@ -2448,6 +2548,10 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
             <span className="text-amber-700 dark:text-amber-400 font-bold">75–82 Kuning</span>
             <span aria-hidden="true" className="text-slate-300 dark:text-slate-600">·</span>
             <span className="text-rose-700 dark:text-rose-400 font-bold">0–74 Merah</span>
+            <span aria-hidden="true" className="text-slate-300 dark:text-slate-600">·</span>
+            <span className="text-slate-600 dark:text-slate-300 font-bold bg-white dark:bg-slate-700 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-600">
+              Kosong: Setelan Default
+            </span>
           </div>
 
           {/* Tombol Penilaian Psikomotorik & Sikap di samping tabel penilaian */}
@@ -2465,11 +2569,22 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
           <button
             type="button"
             onClick={handleClearAllScores}
-            className="px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
-            title="Kosongkan seluruh isian nilai pada kelas ini agar tabel bisa tidak diisi (tanpa angka)"
+            className="px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+            title="Kosongkan seluruh isian nilai pada kelas ini (efek warna kembali ke setelan default)"
           >
             <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
             <span>Kosongkan Nilai</span>
+          </button>
+
+          {/* Tombol Kembalikan ke Setelan Awal (Default) */}
+          <button
+            type="button"
+            onClick={handleResetAllToDefault}
+            className="px-3 py-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/70 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 border border-indigo-200 dark:border-indigo-800 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+            title="Kembalikan tabel penilaian kelas ini ke setelan awal (default)"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+            <span>Kembalikan ke Setelan Awal</span>
           </button>
 
           {/* Tombol Tambah Penilaian */}

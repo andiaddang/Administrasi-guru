@@ -71,4 +71,8 @@ export async function testFirestoreConnection() {
 
 testFirestoreConnection();
 
+export async function signInWithGoogle() {
+  return signInWithPopup(auth, googleProvider);
+}
+
 export { fbSignOut, signInWithPopup };
