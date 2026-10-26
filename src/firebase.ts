@@ -69,7 +69,7 @@ export async function testFirestoreConnection() {
   }
 }
 
-testFirestoreConnection();
+testFirestoreConnection().catch(() => {});
 
 export async function signInWithGoogle() {
   return signInWithPopup(auth, googleProvider);

@@ -76,60 +76,7 @@ const getInitial3KomponenScores = (): Record<string, Record<string, ThreeCompone
   } catch (e) {
     console.error('Error loading 3-component scores', e);
   }
-  return {
-    'cls-1': {
-      // Baris 5 Sesuai Gambar: Ahmad Fauzi
-      'std-100a': {
-        tugas1: 85,
-        tugas2: 90,
-        uh1: 80,
-        uh2: 85,
-        disiplin: 4,
-        kerjasama: 3,
-        tngJawab: 4,
-        proses: 85,
-        produk: 80,
-        presentasi: 90,
-      },
-      // Baris 6 Sesuai Gambar: Budi Santoso
-      'std-100b': {
-        tugas1: 75,
-        tugas2: 80,
-        uh1: 70,
-        uh2: 78,
-        disiplin: 3,
-        kerjasama: 3,
-        tngJawab: 2,
-        proses: 75,
-        produk: 70,
-        presentasi: 75,
-      },
-      'std-101': {
-        tugas1: 88,
-        tugas2: 92,
-        uh1: 85,
-        uh2: 90,
-        disiplin: 4,
-        kerjasama: 4,
-        tngJawab: 4,
-        proses: 90,
-        produk: 88,
-        presentasi: 92,
-      },
-      'std-102': {
-        tugas1: 80,
-        tugas2: 85,
-        uh1: 78,
-        uh2: 82,
-        disiplin: 3,
-        kerjasama: 4,
-        tngJawab: 3,
-        proses: 80,
-        produk: 82,
-        presentasi: 85,
-      },
-    },
-  };
+  return {};
 };
 
 export const createDefaultClassColumns = (classId: string, subject: string, date: string): AssessmentColumn[] => [
@@ -295,6 +242,7 @@ interface GradeManagementProps {
   classes: ClassRoom[];
   grades: GradeRecord[];
   onSaveBatchGrades: (newGrades: GradeRecord[]) => void;
+  onSyncClassGrades?: (classId: string, updatedGrades: GradeRecord[]) => void;
   onUpdateSingleGrade?: (grade: GradeRecord) => void;
   onDeleteGrade: (id: string) => void;
   onDeleteBatchGrades?: (ids: string[]) => void;
@@ -307,6 +255,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
   classes,
   grades,
   onSaveBatchGrades,
+  onSyncClassGrades,
   onDeleteGrade,
   onDeleteBatchGrades,
   school,
@@ -391,46 +340,18 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
     return filteredStudents.map((student, idx) => {
       let s = classScores[student.id];
       if (!s) {
-        if (student.name.toLowerCase().includes('ahmad fauzi') || student.nisn === '12345' || student.nisnNis === '12345') {
-          s = {
-            tugas1: 85,
-            tugas2: 90,
-            uh1: 80,
-            uh2: 85,
-            disiplin: 4,
-            kerjasama: 3,
-            tngJawab: 4,
-            proses: 85,
-            produk: 80,
-            presentasi: 90,
-          };
-        } else if (student.name.toLowerCase().includes('budi santoso') || student.nisn === '12346' || student.nisnNis === '12346') {
-          s = {
-            tugas1: 75,
-            tugas2: 80,
-            uh1: 70,
-            uh2: 78,
-            disiplin: 3,
-            kerjasama: 3,
-            tngJawab: 2,
-            proses: 75,
-            produk: 70,
-            presentasi: 75,
-          };
-        } else {
-          s = {
-            tugas1: '',
-            tugas2: '',
-            uh1: '',
-            uh2: '',
-            disiplin: '',
-            kerjasama: '',
-            tngJawab: '',
-            proses: '',
-            produk: '',
-            presentasi: '',
-          };
-        }
+        s = {
+          tugas1: '',
+          tugas2: '',
+          uh1: '',
+          uh2: '',
+          disiplin: '',
+          kerjasama: '',
+          tngJawab: '',
+          proses: '',
+          produk: '',
+          presentasi: '',
+        };
       }
 
       // 1. Kognitif: Rata Formatif & NA Kognitif
@@ -506,11 +427,12 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
     rawVal: string
   ) => {
     let val: number | '' = '';
-    if (rawVal.trim() !== '') {
-      const num = Number(rawVal);
+    const clean = rawVal.replace(/[^0-9]/g, '');
+    if (clean !== '') {
+      const num = parseInt(clean, 10);
       if (!isNaN(num)) {
         if (field === 'disiplin' || field === 'kerjasama' || field === 'tngJawab') {
-          val = Math.min(4, Math.max(1, num));
+          val = Math.min(4, Math.max(0, num));
         } else {
           val = Math.min(100, Math.max(0, num));
         }
@@ -895,31 +817,55 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
     return [...tugasCols, ...formatifCols, ...sumatifCols, ...stsCols, ...sasCols];
   }, [tugasCols, formatifCols, sumatifCols, stsCols, sasCols]);
 
-  // Inisialisasi Nilai ke State Lokal
+  const lastLoadedClassIdRef = useRef<string>('');
+
+  // Inisialisasi Nilai ke State Lokal saat berganti kelas atau pertama kali dimuat
   useEffect(() => {
-    const initialMap: Record<string, Record<string, number | ''>> = {};
+    if (lastLoadedClassIdRef.current !== selectedClassId) {
+      lastLoadedClassIdRef.current = selectedClassId;
+      const initialMap: Record<string, Record<string, number | ''>> = {};
 
-    classStudents.forEach((student) => {
-      initialMap[student.id] = {};
-      allColumns.forEach((col) => {
-        const matchingRecord = grades.find(
-          (g) =>
-            g.classId === selectedClassId &&
-            g.studentId === student.id &&
-            g.type === col.type &&
-            (g.title || '').trim().toLowerCase() === col.title.trim().toLowerCase() &&
-            (g.date || '').trim() === col.date.trim()
-        );
-        initialMap[student.id][col.key] =
-          matchingRecord && typeof matchingRecord.score === 'number'
-            ? matchingRecord.score
-            : '';
+      classStudents.forEach((student) => {
+        initialMap[student.id] = {};
+        allColumns.forEach((col) => {
+          const matchingRecord = grades.find(
+            (g) =>
+              g.classId === selectedClassId &&
+              g.studentId === student.id &&
+              g.type === col.type &&
+              (g.title || '').trim().toLowerCase() === col.title.trim().toLowerCase() &&
+              (g.date || '').trim() === col.date.trim()
+          );
+          initialMap[student.id][col.key] =
+            matchingRecord && typeof matchingRecord.score === 'number'
+              ? matchingRecord.score
+              : '';
+        });
       });
-    });
 
-    setTableScores(initialMap);
-    setIsDirty(false);
-  }, [selectedClassId, allColumns.length, classStudents.length, grades]);
+      setTableScores(initialMap);
+      setIsDirty(false);
+    }
+  }, [selectedClassId, classStudents.length]);
+
+  // Tambahkan key untuk sub-kolom baru tanpa mereset isian yang sedang diketik
+  useEffect(() => {
+    setTableScores((prev) => {
+      let hasMissing = false;
+      const updated = { ...prev };
+      classStudents.forEach((student) => {
+        const sScores = { ...(updated[student.id] || {}) };
+        allColumns.forEach((col) => {
+          if (sScores[col.key] === undefined) {
+            sScores[col.key] = '';
+            hasMissing = true;
+          }
+        });
+        updated[student.id] = sScores;
+      });
+      return hasMissing ? updated : prev;
+    });
+  }, [allColumns.length]);
 
   // Validasi Total Bobot (Harus Tepat 100%)
   const totalWeight = useMemo(() => {
@@ -1147,8 +1093,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
   // Handle Perubahan Nilai Input (0-100)
   const handleScoreChange = (studentId: string, colKey: string, rawVal: string) => {
     let sanitizedVal: number | '' = '';
-    if (rawVal.trim() !== '') {
-      const num = Number(rawVal);
+    const clean = rawVal.replace(/[^0-9]/g, '');
+    if (clean !== '') {
+      const num = parseInt(clean, 10);
       if (!isNaN(num)) {
         sanitizedVal = Math.min(100, Math.max(0, num));
       }
@@ -1201,20 +1148,20 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
       });
     });
 
-    if (recordsToSave.length > 0) {
-      onSaveBatchGrades(recordsToSave);
-      setAutoSaveStatus('saved');
-      setIsDirty(false);
-      setLastSavedTime(
-        new Date().toLocaleTimeString('id-ID', {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-        })
-      );
+    if (onSyncClassGrades) {
+      onSyncClassGrades(selectedClassId, recordsToSave);
     } else {
-      setAutoSaveStatus('idle');
+      onSaveBatchGrades(recordsToSave);
     }
+    setAutoSaveStatus('saved');
+    setIsDirty(false);
+    setLastSavedTime(
+      new Date().toLocaleTimeString('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })
+    );
   };
 
   // Simpan Semua Nilai Sekaligus untuk Satu Kelas
@@ -1248,12 +1195,11 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
       });
     });
 
-    if (recordsToSave.length === 0) {
-      showToast('Belum ada nilai yang diinput untuk disimpan.');
-      return;
+    if (onSyncClassGrades) {
+      onSyncClassGrades(selectedClassId, recordsToSave);
+    } else {
+      onSaveBatchGrades(recordsToSave);
     }
-
-    onSaveBatchGrades(recordsToSave);
     saveThreeCompScores(threeCompScoresMap);
     setIsDirty(false);
     setAutoSaveStatus('saved');
@@ -1267,12 +1213,12 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
     showToast(`Berhasil menyimpan ${recordsToSave.length} nilai untuk kelas ${currentClass?.name || ''}!`);
   };
 
-  // Kosongkan Seluruh Isian Nilai pada Kelas yang Dipilih (Bisa tidak diisi / kosong tanpa angka & warna kembali ke default)
+  // Kosongkan Seluruh Isian Nilai pada Kelas yang Dipilih (Kembali ke tampilan awal sebelum nilai dimasukkan)
   const handleClearAllScores = () => {
     if (
       window.confirm(
-        `Kosongkan seluruh nilai pada kelas ${currentClass?.name || ''}?\n\n` +
-        `Semua kolom penilaian akan dikosongkan (tanpa angka) dan efek warna akan kembali ke setelan default.`
+        `Kosongkan seluruh nilai pada kelas ${currentClass?.name || ''} ke tampilan awal sebelum nilai dimasukkan?\n\n` +
+        `Semua kolom penilaian akan dikosongkan (tanpa angka) dan efek warna akan kembali ke setelan awal (default).`
       )
     ) {
       const cleared: Record<string, Record<string, number | ''>> = {};
@@ -1303,70 +1249,18 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
       const nextThreeMap = { ...threeCompScoresMap, [selectedClassId]: clearedThreeComp };
       saveThreeCompScores(nextThreeMap);
 
-      setIsDirty(true);
-      showToast(`Tabel penilaian kelas ${currentClass?.name || ''} dikosongkan — seluruh kotak nilai dan efek warna kembali ke setelan default.`);
+      if (onSyncClassGrades) {
+        onSyncClassGrades(selectedClassId, []);
+      }
+
+      setIsDirty(false);
+      showToast(`Tabel penilaian kelas ${currentClass?.name || ''} berhasil dikosongkan ke tampilan awal sebelum nilai dimasukkan.`);
     }
   };
 
-  // Kembalikan Seluruh Nilai Tabel ke Setelan Awal (Default)
+  // Kembalikan Seluruh Nilai Tabel ke Setelan Awal (Kosong Bersih Sebelum Nilai Dimasukkan)
   const handleResetAllToDefault = () => {
-    if (
-      window.confirm(
-        `Kembalikan tabel penilaian kelas ${currentClass?.name || ''} ke setelan awal (default)?\n\n` +
-        `Data nilai awal bawaan kurikulum akan dimuat kembali beserta efek warna nilainya.`
-      )
-    ) {
-      const resetMap: Record<string, Record<string, number | ''>> = {};
-      classStudents.forEach((student) => {
-        resetMap[student.id] = {};
-        allColumns.forEach((col) => {
-          const studentGradesOfType = DEFAULT_GRADES.filter(
-            (g) => g.studentId === student.id && g.type === col.type
-          );
-          const colIndexInType = currentClassColumns
-            .filter((c) => c.type === col.type)
-            .findIndex((c) => c.key === col.key);
-
-          const defaultRecord =
-            (colIndexInType >= 0 ? studentGradesOfType[colIndexInType] : undefined) ||
-            grades.find(
-              (g) =>
-                g.classId === selectedClassId &&
-                g.studentId === student.id &&
-                g.type === col.type
-            );
-
-          if (defaultRecord && typeof defaultRecord.score === 'number') {
-            resetMap[student.id][col.key] = defaultRecord.score;
-          } else if (student.id === 'std-100a' || student.name.toLowerCase().includes('ahmad fauzi')) {
-            if (col.type === 'Tugas') resetMap[student.id][col.key] = colIndexInType === 0 ? 85 : 90;
-            else if (col.type === 'Harian') resetMap[student.id][col.key] = colIndexInType === 0 ? 80 : 85;
-            else if (col.type === 'Sumatif') resetMap[student.id][col.key] = 85;
-            else if (col.type === 'STS') resetMap[student.id][col.key] = 88;
-            else if (col.type === 'SAS') resetMap[student.id][col.key] = 90;
-          } else if (student.id === 'std-100b' || student.name.toLowerCase().includes('budi santoso')) {
-            if (col.type === 'Tugas') resetMap[student.id][col.key] = colIndexInType === 0 ? 75 : 80;
-            else if (col.type === 'Harian') resetMap[student.id][col.key] = colIndexInType === 0 ? 70 : 78;
-            else if (col.type === 'Sumatif') resetMap[student.id][col.key] = 76;
-            else if (col.type === 'STS') resetMap[student.id][col.key] = 78;
-            else if (col.type === 'SAS') resetMap[student.id][col.key] = 80;
-          } else {
-            resetMap[student.id][col.key] = 80;
-          }
-        });
-      });
-
-      setTableScores(resetMap);
-
-      // Kembalikan juga penilaian psikomotorik & sikap ke setelan default
-      const default3Comp = getInitial3KomponenScores();
-      const currentClass3Comp = default3Comp[selectedClassId] || default3Comp['cls-1'] || {};
-      const nextThreeMap = { ...threeCompScoresMap, [selectedClassId]: currentClass3Comp };
-      saveThreeCompScores(nextThreeMap);
-
-      setIsDirty(true);
-      showToast(`Tabel penilaian kelas ${currentClass?.name || ''} berhasil dikembalikan ke setelan awal (default).`);
-    }
+    handleClearAllScores();
   };
 
   // Buka Modal Tambah Sub-Kolom
@@ -2254,9 +2148,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                           {/* AFEKTIF: DISIPLIN (SKALA 1-4) */}
                           <td className="p-1.5 text-center bg-amber-50/20 dark:bg-amber-950/10">
                             <input
-                              type="number"
-                              min="1"
-                              max="4"
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
                               value={s.disiplin}
                               placeholder="1-4"
                               onChange={(e) => handleThreeCompScoreChange(std.id, 'disiplin', e.target.value)}
@@ -2267,9 +2161,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                           {/* AFEKTIF: KERJASAMA (SKALA 1-4) */}
                           <td className="p-1.5 text-center bg-amber-50/20 dark:bg-amber-950/10">
                             <input
-                              type="number"
-                              min="1"
-                              max="4"
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
                               value={s.kerjasama}
                               placeholder="1-4"
                               onChange={(e) => handleThreeCompScoreChange(std.id, 'kerjasama', e.target.value)}
@@ -2280,9 +2174,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                           {/* AFEKTIF: TNG JAWAB (SKALA 1-4) */}
                           <td className="p-1.5 text-center bg-amber-50/20 dark:bg-amber-950/10">
                             <input
-                              type="number"
-                              min="1"
-                              max="4"
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
                               value={s.tngJawab}
                               placeholder="1-4"
                               onChange={(e) => handleThreeCompScoreChange(std.id, 'tngJawab', e.target.value)}
@@ -2304,9 +2198,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                           {/* PSIKOMOTORIK: PROSES/PRAKTIK */}
                           <td className="p-1.5 text-center bg-purple-50/20 dark:bg-purple-950/10">
                             <input
-                              type="number"
-                              min="0"
-                              max="100"
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
                               value={s.proses}
                               placeholder="—"
                               onChange={(e) => handleThreeCompScoreChange(std.id, 'proses', e.target.value)}
@@ -2319,9 +2213,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                           {/* PSIKOMOTORIK: PRODUK */}
                           <td className="p-1.5 text-center bg-purple-50/20 dark:bg-purple-950/10">
                             <input
-                              type="number"
-                              min="0"
-                              max="100"
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
                               value={s.produk}
                               placeholder="—"
                               onChange={(e) => handleThreeCompScoreChange(std.id, 'produk', e.target.value)}
@@ -2334,9 +2228,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                           {/* PSIKOMOTORIK: PRESENTASI */}
                           <td className="p-1.5 text-center bg-purple-50/20 dark:bg-purple-950/10">
                             <input
-                              type="number"
-                              min="0"
-                              max="100"
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
                               value={s.presentasi}
                               placeholder="—"
                               onChange={(e) => handleThreeCompScoreChange(std.id, 'presentasi', e.target.value)}
@@ -3149,9 +3043,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                               return (
                                 <td key={col.key} className="py-1.5 px-1 text-center w-28 min-w-[105px] max-w-[125px]">
                                   <input
-                                    type="number"
-                                    min="0"
-                                    max="100"
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
                                     placeholder="—"
                                     value={currentScore}
                                     onChange={(e) =>
@@ -3204,9 +3098,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                               return (
                                 <td key={col.key} className="py-1.5 px-1 text-center w-28 min-w-[105px] max-w-[125px]">
                                   <input
-                                    type="number"
-                                    min="0"
-                                    max="100"
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
                                     placeholder="—"
                                     value={currentScore}
                                     onChange={(e) =>
@@ -3232,9 +3126,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                               return (
                                 <td key={col.key} className="py-1.5 px-1 text-center w-28 min-w-[105px] max-w-[125px]">
                                   <input
-                                    type="number"
-                                    min="0"
-                                    max="100"
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
                                     placeholder="—"
                                     value={currentScore}
                                     onChange={(e) =>
@@ -3260,9 +3154,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                               return (
                                 <td key={col.key} className="py-1.5 px-1 text-center w-28 min-w-[105px] max-w-[125px]">
                                   <input
-                                    type="number"
-                                    min="0"
-                                    max="100"
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
                                     placeholder="—"
                                     value={currentScore}
                                     onChange={(e) =>
@@ -3288,9 +3182,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                               return (
                                 <td key={col.key} className="py-1.5 px-1 text-center w-28 min-w-[105px] max-w-[125px]">
                                   <input
-                                    type="number"
-                                    min="0"
-                                    max="100"
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
                                     placeholder="—"
                                     value={currentScore}
                                     onChange={(e) =>
@@ -3313,9 +3207,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                             {/* AFEKTIF: DISIPLIN */}
                             <td className="p-1 text-center bg-amber-50/20 dark:bg-amber-950/10 w-20 min-w-[75px] max-w-[90px] border-l border-amber-200 dark:border-amber-900">
                               <input
-                                type="number"
-                                min="1"
-                                max="4"
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
                                 value={threeCompStudentItem?.scores.disiplin ?? ''}
                                 placeholder="—"
                                 onChange={(e) =>
@@ -3328,9 +3222,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                             {/* AFEKTIF: KERJASAMA */}
                             <td className="p-1 text-center bg-amber-50/20 dark:bg-amber-950/10 w-20 min-w-[75px] max-w-[90px] border-l border-amber-200 dark:border-amber-900">
                               <input
-                                type="number"
-                                min="1"
-                                max="4"
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
                                 value={threeCompStudentItem?.scores.kerjasama ?? ''}
                                 placeholder="—"
                                 onChange={(e) =>
@@ -3343,9 +3237,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                             {/* AFEKTIF: TNG JAWAB */}
                             <td className="p-1 text-center bg-amber-50/20 dark:bg-amber-950/10 w-20 min-w-[75px] max-w-[90px] border-l border-amber-200 dark:border-amber-900">
                               <input
-                                type="number"
-                                min="1"
-                                max="4"
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
                                 value={threeCompStudentItem?.scores.tngJawab ?? ''}
                                 placeholder="—"
                                 onChange={(e) =>
@@ -3369,9 +3263,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                             {/* PSIKOMOTORIK: PROSES/PRAKTIK */}
                             <td className="p-1 text-center bg-purple-50/20 dark:bg-purple-950/10 w-22 min-w-[80px] max-w-[95px] border-l border-purple-200 dark:border-purple-900">
                               <input
-                                type="number"
-                                min="0"
-                                max="100"
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
                                 value={threeCompStudentItem?.scores.proses ?? ''}
                                 placeholder="—"
                                 onChange={(e) =>
@@ -3386,9 +3280,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                             {/* PSIKOMOTORIK: PRODUK */}
                             <td className="p-1 text-center bg-purple-50/20 dark:bg-purple-950/10 w-22 min-w-[80px] max-w-[95px] border-l border-purple-200 dark:border-purple-900">
                               <input
-                                type="number"
-                                min="0"
-                                max="100"
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
                                 value={threeCompStudentItem?.scores.produk ?? ''}
                                 placeholder="—"
                                 onChange={(e) =>
@@ -3403,9 +3297,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                             {/* PSIKOMOTORIK: PRESENTASI */}
                             <td className="p-1 text-center bg-purple-50/20 dark:bg-purple-950/10 w-22 min-w-[80px] max-w-[95px] border-l border-purple-200 dark:border-purple-900">
                               <input
-                                type="number"
-                                min="0"
-                                max="100"
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
                                 value={threeCompStudentItem?.scores.presentasi ?? ''}
                                 placeholder="—"
                                 onChange={(e) =>

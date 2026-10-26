@@ -3,6 +3,34 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      /* Suppress HMR & WebSocket errors in AI Studio iframe environment */
+      window.addEventListener('unhandledrejection', function(event) {
+        var reason = event && event.reason;
+        var msg = (reason && (reason.message || reason.stack || String(reason))) || '';
+        if (
+          msg.indexOf('WebSocket') !== -1 ||
+          msg.indexOf('vite') !== -1 ||
+          msg.indexOf('vite-hmr') !== -1 ||
+          msg.indexOf('SendBeforeConnectError') !== -1
+        ) {
+          event.preventDefault();
+          if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+        }
+      }, true);
+      window.addEventListener('error', function(event) {
+        var msg = (event && (event.message || '')) || '';
+        var filename = (event && event.filename) || '';
+        if (
+          msg.indexOf('WebSocket') !== -1 ||
+          msg.indexOf('vite') !== -1 ||
+          filename.indexOf('@vite/client') !== -1
+        ) {
+          event.preventDefault();
+          if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+        }
+      }, true);
+    </script>
     <title>Aplikasi Administrasi Guru SMAN 1 Gowa</title>
     <meta name="description" content="Sistem Informasi Manajemen Administrasi Guru Terpadu SMA Negeri 1 Gowa: Presensi, Nilai Kurikulum Merdeka, Jurnal Mengajar, Jadwal, dan Cetak Rapor." />
     <meta property="og:title" content="Aplikasi Administrasi Guru SMAN 1 Gowa" />

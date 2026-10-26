@@ -139,18 +139,19 @@ export const StorageService = {
   },
 
   getGrades(): GradeRecord[] {
-    const stored = safeGet<GradeRecord[]>(KEYS.GRADES, DEFAULT_GRADES);
-    if (stored && stored.length > 0) {
-      const storedIds = new Set(stored.map((g) => g.id));
-      const missingDefaults = DEFAULT_GRADES.filter((g) => !storedIds.has(g.id));
-      if (missingDefaults.length > 0) {
-        const merged = [...stored, ...missingDefaults];
-        safeSet(KEYS.GRADES, merged);
-        return merged;
+    if (typeof window === 'undefined') return [];
+    const raw = localStorage.getItem(KEYS.GRADES);
+    if (raw !== null) {
+      try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        console.error('Error parsing stored grades:', e);
+        return [];
       }
-      return stored;
     }
-    return DEFAULT_GRADES;
+    // Tampilan awal sebelum nilai dimasukkan: kosong bersih
+    return [];
   },
   saveGrades(grades: GradeRecord[]): void {
     safeSet(KEYS.GRADES, grades);

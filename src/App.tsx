@@ -263,6 +263,14 @@ export default function App() {
     setGrades((prev) => prev.filter((g) => !ids.includes(g.id)));
   };
 
+  // Synchronize entire class grades (removes cleared/empty grades permanently)
+  const handleSyncClassGrades = (classId: string, updatedClassGrades: GradeRecord[]) => {
+    setGrades((prev) => {
+      const otherClassesGrades = prev.filter((g) => g.classId !== classId);
+      return [...otherClassesGrades, ...updatedClassGrades];
+    });
+  };
+
   // JOURNAL HANDLERS
   const handleAddJournal = (newJournal: Omit<TeachingJournal, 'id'>) => {
     const created: TeachingJournal = {
@@ -426,6 +434,7 @@ export default function App() {
               classes={classes}
               grades={grades}
               onSaveBatchGrades={handleSaveBatchGrades}
+              onSyncClassGrades={handleSyncClassGrades}
               onUpdateSingleGrade={handleUpdateSingleGrade}
               onDeleteGrade={handleDeleteGrade}
               onDeleteBatchGrades={handleDeleteBatchGrades}
