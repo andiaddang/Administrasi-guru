@@ -203,7 +203,7 @@ class RtdbServiceClass {
       this.isConnected = false;
       this.syncInProgress = false;
       this.notifyStatus();
-      return { success: false, error: this.lastError };
+      return { success: false, error: this.lastError || undefined };
     }
   }
 
@@ -263,7 +263,7 @@ class RtdbServiceClass {
       this.isConnected = false;
       this.syncInProgress = false;
       this.notifyStatus();
-      return { success: false, error: this.lastError };
+      return { success: false, error: this.lastError || undefined };
     }
   }
 

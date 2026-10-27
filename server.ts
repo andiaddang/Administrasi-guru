@@ -3,6 +3,7 @@ import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import dotenv from 'dotenv';
 import { GoogleGenAI, ThinkingLevel } from '@google/genai';
+import { generateSubjectExamPackage } from './src/services/smartQuestionService.js';
 
 dotenv.config();
 
@@ -44,155 +45,16 @@ function generateSmartFallbackPackage(
   includeAnswerKey: boolean,
   includeExplanation: boolean
 ) {
-  const targetCount = Math.max(1, Math.min(50, count));
-  const keysCycle = ['A', 'B', 'C', 'D', 'E'];
-
-  const questionAngles = [
-    {
-      stem: 'Manakah di antara pernyataan berikut yang paling tepat mendefinisikan prinsip dasar dari',
-      correctText: 'Merupakan konsep fundamental yang menghubungkan variabel utama dengan kaidah sistem yang berlaku.',
-      distractors: [
-        'Hanya berlaku pada kondisi eksperimen tertutup tanpa adanya interaksi eksternal.',
-        'Mengindikasikan bahwa nilai besaran selalu bernilai nol dalam keadaan dinamis.',
-        'Menyatakan bahwa perubahan sistem tidak dipengaruhi oleh parameter awal.',
-        'Merupakan fenomena sesaat yang tidak memiliki korelasi dengan capaian pembelajaran.',
-      ],
-      explanation: 'Pernyataan ini tepat karena merefleksikan definisi dan prinsip dasar materi secara saintifik dan utuh.',
-    },
-    {
-      stem: 'Berdasarkan analisis karakteristik materi, faktor penentu yang paling dominan dalam fenomena',
-      correctText: 'Interaksi timbal balik antara besaran input dengan daya dukung lingkungan sistem.',
-      distractors: [
-        'Penurunan frekuensi operasional secara acak dan tidak teratur.',
-        'Hanya faktor kebetulan tanpa adanya kaidah hukum alam yang mengikat.',
-        'Perubahan temperatur konstan yang tidak menghasilkan perbedaan energi.',
-        'Ketiadaan hubungan kausalitas antara stimulus dan respon yang diamati.',
-      ],
-      explanation: 'Faktor penentu utama selalu didasarkan pada interaksi terukur antar variabel pembentuk sistem.',
-    },
-    {
-      stem: 'Dalam penerapan kehidupan sehari-hari, contoh konkret implementasi nyata dari konsep',
-      correctText: 'Aplikasi terpadu pada teknologi modern dan aktivitas masyarakat dalam mengatasi permasalahan kontekstual.',
-      distractors: [
-        'Pengabaian seluruh variabel pendukung demi efisiensi jangka pendek.',
-        'Penggunaan metode acak tanpa evaluasi keselamatan dan efektivitas kerja.',
-        'Penerapan yang bertentangan dengan prinsip etika dan kelestarian lingkungan.',
-        'Pemanfaatan instrumen tanpa kalibrasi standar yang baku.',
-      ],
-      explanation: 'Penerapan kontekstual bertujuan memberikan solusi nyata yang efektif, aman, dan relevan dengan lingkungan sekitar.',
-    },
-    {
-      stem: 'Perhatikan hubungan sebab-akibat berikut! Apabila terjadi peningkatan intensitas pada komponen utama',
-      correctText: 'Sistem akan merespons secara adaptif sesuai dengan hukum kekekalan dan stabilitas dinamis.',
-      distractors: [
-        'Sistem langsung runtuh tanpa menghasilkan respon transformasi apa pun.',
-        'Tidak terjadi perubahan sama sekali meskipun intensitas dinaikkan secara ekstrem.',
-        'Nilai keluaran menjadi tidak terdefinisi dan menyimpang dari kaidah dasar.',
-        'Semua parameter turunan akan tereliminasi secara spontan.',
-      ],
-      explanation: 'Respons adaptif mempertahankan keseimbangan sistem sesuai kaidah hukum yang berlaku.',
-    },
-    {
-      stem: 'Seorang peserta didik melakukan kajian komparatif. Perbedaan mendasar antara penerapan konvensional dan modern pada',
-      correctText: 'Optimalisasi akurasi, efisiensi waktu, serta akuntabilitas data berbasis pendekatan saintifik.',
-      distractors: [
-        'Penggunaan bahan baku yang lebih rapuh dan tidak terstandarisasi.',
-        'Penghilangan tahapan verifikasi demi mengejar kecepatan proses.',
-        'Penurunan standar keselamatan kerja dibandingkan metode terdahulu.',
-        'Ketiadaan dokumentasi hasil pengujian dalam pelaporan akhir.',
-      ],
-      explanation: 'Pendekatan modern menekankan presisi tinggi, efisiensi terukur, dan berbasis data ilmiah valid.',
-    },
-    {
-      stem: 'Kajian kritis: Mengapa pemahaman mendalam tentang konsep ini sangat penting dalam Kurikulum Merdeka?',
-      correctText: 'Mengembangkan nalar kritis, kreativitas pemecahan masalah kontekstual, dan kemandirian belajar.',
-      distractors: [
-        'Hanya untuk menghafal istilah tanpa memahami makna esensial di baliknya.',
-        'Membatasi eksplorasi siswa agar terpaku pada satu sudut pandang teori saja.',
-        'Menggantikan peran observasi lapangan dengan spekulasi abstrak semata.',
-        'Menyederhanakan masalah kompleks menjadi kesimpulan parsial tanpa bukti.',
-      ],
-      explanation: 'Kurikulum Merdeka berorientasi pada penguatan kompetensi nalar kritis, berpikir analitis, dan solutif.',
-    },
-  ];
-
-  const questions = Array.from({ length: targetCount }, (_, idx) => {
-    const num = idx + 1;
-    const key = keysCycle[(num - 1) % keysCycle.length];
-    const angle = questionAngles[(num - 1) % questionAngles.length];
-
-    if (questionType === 'essay') {
-      return {
-        number: num,
-        type: 'essay',
-        stimulus: `Kajian Konseptual ${subject} (${topic}) - Bagian ${num}: Perhatikan fenomena dan data empiris terkait topik ini dalam kehidupan nyata.`,
-        questionText: `Uraikan secara komprehensif bagaimana prinsip ${topic} diterapkan pada butir evaluasi ke-${num}, serta jelaskan implikasi analitisnya terhadap pemecahan masalah kontekstual!`,
-        answerKey: includeAnswerKey
-          ? `Peserta didik mampu menguraikan definisi esensial ${topic}, menyajikan argumen logis berdasarkan prinsip saintifik, dan memberikan minimal satu contoh solusi penerapannya secara sistematis.`
-          : undefined,
-        explanation: includeExplanation
-          ? `Rubrik Penskoran: Penguasaan konsep dasar (40%), Ketajaman analisis argumen (30%), Kejelasan contoh aplikasi nyata & kesimpulan (30%).`
-          : undefined,
-        scoreWeight: Math.round(100 / targetCount) || 1,
-      };
-    }
-
-    if (questionType === 'benar_salah') {
-      const isTrue = num % 2 === 1;
-      return {
-        number: num,
-        type: 'benar_salah',
-        stimulus: `Tinjauan Materi ${subject} (${topic}): Evaluasi validitas pernyataan nomor ${num}.`,
-        questionText: `Pernyataan: "Pada kajian ${topic}, dinamika perubahan sistem selalu sebanding dengan besaran gaya penggerak serta mengikuti kaidah keteraturan yang konsisten."`,
-        options: ['A. Benar', 'B. Salah'],
-        answerKey: includeAnswerKey ? (isTrue ? 'A. Benar' : 'B. Salah') : undefined,
-        explanation: includeExplanation
-          ? `Prinsip ${topic} membuktikan bahwa keteraturan sistem terjaga selama asumsi dasar dan variabel pembatas terpenuhi.`
-          : undefined,
-        scoreWeight: Math.round(100 / targetCount) || 1,
-      };
-    }
-
-    // Default Pilihan Ganda (5 opsi: A, B, C, D, E)
-    const optionsMap: Record<string, string> = {};
-    const keyIndex = keysCycle.indexOf(key);
-    let distractorIdx = 0;
-
-    keysCycle.forEach((letter, lIdx) => {
-      if (lIdx === keyIndex) {
-        optionsMap[letter] = `${letter}. ${angle.correctText}`;
-      } else {
-        const distText = angle.distractors[distractorIdx % angle.distractors.length];
-        optionsMap[letter] = `${letter}. ${distText}`;
-        distractorIdx++;
-      }
-    });
-
-    const options = keysCycle.map((k) => optionsMap[k]);
-
-    return {
-      number: num,
-      type: 'pilihan_ganda',
-      stimulus: `Konteks Evaluasi Pembelajaran ${subject} (Materi: ${topic}) Butir ke-${num}:`,
-      questionText: `${angle.stem} "${topic}" pada studi kasus nomor ${num}?`,
-      options,
-      answerKey: includeAnswerKey ? key : undefined,
-      explanation: includeExplanation ? `${angle.explanation} (Opsi ${key} tepat).` : undefined,
-      scoreWeight: Math.round(100 / targetCount) || 1,
-    };
-  });
-
-  return {
-    title: `Paket Asesmen ${subject}: ${topic}`,
+  return generateSubjectExamPackage({
     subject,
     topic,
-    gradeLevel: gradeLevel || 'SMA Kelas X-XII (Fase E/F)',
-    totalQuestions: targetCount,
+    gradeLevel,
     questionType,
+    count,
     difficulty,
-    instructions: 'Bacalah setiap butir soal dengan teliti, kemudian tentukan pilihan jawaban yang paling tepat.',
-    questions,
-  };
+    includeAnswerKey,
+    includeExplanation,
+  });
 }
 
 // Health and AI status check endpoint
@@ -303,9 +165,13 @@ PENTING: Berikan output dalam format JSON valid murni tanpa teks pengantar di lu
           break;
         }
       } catch (err: any) {
-        console.warn(`Gemini generateContent attempt ${attempt} warning:`, err?.message || err);
+        const errMsg = String(err?.message || '');
+        console.warn(`Gemini generateContent attempt ${attempt} warning:`, errMsg);
+        if (errMsg.includes('401') || errMsg.includes('UNAUTHENTICATED') || errMsg.includes('API key not valid') || errMsg.includes('ACCESS_TOKEN_TYPE_UNSUPPORTED')) {
+          break;
+        }
         if (attempt < 2) {
-          await new Promise((resolve) => setTimeout(resolve, 800));
+          await new Promise((resolve) => setTimeout(resolve, 500));
         }
       }
     }
