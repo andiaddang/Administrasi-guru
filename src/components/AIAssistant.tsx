@@ -90,6 +90,130 @@ interface GradeAnalysisResult {
 }
 
 const STORAGE_SAVED_EXAMS_KEY = 'sman1_gowa_ai_saved_exams_v1';
+const STORAGE_LAST_SUBJECT_KEY = 'sman1_gowa_ai_last_subject_v1';
+
+export const POPULAR_SUBJECTS = [
+  'Fisika',
+  'Matematika',
+  'Kimia',
+  'Biologi',
+  'Informatika',
+  'Bahasa Indonesia',
+  'Bahasa Inggris',
+  'Pendidikan Agama Islam',
+  'Pendidikan Pancasila (PPKn)',
+  'Sejarah',
+  'Geografi',
+  'Ekonomi',
+  'Sosiologi',
+  'PJOK',
+  'Seni Budaya',
+  'Prakarya dan Kewirausahaan',
+  'Matematika Tingkat Lanjut',
+  'Bimbingan Konseling (BK)',
+];
+
+export const SUBJECT_TOPIC_SUGGESTIONS: Record<string, string[]> = {
+  Fisika: [
+    'Hukum Newton tentang Gerak dan Penerapannya',
+    'Kinematika Gerak Lurus (GLB dan GLBB)',
+    'Termodinamika dan Perpindahan Kalor',
+    'Gelombang Bunyi dan Gelombang Cahaya',
+    'Listrik Dinamis dan Rangkaian Tertutup',
+  ],
+  Matematika: [
+    'Persamaan dan Pertidaksamaan Nilai Mutlak',
+    'Fungsi Kuadrat dan Grafiknya',
+    'Trigonometri Dasar dan Sudut Berelasi',
+    'Barisan dan Deret Aritmetika serta Geometri',
+    'Statistika dan Analisis Penyajian Data',
+  ],
+  'Matematika Tingkat Lanjut': [
+    'Polinomial dan Teorema Sisa',
+    'Matriks dan Sistem Persamaan Linear',
+    'Irisan Kerucut dan Vektor',
+    'Kalkulus Diferensial dan Turunan',
+  ],
+  Kimia: [
+    'Struktur Atom dan Konfigurasi Elektron',
+    'Ikatan Kimia (Kovalen, Ionik, Logam)',
+    'Stoikiometri dan Hukum Dasar Kimia',
+    'Termokimia dan Entalpi Reaksi',
+    'Larutan Asam-Basa dan Titrasi',
+  ],
+  Biologi: [
+    'Struktur dan Fungsi Komponen Sel Hewan dan Tumbuhan',
+    'Sistem Peredaran Darah pada Manusia',
+    'Pewarisan Sifat dan Genetika Mendel',
+    'Ekosistem dan Keanekaragaman Hayati',
+    'Bioteknologi Konvensional dan Modern',
+  ],
+  Informatika: [
+    'Berpikir Komputasional dan Algoritma Dasar',
+    'Pemrograman Prosedural dan Variabel',
+    'Jaringan Komputer dan Keamanan Siber',
+    'Analisis Data dengan Spreadsheet',
+  ],
+  'Bahasa Indonesia': [
+    'Teks Laporan Hasil Observasi (LHO)',
+    'Teks Negosiasi dan Struktur Kebahasaan',
+    'Teks Anekdot dan Kritik Sosial Santun',
+    'Kaidah Resensi Buku dan Apresiasi Sastra',
+    'Menyusun Karya Ilmiah dan Abstrak',
+  ],
+  'Bahasa Inggris': [
+    'Narrative Text and Moral Values',
+    'Analytical Exposition and Persuasive Arguments',
+    'Report Text on Natural Phenomena and Animals',
+    'Passive Voice in Scientific Contexts',
+    'Conditional Sentences (Type 1, 2, and 3)',
+  ],
+  'Pendidikan Agama Islam': [
+    'Meraih Kedamaian dengan Iman dan Akhlak Mulia',
+    'Hukum Bacaan Tajwid Al-Qur\'an',
+    'Fikih Muamalah: Jual Beli dan Asuransi Syariah',
+    'Sejarah Peradaban Islam pada Masa Kejayaan',
+  ],
+  'Pendidikan Pancasila (PPKn)': [
+    'Pancasila sebagai Pandangan Hidup dan Dasar Negara',
+    'Konstitusi dan Norma Hukum dalam UUD NRI 1945',
+    'Bhinneka Tunggal Ika dalam Harmoni Keberagaman',
+    'Kedaulatan Rakyat dan Sistem Demokrasi Indonesia',
+  ],
+  Sejarah: [
+    'Konsep Berpikir Diakronik dan Sinkronik dalam Sejarah',
+    'Jejak Peradaban Hindu-Buddha dan Islam di Nusantara',
+    'Lahirnya Pergerakan Nasional dan Sumpah Pemuda 1928',
+    'Detik-Detik Proklamasi Kemerdekaan 17 Agustus 1945',
+  ],
+  Geografi: [
+    'Konsep Esensial Geografi dan Prinsip Analisis Spasial',
+    'Dinamika Litosfer dan Dampaknya terhadap Kehidupan',
+    'Dinamika Atmosfer, Cuaca, dan Iklim Global',
+    'Pemanfaatan Peta, Penginderaan Jauh, dan SIG',
+  ],
+  Ekonomi: [
+    'Konsep Kelangkaan dan Pilihan Skala Prioritas Kebutuhan',
+    'Mekanisme Pasar, Permintaan, dan Penawaran',
+    'Pendapatan Nasional dan Kesejahteraan Masyarakat',
+    'Lembaga Jasa Keuangan Perbankan dan OJK',
+  ],
+  Sosiologi: [
+    'Individu, Kelompok, dan Hubungan Sosial di Masyarakat',
+    'Nilai dan Norma Sosial sebagai Pembentuk Keteraturan',
+    'Konflik Sosial, Kekerasan, dan Resolusi Damai',
+  ],
+  PJOK: [
+    'Keterampilan Gerak Permainan Bola Besar (Sepak Bola & Voli)',
+    'Analisis Kebugaran Jasmani dan Komposisi Tubuh Sehat',
+    'Pola Hidup Sehat dan Pencegahan Bahaya NAPZA',
+  ],
+  'Seni Budaya': [
+    'Apresiasi Karya Seni Rupa Dua dan Tiga Dimensi',
+    'Karakteristik Musik Tradisional Nusantara',
+    'Gerak Dasar dan Makna Simbolis Seni Tari Daerah',
+  ],
+};
 
 export const AIAssistant: React.FC<AIAssistantProps> = ({
   classes,
@@ -104,15 +228,26 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   // ==========================================
   // STATE: PEMBUAT SOAL (QUESTION GENERATOR)
   // ==========================================
-  const [subject, setSubject] = useState<string>(currentUser?.subject || 'Fisika');
+  const [subject, setSubject] = useState<string>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_LAST_SUBJECT_KEY);
+      if (stored && stored.trim()) return stored;
+    } catch {
+      // ignore
+    }
+    return currentUser?.subject || 'Fisika';
+  });
   const [gradeLevel, setGradeLevel] = useState<string>('Kelas X (Fase E)');
   const [topic, setTopic] = useState<string>('Hukum Newton tentang Gerak dan Penerapannya');
   const [questionType, setQuestionType] = useState<string>('pilihan_ganda');
-  const [questionCount, setQuestionCount] = useState<number>(5);
+  const [questionCount, setQuestionCount] = useState<number>(25);
   const [difficulty, setDifficulty] = useState<string>('sedang');
   const [includeKey, setIncludeKey] = useState<boolean>(true);
   const [includeExplanation, setIncludeExplanation] = useState<boolean>(true);
   const [customInstructions, setCustomInstructions] = useState<string>('');
+
+  // Chunk pagination for viewing large question sets (e.g. 25 or 30 questions)
+  const [pageChunk, setPageChunk] = useState<'all' | '1-10' | '11-20' | '21-30'>('all');
 
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [generatedPackage, setGeneratedPackage] = useState<QuestionPackage | null>(null);
@@ -133,6 +268,36 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       setToastMessage(null);
     }, 3500);
   };
+
+  // Helper untuk menyimpan mata pelajaran aktif dan menyinkronkan
+  const handleSubjectChange = (newSubject: string) => {
+    setSubject(newSubject);
+    setExaminerSubject(newSubject);
+    try {
+      localStorage.setItem(STORAGE_LAST_SUBJECT_KEY, newSubject);
+    } catch {
+      // ignore
+    }
+  };
+
+  // Helper untuk menerapkan topik saran dengan 1 klik
+  const handleSelectTopicSuggestion = (suggestedTopic: string) => {
+    setTopic(suggestedTopic);
+  };
+
+  // Dapatkan daftar saran materi/topik yang relevan dengan mata pelajaran aktif
+  const currentTopicSuggestions =
+    SUBJECT_TOPIC_SUGGESTIONS[subject] ||
+    SUBJECT_TOPIC_SUGGESTIONS[
+      Object.keys(SUBJECT_TOPIC_SUGGESTIONS).find(
+        (k) => k.toLowerCase() === subject.trim().toLowerCase()
+      ) || ''
+    ] || [
+      'Konsep Dasar dan Teori Pokok',
+      'Analisis Karakteristik dan Prinsip Kerja',
+      'Penerapan Nyata dalam Kehidupan Sehari-hari',
+      'Pemecahan Masalah dan Evaluasi Kasus',
+    ];
 
   // ==========================================
   // STATE: PEMERIKSA JAWABAN (VISION EXAMINER)
@@ -167,6 +332,10 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
   // Handle Generate Questions via backend API
   const handleGenerateQuestions = async () => {
+    if (!subject.trim()) {
+      alert('Silakan tentukan atau isi mata pelajaran terlebih dahulu.');
+      return;
+    }
     if (!topic.trim()) {
       alert('Silakan masukkan topik atau materi pembelajaran terlebih dahulu.');
       return;
@@ -178,9 +347,9 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          subject,
+          subject: subject.trim(),
           gradeLevel,
-          topic,
+          topic: topic.trim(),
           questionType,
           count: Number(questionCount),
           difficulty,
@@ -191,34 +360,93 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       });
 
       const json = await res.json();
-      if (!res.ok) {
+      if (!res.ok && !json.data) {
         throw new Error(json.error || 'Gagal membuat soal');
+      }
+
+      const receivedData = json.data;
+      if (!receivedData || !Array.isArray(receivedData.questions) || receivedData.questions.length === 0) {
+        throw new Error('Format soal yang diterima tidak lengkap. Silakan coba lagi.');
       }
 
       const pkg: QuestionPackage = {
         id: `exam-${Date.now()}`,
         createdAt: new Date().toLocaleString('id-ID'),
-        title: json.data.title || `Asesmen ${subject}: ${topic}`,
-        subject: json.data.subject || subject,
-        topic: json.data.topic || topic,
-        gradeLevel: json.data.gradeLevel || gradeLevel,
-        totalQuestions: json.data.totalQuestions || questionCount,
-        questionType: json.data.questionType || questionType,
-        difficulty: json.data.difficulty || difficulty,
+        title: receivedData.title || `Paket Asesmen ${subject}: ${topic}`,
+        subject: receivedData.subject || subject,
+        topic: receivedData.topic || topic,
+        gradeLevel: receivedData.gradeLevel || gradeLevel,
+        totalQuestions: receivedData.totalQuestions || receivedData.questions.length || questionCount,
+        questionType: receivedData.questionType || questionType,
+        difficulty: receivedData.difficulty || difficulty,
         instructions:
-          json.data.instructions ||
+          receivedData.instructions ||
           'Bacalah setiap butir soal dengan seksama sebelum memberikan jawaban terbaik Anda.',
-        questions: json.data.questions || [],
+        questions: receivedData.questions || [],
       };
 
       setGeneratedPackage(pkg);
-      showToast('Berhasil menyusun butir soal ujian dengan AI!');
+      setPageChunk('all');
+      showToast(`Berhasil menyusun ${pkg.questions.length} butir soal ${pkg.subject} dengan AI!`);
     } catch (err: any) {
       console.error(err);
-      alert(`Terjadi kendala saat menyusun soal: ${err.message}`);
+      alert(`Terjadi kendala saat menyusun soal: ${err.message || 'Silakan periksa koneksi atau coba sesaat lagi.'}`);
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  // Unduh Paket Soal sebagai File Teks / Word Ready
+  const handleDownloadExamTxt = () => {
+    if (!generatedPackage) return;
+    let text = `${school.name.toUpperCase()}\n`;
+    text += `ASESMEN PEMBELAJARAN - ${generatedPackage.subject.toUpperCase()}\n`;
+    text += `Materi Pokok: ${generatedPackage.topic}\n`;
+    text += `Tingkat / Fase: ${generatedPackage.gradeLevel}\n`;
+    text += `Bentuk Soal: ${generatedPackage.questionType.toUpperCase()} (${generatedPackage.questions.length} Butir Soal)\n`;
+    text += `Semester: ${school.semester} T.A ${school.academicYear}\n`;
+    text += `Petunjuk Pengerjaan: ${generatedPackage.instructions}\n\n`;
+    text += `========================================================================\n\n`;
+
+    generatedPackage.questions.forEach((q) => {
+      text += `Soal No. ${q.number} (Bobot: ${q.scoreWeight || 1} Poin)\n`;
+      if (q.stimulus) {
+        text += `[Konteks/Stimulus]:\n${q.stimulus}\n\n`;
+      }
+      text += `${q.questionText}\n\n`;
+      if (q.options && q.options.length > 0) {
+        q.options.forEach((opt) => {
+          text += `  ${opt}\n`;
+        });
+        text += `\n`;
+      }
+      text += `------------------------------------------------------------------------\n\n`;
+    });
+
+    if (includeKey || includeExplanation) {
+      text += `\n========================================================================\n`;
+      text += `KUNCI JAWABAN & PEMBAHASAN RESMI\n`;
+      text += `========================================================================\n\n`;
+
+      generatedPackage.questions.forEach((q) => {
+        text += `Nomor ${q.number}: Kunci [ ${q.answerKey || '-'} ]\n`;
+        if (q.explanation) {
+          text += `Pembahasan: ${q.explanation}\n`;
+        }
+        text += `\n`;
+      });
+    }
+
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Paket_Soal_${generatedPackage.subject.replace(/[^a-zA-Z0-9]/g, '_')}_${generatedPackage.questions.length}_Nomor.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast(`Berhasil mengunduh dokumen ${generatedPackage.questions.length} butir soal!`);
   };
 
   // Save Exam Package to Local Bank
@@ -492,22 +720,52 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
               </div>
 
               {/* Form Input */}
-              <div className="space-y-3.5 text-xs">
-                {/* Mata Pelajaran */}
+              <div className="space-y-4 text-xs">
+                {/* Mata Pelajaran - Bebas diisi atau pilih cepat */}
                 <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Mata Pelajaran
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-bold text-slate-700 dark:text-slate-300">
+                      Mata Pelajaran
+                    </label>
+                    <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold">
+                      Bisa diisi sesuai yang buatkan soal
+                    </span>
+                  </div>
                   <input
                     type="text"
+                    list="popular-subjects-list"
                     value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                    placeholder="Contoh: Fisika, Matematika, Biologi, dll."
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-100 font-semibold focus:ring-2 focus:ring-indigo-500"
+                    onChange={(e) => handleSubjectChange(e.target.value)}
+                    placeholder="Ketik mata pelajaran (Contoh: Fisika, Matematika, Biologi, Kimia, dll.)"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-100 font-semibold focus:ring-2 focus:ring-indigo-500 shadow-2xs"
                   />
+                  <datalist id="popular-subjects-list">
+                    {POPULAR_SUBJECTS.map((subj) => (
+                      <option key={subj} value={subj} />
+                    ))}
+                  </datalist>
+
+                  {/* Pilihan Cepat Mata Pelajaran */}
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] font-semibold text-slate-400">Pilihan Cepat:</span>
+                    {POPULAR_SUBJECTS.slice(0, 10).map((subj) => (
+                      <button
+                        key={subj}
+                        type="button"
+                        onClick={() => handleSubjectChange(subj)}
+                        className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                          subject.toLowerCase() === subj.toLowerCase()
+                            ? 'bg-indigo-600 text-white shadow-2xs scale-102'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                        }`}
+                      >
+                        {subj}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                {/* Jenjang / Kelas */}
+                {/* Jenjang / Kelas & Bentuk Soal */}
                 <div className="grid grid-cols-2 gap-2.5">
                   <div>
                     <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -521,7 +779,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                       <option value="Kelas X (Fase E)">Kelas X (Fase E)</option>
                       <option value="Kelas XI (Fase F)">Kelas XI (Fase F)</option>
                       <option value="Kelas XII (Fase F)">Kelas XII (Fase F)</option>
-                      <option value="SMP / Sederajat">SMP / Fase D</option>
+                      <option value="SMP / Sederajat (Fase D)">SMP / Fase D</option>
                     </select>
                   </div>
 
@@ -534,7 +792,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                       onChange={(e) => setQuestionType(e.target.value)}
                       className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 text-slate-800 dark:text-slate-100 font-semibold focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                     >
-                      <option value="pilihan_ganda">Pilihan Ganda (A-E)</option>
+                      <option value="pilihan_ganda">Pilihan Ganda (5 Opsi: A-E)</option>
                       <option value="essay">Uraian / Esai Analitis</option>
                       <option value="benar_salah">Benar / Salah</option>
                       <option value="menjodohkan">Menjodohkan Pasangan</option>
@@ -546,24 +804,53 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
                 {/* Topik / Materi / Capaian Pembelajaran */}
                 <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Topik / Materi / Capaian Pembelajaran (CP)
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-bold text-slate-700 dark:text-slate-300">
+                      Topik / Materi / Capaian Pembelajaran (CP)
+                    </label>
+                    <span className="text-[10px] text-slate-400">Bisa diketik bebas</span>
+                  </div>
                   <textarea
-                    rows={3}
+                    rows={2}
                     value={topic}
                     onChange={(e) => setTopic(e.target.value)}
-                    placeholder="Masukkan judul materi pokok atau rincian TP/CP yang ingin diuji..."
+                    placeholder="Ketik topik pokok bahasan atau indikator capaian yang ingin diuji..."
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 text-xs"
                   />
+
+                  {/* Saran Topik Cepat Berdasarkan Mata Pelajaran Aktif */}
+                  {currentTopicSuggestions.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                      <span className="text-[10px] text-slate-400 font-medium">Saran Topik:</span>
+                      {currentTopicSuggestions.map((sug) => (
+                        <button
+                          key={sug}
+                          type="button"
+                          onClick={() => handleSelectTopicSuggestion(sug)}
+                          className={`text-[10px] px-2 py-0.5 rounded-md border text-left transition-colors cursor-pointer ${
+                            topic === sug
+                              ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800 font-semibold'
+                              : 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-indigo-50/50'
+                          }`}
+                        >
+                          {sug}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Jumlah & Tingkat Kesulitan */}
                 <div className="grid grid-cols-2 gap-2.5">
                   <div>
-                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Jumlah Butir Soal
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="font-bold text-slate-700 dark:text-slate-300">
+                        Jumlah Butir Soal
+                      </label>
+                      <span className="text-[10px] font-extrabold text-indigo-600 dark:text-indigo-400">
+                        {questionCount} Soal
+                      </span>
+                    </div>
                     <select
                       value={questionCount}
                       onChange={(e) => setQuestionCount(Number(e.target.value))}
@@ -571,10 +858,30 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                     >
                       <option value={3}>3 Butir Soal (Kuis Singkat)</option>
                       <option value={5}>5 Butir Soal (Formatif Standar)</option>
-                      <option value={10}>10 Butir Soal (Sumatif TP)</option>
-                      <option value={15}>15 Butir Soal (Ulangan)</option>
-                      <option value={20}>20 Butir Soal (Ujian Lengkap)</option>
+                      <option value={10}>10 Butir Soal (Sumatif TP / Bab)</option>
+                      <option value={15}>15 Butir Soal (Ulangan Harian)</option>
+                      <option value={20}>20 Butir Soal (Asesmen Lengkap)</option>
+                      <option value={25}>25 Butir Soal (Sumatif Tengah Semester / STS) 🔥</option>
+                      <option value={30}>30 Butir Soal (Ujian Akhir Semester / SAS) 🎯</option>
                     </select>
+
+                    {/* Tombol Pilihan Cepat Jumlah Soal */}
+                    <div className="mt-2 flex flex-wrap items-center gap-1">
+                      {[3, 5, 10, 15, 20, 25, 30].map((cnt) => (
+                        <button
+                          key={cnt}
+                          type="button"
+                          onClick={() => setQuestionCount(cnt)}
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold transition-all cursor-pointer ${
+                            questionCount === cnt
+                              ? 'bg-indigo-600 text-white shadow-2xs scale-105'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                          }`}
+                        >
+                          {cnt === 25 ? '25 (STS)' : cnt === 30 ? '30 (SAS)' : cnt}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   <div>
@@ -630,7 +937,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                     type="text"
                     value={customInstructions}
                     onChange={(e) => setCustomInstructions(e.target.value)}
-                    placeholder="Misal: kaitkan contoh dengan kearifan lokal Sulsel..."
+                    placeholder="Misal: kaitkan contoh dengan kearifan lokal Sulsel atau konteks nyata..."
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 text-slate-800 dark:text-slate-100 text-xs"
                   />
                 </div>
@@ -649,12 +956,16 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                   {isGenerating ? (
                     <>
                       <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Sedang Merumuskan Butir Soal Cerdas...</span>
+                      <span>
+                        Sedang Merumuskan {questionCount} Butir Soal {subject}...
+                      </span>
                     </>
                   ) : (
                     <>
                       <Sparkles className="w-4 h-4 text-amber-300" />
-                      <span>Buat Soal dengan AI Sekarang</span>
+                      <span>
+                        Buat {questionCount} Butir Soal {subject} Sekarang
+                      </span>
                     </>
                   )}
                 </button>
@@ -721,6 +1032,16 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
                     <button
                       type="button"
+                      onClick={handleDownloadExamTxt}
+                      className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                      title="Unduh paket soal dalam format .txt (siap diolah di Microsoft Word / dicetak)"
+                    >
+                      <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span>Unduh .txt</span>
+                    </button>
+
+                    <button
+                      type="button"
                       onClick={handlePrintExam}
                       className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer shadow-2xs"
                       title="Cetak lembar soal"
@@ -740,6 +1061,64 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                     </button>
                   </div>
                 </div>
+
+                {/* Navigasi Kelompok Butir Soal untuk Ujian 25 atau 30 Nomor */}
+                {generatedPackage.questions.length > 10 && (
+                  <div className="px-4 py-2 bg-indigo-50/70 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <span className="font-semibold text-slate-600 dark:text-slate-300 text-[11px] flex items-center gap-1.5">
+                      <Sliders className="w-3.5 h-3.5 text-indigo-500" />
+                      <span>Navigasi Butir Soal:</span>
+                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => setPageChunk('all')}
+                        className={`px-2.5 py-1 rounded-md text-xs font-semibold cursor-pointer transition-colors ${
+                          pageChunk === 'all'
+                            ? 'bg-indigo-600 text-white shadow-2xs'
+                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 border border-slate-200 dark:border-slate-700'
+                        }`}
+                      >
+                        Semua ({generatedPackage.questions.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPageChunk('1-10')}
+                        className={`px-2.5 py-1 rounded-md text-xs font-semibold cursor-pointer transition-colors ${
+                          pageChunk === '1-10'
+                            ? 'bg-indigo-600 text-white shadow-2xs'
+                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 border border-slate-200 dark:border-slate-700'
+                        }`}
+                      >
+                        No. 1–10
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPageChunk('11-20')}
+                        className={`px-2.5 py-1 rounded-md text-xs font-semibold cursor-pointer transition-colors ${
+                          pageChunk === '11-20'
+                            ? 'bg-indigo-600 text-white shadow-2xs'
+                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 border border-slate-200 dark:border-slate-700'
+                        }`}
+                      >
+                        No. 11–20
+                      </button>
+                      {generatedPackage.questions.length > 20 && (
+                        <button
+                          type="button"
+                          onClick={() => setPageChunk('21-30')}
+                          className={`px-2.5 py-1 rounded-md text-xs font-semibold cursor-pointer transition-colors ${
+                            pageChunk === '21-30'
+                              ? 'bg-indigo-600 text-white shadow-2xs'
+                              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 border border-slate-200 dark:border-slate-700'
+                          }`}
+                        >
+                          No. 21–{generatedPackage.questions.length}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Konten Kertas Ujian (Printable format) */}
                 <div className="p-6 space-y-6 max-h-[700px] overflow-y-auto">
@@ -780,7 +1159,14 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
                   {/* Daftar Butir Soal */}
                   <div className="space-y-6 text-xs">
-                    {generatedPackage.questions.map((q) => (
+                    {generatedPackage.questions
+                      .filter((q) => {
+                        if (pageChunk === '1-10') return q.number >= 1 && q.number <= 10;
+                        if (pageChunk === '11-20') return q.number >= 11 && q.number <= 20;
+                        if (pageChunk === '21-30') return q.number >= 21;
+                        return true;
+                      })
+                      .map((q) => (
                       <div
                         key={q.number}
                         className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/40 space-y-3"
