@@ -1,14 +1,37 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, signInAnonymously } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { getDatabase, ref as rtdbRef, get as getRtdb } from 'firebase/database';
 import firebaseConfig from '../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
 
 // CRITICAL: getFirestore must pass firebaseConfig.firestoreDatabaseId
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+
+// Firebase Realtime Database initialization
+export const RTDB_URL =
+  (firebaseConfig as any).databaseURL ||
+  'https://administrasiguru159-default-rtdb.firebaseio.com';
+export const RTDB_PROJECT_NAME = 'Aplikasi Administrasi Guru SMAN 1 Gowa';
+export const RTDB_PROJECT_ID = 'administrasiguru159';
+
+export const rtdb = getDatabase(app, RTDB_URL);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+
+// Attempt silent anonymous auth to satisfy auth != null rules if enabled
+if (typeof window !== 'undefined') {
+  try {
+    if (!auth.currentUser) {
+      signInAnonymously(auth).catch(() => {
+        // Silently ignore if anonymous sign-in is disabled in project
+      });
+    }
+  } catch {
+    // ignore
+  }
+}
 
 export enum OperationType {
   CREATE = 'create',
@@ -70,6 +93,17 @@ export async function testFirestoreConnection() {
 }
 
 testFirestoreConnection().catch(() => {});
+
+export async function testRtdbConnection(): Promise<boolean> {
+  try {
+    const connectedRef = rtdbRef(rtdb, '.info/connected');
+    const snapshot = await getRtdb(connectedRef);
+    return snapshot.val() === true;
+  } catch (error) {
+    console.warn('Realtime Database connection check:', error);
+    return false;
+  }
+}
 
 export async function signInWithGoogle() {
   return signInWithPopup(auth, googleProvider);

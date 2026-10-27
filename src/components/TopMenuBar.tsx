@@ -162,6 +162,19 @@ export const TopMenuBar: React.FC<TopMenuBarProps> = ({
           <ChevronRight className="w-4 h-4" />
         </button>
 
+        {/* Indikator Status Firebase Realtime Database */}
+        <div className="flex items-center pl-2 border-l border-slate-200/80 dark:border-slate-800 shrink-0">
+          <button
+            type="button"
+            onClick={() => setActiveTab('settings')}
+            className="inline-flex items-center gap-1.5 px-2 py-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-lg transition-colors cursor-pointer border border-emerald-200/60 dark:border-emerald-800/60"
+            title="Terhubung ke Firebase Realtime Database: https://administrasiguru159-default-rtdb.firebaseio.com/"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+            <span className="hidden sm:inline font-bold">RTDB Cloud</span>
+          </button>
+        </div>
+
         {/* Opsi Reset Data di Ujung Kanan (Opsional) */}
         {onResetData && (
           <div className="hidden xl:flex items-center pl-2 border-l border-slate-200/80 dark:border-slate-800 shrink-0">

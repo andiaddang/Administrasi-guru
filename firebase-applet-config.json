@@ -4,6 +4,7 @@
   "apiKey": "AIzaSyCo7Ar6NR7ygwv-z5o_lPaUkYt-XK9trhI",
   "authDomain": "gen-lang-client-0594554728.firebaseapp.com",
   "firestoreDatabaseId": "ai-studio-aplikasiadminist-917d0ccd-4f4b-42db-9984-cf4a8f930738",
+  "databaseURL": "https://administrasiguru159-default-rtdb.firebaseio.com",
   "storageBucket": "gen-lang-client-0594554728.firebasestorage.app",
   "messagingSenderId": "475089431272",
   "measurementId": "",

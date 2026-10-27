@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   SchoolProfile,
   User,
@@ -11,6 +11,8 @@ import {
   AppThemeConfig,
 } from './types';
 import { StorageService, DEFAULT_THEME_CONFIG } from './services/storageService';
+import { RtdbService, RtdbStatus } from './services/rtdbService';
+import { Cloud, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { Header } from './components/Header';
 import { TopMenuBar } from './components/TopMenuBar';
 import { Sidebar } from './components/Sidebar';
@@ -49,6 +51,134 @@ export default function App() {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
+
+  // Firebase Realtime Database States
+  const [rtdbStatus, setRtdbStatus] = useState<RtdbStatus>(() => RtdbService.getStatus());
+  const [rtdbToast, setRtdbToast] = useState<string | null>(null);
+  const isInitialMount = useRef(true);
+
+  // Monitor Realtime Database connection & subscribe to remote cloud updates
+  useEffect(() => {
+    const unsubStatus = RtdbService.subscribeStatus((status) => {
+      setRtdbStatus(status);
+    });
+
+    // Initial check: jika ada data di Realtime Database, sinkronkan ke local
+    RtdbService.loadAllFromCloud().then((res) => {
+      if (res.success && res.data) {
+        const d = res.data;
+        if (d.school) {
+          setSchool(d.school);
+          StorageService.saveSchool(d.school);
+        }
+        if (d.classes && Array.isArray(d.classes)) {
+          setClasses(d.classes);
+          StorageService.saveClasses(d.classes);
+        }
+        if (d.students && Array.isArray(d.students)) {
+          setStudents(d.students);
+          StorageService.saveStudents(d.students);
+        }
+        if (d.schedules && Array.isArray(d.schedules)) {
+          setSchedules(d.schedules);
+          StorageService.saveSchedules(d.schedules);
+        }
+        if (d.attendances && Array.isArray(d.attendances)) {
+          setAttendances(d.attendances);
+          StorageService.saveAttendances(d.attendances);
+        }
+        if (d.grades && Array.isArray(d.grades)) {
+          setGrades(d.grades);
+          StorageService.saveGrades(d.grades);
+        }
+        if (d.journals && Array.isArray(d.journals)) {
+          setJournals(d.journals);
+          StorageService.saveJournals(d.journals);
+        }
+      } else if (res.success && res.data === null) {
+        // Hanya jika pemanggilan cloud berhasil dan memang belum ada data sama sekali di cloud
+        RtdbService.syncAllToCloud({
+          school,
+          classes,
+          students,
+          schedules,
+          attendances,
+          grades,
+          journals,
+          theme,
+          currentUser,
+        });
+      }
+      // Jika res.success === false (misal permission denied atau offline), aplikasi tetap berjalan normal offline-first
+    });
+
+    // Realtime Listener
+    const unsubRealtime = RtdbService.subscribeToRealtimeCloud((cloudData) => {
+      if (cloudData.school) setSchool(cloudData.school);
+      if (cloudData.classes && Array.isArray(cloudData.classes)) setClasses(cloudData.classes);
+      if (cloudData.students && Array.isArray(cloudData.students)) setStudents(cloudData.students);
+      if (cloudData.schedules && Array.isArray(cloudData.schedules)) setSchedules(cloudData.schedules);
+      if (cloudData.attendances && Array.isArray(cloudData.attendances)) setAttendances(cloudData.attendances);
+      if (cloudData.grades && Array.isArray(cloudData.grades)) setGrades(cloudData.grades);
+      if (cloudData.journals && Array.isArray(cloudData.journals)) setJournals(cloudData.journals);
+    });
+
+    return () => {
+      unsubStatus();
+      unsubRealtime();
+    };
+  }, []);
+
+  // Debounced Auto-sync to Firebase Realtime Database on data mutation
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    // Jika izin database ditolak, jangan jalankan auto-sync agar tidak memicu error berulang
+    if (RtdbService.hasPermissionDenied()) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      if (!RtdbService.hasPermissionDenied()) {
+        RtdbService.syncAllToCloud({
+          school,
+          classes,
+          students,
+          schedules,
+          attendances,
+          grades,
+          journals,
+          theme,
+          currentUser,
+        });
+      }
+    }, 2500);
+
+    return () => clearTimeout(timer);
+  }, [school, classes, students, schedules, attendances, grades, journals, theme]);
+
+  const handleManualRtdbSync = async () => {
+    setRtdbToast('Menghubungkan ke Firebase Realtime Database...');
+    RtdbService.resetPermissionState();
+    const res = await RtdbService.syncAllToCloud({
+      school,
+      classes,
+      students,
+      schedules,
+      attendances,
+      grades,
+      journals,
+      theme,
+      currentUser,
+    });
+    if (res.success) {
+      setRtdbToast('Data berhasil disinkronkan ke Firebase Realtime Database!');
+    } else {
+      setRtdbToast(`Status sinkronisasi: ${res.error || 'Periksa aturan Rules database atau koneksi Anda.'}`);
+    }
+    setTimeout(() => setRtdbToast(null), 5000);
+  };
 
   // Apply dark mode class to documentElement whenever theme.mode changes
   useEffect(() => {
@@ -485,10 +615,22 @@ export default function App() {
               onSaveSchool={handleSaveSchool}
               currentUser={currentUser}
               onSaveProfile={handleSaveProfile}
+              rtdbStatus={rtdbStatus}
+              onManualRtdbSync={handleManualRtdbSync}
             />
           )}
         </main>
       </div>
+
+      {/* Realtime Database Toast Notification */}
+      {rtdbToast && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-3 duration-200 pointer-events-none">
+          <div className="flex items-center gap-2.5 px-4 py-3 bg-slate-900 text-white rounded-xl shadow-2xl border border-slate-700 text-xs">
+            <Cloud className="w-4 h-4 text-emerald-400 shrink-0 animate-pulse" />
+            <span className="font-medium">{rtdbToast}</span>
+          </div>
+        </div>
+      )}
 
       {/* Auth Modal (Login / Register) */}
       <AuthModal

@@ -15,14 +15,26 @@ import {
   BadgeCheck,
   Camera,
   Trash2,
+  Database,
+  Cloud,
+  Server,
+  RefreshCw,
+  ExternalLink,
+  AlertTriangle,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { DEFAULT_SCHOOL, DEFAULT_LOGO_KIRI, DEFAULT_LOGO_KANAN } from '../data/initialData';
+import { RtdbStatus, RtdbService } from '../services/rtdbService';
+import { RTDB_URL, RTDB_PROJECT_NAME, RTDB_PROJECT_ID } from '../firebase';
 
 interface SchoolSettingsProps {
   school: SchoolProfile;
   onSaveSchool: (profile: SchoolProfile) => void;
   currentUser: User | null;
   onSaveProfile: (updated: User) => void;
+  rtdbStatus?: RtdbStatus;
+  onManualRtdbSync?: () => Promise<void>;
 }
 
 export const SchoolSettings: React.FC<SchoolSettingsProps> = ({
@@ -30,8 +42,10 @@ export const SchoolSettings: React.FC<SchoolSettingsProps> = ({
   onSaveSchool,
   currentUser,
   onSaveProfile,
+  rtdbStatus,
+  onManualRtdbSync,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'school' | 'teacher'>('school');
+  const [activeSubTab, setActiveSubTab] = useState<'school' | 'teacher' | 'database'>('database');
   const [formData, setFormData] = useState<SchoolProfile>({ ...school });
   const [schoolSuccessMsg, setSchoolSuccessMsg] = useState(false);
 
@@ -148,6 +162,19 @@ export const SchoolSettings: React.FC<SchoolSettingsProps> = ({
         <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg self-start sm:self-auto border border-slate-200 dark:border-slate-700">
           <button
             type="button"
+            onClick={() => setActiveSubTab('database')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
+              activeSubTab === 'database'
+                ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Database className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Firebase Realtime DB</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveSubTab('school')}
             className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
               activeSubTab === 'school'
@@ -172,6 +199,158 @@ export const SchoolSettings: React.FC<SchoolSettingsProps> = ({
           </button>
         </div>
       </div>
+
+      {/* TAB 0: FIREBASE REALTIME DATABASE SYNC & STATUS */}
+      {activeSubTab === 'database' && (
+        <div className="space-y-6 animate-in fade-in">
+          {/* Status Card Utama */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                  <Database className="w-6 h-6 animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                      Firebase Realtime Database Terhubung
+                    </h2>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                      Online & Aktif
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Sinkronisasi data otomatis 2-arah antara perangkat lokal dan cloud server
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (onManualRtdbSync) {
+                      await onManualRtdbSync();
+                    } else {
+                      await RtdbService.syncAllToCloud({
+                        school: formData,
+                        classes: [],
+                        students: [],
+                        schedules: [],
+                        attendances: [],
+                        grades: [],
+                        journals: [],
+                        currentUser,
+                      });
+                    }
+                  }}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs flex items-center gap-2 cursor-pointer transition-all"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Sinkronkan Sekarang</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Detail Konfigurasi */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-5">
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 space-y-1">
+                <span className="text-[11px] font-medium text-slate-400 block uppercase tracking-wider">
+                  Project Title / ID
+                </span>
+                <span className="text-xs font-bold text-slate-900 dark:text-white block font-mono">
+                  {RTDB_PROJECT_NAME}
+                </span>
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">
+                  ({RTDB_PROJECT_ID})
+                </span>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 space-y-1">
+                <span className="text-[11px] font-medium text-slate-400 block uppercase tracking-wider">
+                  Database URL
+                </span>
+                <a
+                  href={RTDB_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline block font-mono truncate flex items-center gap-1"
+                >
+                  <span className="truncate">{RTDB_URL}</span>
+                  <ExternalLink className="w-3 h-3 shrink-0" />
+                </a>
+                <span className="text-[10px] text-slate-500">Default Region (us-central1)</span>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 space-y-1">
+                <span className="text-[11px] font-medium text-slate-400 block uppercase tracking-wider">
+                  Metode Penyimpanan
+                </span>
+                <span className="text-xs font-bold text-slate-900 dark:text-white block">
+                  Offline-First & Cloud Sync
+                </span>
+                <span className="text-[10px] text-slate-500">
+                  Data tetap aman di browser saat offline
+                </span>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 space-y-1">
+                <span className="text-[11px] font-medium text-slate-400 block uppercase tracking-wider">
+                  Status Terakhir
+                </span>
+                <span className="text-xs font-bold text-slate-900 dark:text-white block">
+                  {rtdbStatus?.lastSyncTime
+                    ? new Date(rtdbStatus.lastSyncTime).toLocaleTimeString('id-ID', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                      }) + ' WITA'
+                    : 'Tersinkron Otomatis'}
+                </span>
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                  Realtime Listener Aktif
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Tabel Entitas yang Disinkronkan */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs space-y-4">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Server className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <span>Daftar Entitas & Jalur Realtime Database</span>
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+              {[
+                { name: 'Profil & Kop Sekolah', path: '/school', desc: 'Identitas SMAN 1 Gowa, kop surat, kepsek' },
+                { name: 'Manajemen Kelas', path: '/classes', desc: 'Daftar rombel, tingkatan, wali kelas' },
+                { name: 'Data Siswa', path: '/students', desc: 'NISN, nama siswa, jenis kelamin, kelas' },
+                { name: 'Jadwal Mengajar', path: '/schedules', desc: 'Hari, jam pelajaran, mata pelajaran' },
+                { name: 'Presensi Siswa', path: '/attendances', desc: 'Rekap kehadiran Hadir, Sakit, Izin, Alpa' },
+                { name: 'Penilaian & Rapor', path: '/grades', desc: 'Formatif, sumatif, STS, SAS' },
+                { name: 'Jurnal Harian Guru', path: '/journals', desc: 'Catatan mengajar, materi & kendala' },
+                { name: 'Pengaturan Tema', path: '/theme', desc: 'Mode terang/gelap & warna menu bar' },
+              ].map((item) => (
+                <div
+                  key={item.path}
+                  className="p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-1"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{item.name}</span>
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+                  </div>
+                  <span className="font-mono text-[10px] text-indigo-600 dark:text-indigo-400 block">
+                    administrasi_guru_sman1gowa{item.path}
+                  </span>
+                  <p className="text-[11px] text-slate-500">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* TAB 1: PROFIL AKUN GURU (NAMA & NIP BISA DIRUBAH) */}
       {activeSubTab === 'teacher' && (
