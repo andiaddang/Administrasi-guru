@@ -12,8 +12,10 @@ import {
   Clock,
   AlertCircle,
   Lightbulb,
+  CheckCircle2,
 } from 'lucide-react';
 import { PrintDocumentModal } from './PrintDocumentModal';
+import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
 interface JournalManagementProps {
   journals: TeachingJournal[];
@@ -39,6 +41,20 @@ export const JournalManagement: React.FC<JournalManagementProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingJournal, setEditingJournal] = useState<TeachingJournal | null>(null);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  // In-app Delete Confirmation Modal State (replaces window.confirm)
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    id?: string;
+    meetingNumber?: number;
+    topic?: string;
+  }>({ isOpen: false });
+
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 3000);
+  };
 
   // Form states
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
@@ -96,7 +112,7 @@ export const JournalManagement: React.FC<JournalManagementProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!topic.trim() || !learningActivities.trim()) return;
+    if (!topic.trim()) return;
 
     if (editingJournal) {
       onUpdateJournal({
@@ -107,12 +123,13 @@ export const JournalManagement: React.FC<JournalManagementProps> = ({
         subject: subject.trim(),
         time,
         topic: topic.trim(),
-        learningActivities: learningActivities.trim(),
+        learningActivities: learningActivities.trim() || 'Pembelajaran tatap muka sesuai kurikulum',
         obstacles: obstacles.trim() || 'Tidak ada hambatan',
         solutions: solutions.trim() || 'Pembelajaran berjalan lancar',
         presentCount,
         absentCount,
       });
+      showToast(`Jurnal pertemuan ke-${meetingNumber} berhasil diperbarui`);
     } else {
       onAddJournal({
         date,
@@ -121,20 +138,33 @@ export const JournalManagement: React.FC<JournalManagementProps> = ({
         subject: subject.trim(),
         time,
         topic: topic.trim(),
-        learningActivities: learningActivities.trim(),
+        learningActivities: learningActivities.trim() || 'Pembelajaran tatap muka sesuai kurikulum',
         obstacles: obstacles.trim() || 'Tidak ada hambatan',
         solutions: solutions.trim() || 'Pembelajaran berjalan lancar',
         presentCount,
         absentCount,
       });
+      showToast(`Jurnal baru pertemuan ke-${meetingNumber} berhasil dicatat`);
     }
     setIsModalOpen(false);
+    setEditingJournal(null);
   };
 
-  const handleDelete = (id: string, meeting: number) => {
-    if (window.confirm(`Hapus catatan jurnal pertemuan ke-${meeting}?`)) {
-      onDeleteJournal(id);
+  const triggerDelete = (id: string, meeting: number, topic?: string) => {
+    setDeleteModal({
+      isOpen: true,
+      id,
+      meetingNumber: meeting,
+      topic,
+    });
+  };
+
+  const confirmDeleteAction = () => {
+    if (deleteModal.id) {
+      onDeleteJournal(deleteModal.id);
+      showToast(`Jurnal pertemuan ke-${deleteModal.meetingNumber} berhasil dihapus`);
     }
+    setDeleteModal({ isOpen: false });
   };
 
   return (
@@ -301,7 +331,7 @@ export const JournalManagement: React.FC<JournalManagementProps> = ({
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
-                      onClick={() => handleDelete(journal.id, journal.meetingNumber)}
+                      onClick={() => triggerDelete(journal.id, journal.meetingNumber, journal.topic)}
                       className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 rounded-md transition-colors cursor-pointer"
                       title="Hapus Jurnal"
                     >
@@ -557,6 +587,26 @@ export const JournalManagement: React.FC<JournalManagementProps> = ({
           </tbody>
         </table>
       </PrintDocumentModal>
+
+      {/* In-app Deletion Confirmation Modal */}
+      <ConfirmDeleteModal
+        isOpen={deleteModal.isOpen}
+        title="Hapus Catatan Jurnal Mengajar"
+        message={`Apakah Anda yakin ingin menghapus catatan jurnal mengajar pertemuan ke-${deleteModal.meetingNumber}? Data yang dihapus tidak dapat dikembalikan.`}
+        itemName={deleteModal.topic}
+        confirmLabel="Hapus Jurnal"
+        onConfirm={confirmDeleteAction}
+        onClose={() => setDeleteModal({ isOpen: false })}
+      />
+
+      {/* Floating feedback toast */}
+      {toastMsg && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 bg-slate-900/95 dark:bg-emerald-950/90 text-white rounded-xl shadow-xl border border-slate-700 dark:border-emerald-700/50 text-xs sm:text-sm animate-fade-in">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{toastMsg}</span>
+        </div>
+      )}
     </div>
   );
 };
+

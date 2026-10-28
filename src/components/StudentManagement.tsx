@@ -1,5 +1,6 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Student, ClassRoom, Gender } from '../types';
+import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import {
   Plus,
   Trash2,
@@ -187,6 +188,15 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
   const [isInlineEditMode, setIsInlineEditMode] = useState(false);
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
   const [saveToast, setSaveToast] = useState<string | null>(null);
+
+  // In-app Delete Confirmation Modal State (replaces window.confirm)
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    isBatch?: boolean;
+    id?: string;
+    studentName?: string;
+    count?: number;
+  }>({ isOpen: false });
 
   // EXTERNAL PASTE STATE
   const [isQuickPasteBoxOpen, setIsQuickPasteBoxOpen] = useState(false);
@@ -568,36 +578,38 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
   // Submit Single Student
   const handleSubmitSingle = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !nisnNis.trim()) return;
+    if (!name.trim()) return;
 
+    const finalNisnNis = nisnNis.trim() || '-';
     if (editingStudent) {
       onUpdateStudent({
         ...editingStudent,
-        nisnNis: nisnNis.trim(),
-        nisn: nisnNis.trim(),
-        nis: nisnNis.trim(),
+        nisnNis: finalNisnNis,
+        nisn: finalNisnNis,
+        nis: finalNisnNis,
         name: name.trim(),
         gender,
         classId,
         parentPhone: parentPhone.trim() || '-',
         status,
       });
-      showSaveToast('Data siswa berhasil diperbarui');
+      showSaveToast(`Data siswa "${name.trim()}" berhasil diperbarui`);
     } else {
       onAddStudent({
-        nisnNis: nisnNis.trim(),
-        nisn: nisnNis.trim(),
-        nis: nisnNis.trim(),
+        nisnNis: finalNisnNis,
+        nisn: finalNisnNis,
+        nis: finalNisnNis,
         name: name.trim(),
         gender,
         classId,
         parentPhone: parentPhone.trim() || '-',
         status,
       });
-      showSaveToast('Siswa baru berhasil ditambahkan');
+      showSaveToast(`Siswa "${name.trim()}" berhasil ditambahkan`);
     }
 
     setIsModalOpen(false);
+    setEditingStudent(null);
   };
 
   // Submit Multi-Student from Modal tab
@@ -610,11 +622,12 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
   };
 
   const handleDeleteSingle = (id: string, sName: string) => {
-    if (window.confirm(`Yakin ingin menghapus data siswa "${sName}"?`)) {
-      onDeleteStudent(id);
-      setSelectedIds((prev) => prev.filter((item) => item !== id));
-      showSaveToast('Siswa berhasil dihapus');
-    }
+    setDeleteModal({
+      isOpen: true,
+      isBatch: false,
+      id,
+      studentName: sName,
+    });
   };
 
   // Batch Selection
@@ -633,15 +646,27 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
   };
 
   const handleDeleteSelected = () => {
-    if (
-      window.confirm(
-        `Yakin ingin menghapus ${selectedIds.length} data siswa yang dipilih sekaligus?`
-      )
-    ) {
-      onDeleteBatchStudents(selectedIds);
-      setSelectedIds([]);
-      showSaveToast(`${selectedIds.length} siswa berhasil dihapus sekaligus`);
+    if (selectedIds.length === 0) return;
+    setDeleteModal({
+      isOpen: true,
+      isBatch: true,
+      count: selectedIds.length,
+    });
+  };
+
+  const confirmDeleteAction = () => {
+    if (deleteModal.isBatch) {
+      if (selectedIds.length > 0) {
+        onDeleteBatchStudents(selectedIds);
+        showSaveToast(`${selectedIds.length} data siswa berhasil dihapus sekaligus`);
+        setSelectedIds([]);
+      }
+    } else if (deleteModal.id) {
+      onDeleteStudent(deleteModal.id);
+      setSelectedIds((prev) => prev.filter((item) => item !== deleteModal.id));
+      showSaveToast(`Data siswa "${deleteModal.studentName || ''}" berhasil dihapus`);
     }
+    setDeleteModal({ isOpen: false });
   };
 
   // Template Excel Download
@@ -1382,33 +1407,12 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                       {/* AKSI */}
                       <td className="py-2.5 px-2 text-center w-24 whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1.5">
-                          {editingRowId === student.id ? (
-                            <button
-                              onClick={() => {
-                                setEditingRowId(null);
-                                showSaveToast('Edit baris selesai');
-                              }}
-                              className="p-1.5 bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 rounded-md transition-colors cursor-pointer"
-                              title="Selesai Edit"
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => setEditingRowId(student.id)}
-                              className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-slate-800 rounded-md transition-colors cursor-pointer"
-                              title="Edit Cepat Baris Ini"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-
                           <button
                             onClick={() => handleOpenEdit(student)}
-                            className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-800 rounded-md transition-colors cursor-pointer"
-                            title="Edit Formulir Lengkap"
+                            className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-slate-800 rounded-md transition-colors cursor-pointer"
+                            title="Edit Data Siswa"
                           >
-                            <FileText className="w-3.5 h-3.5" />
+                            <Edit2 className="w-3.5 h-3.5" />
                           </button>
 
                           <button
@@ -2068,6 +2072,20 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
           </div>
         </div>
       )}
+
+      {/* In-app Deletion Confirmation Modal */}
+      <ConfirmDeleteModal
+        isOpen={deleteModal.isOpen}
+        title={deleteModal.isBatch ? 'Hapus Data Siswa Terpilih' : 'Hapus Data Siswa'}
+        message={
+          deleteModal.isBatch
+            ? `Apakah Anda yakin ingin menghapus ${deleteModal.count || selectedIds.length} data siswa yang dipilih sekaligus? Data yang dihapus tidak dapat dipulihkan.`
+            : `Apakah Anda yakin ingin menghapus data siswa "${deleteModal.studentName || ''}"? Tindakan ini tidak dapat dibatalkan.`
+        }
+        confirmLabel={deleteModal.isBatch ? 'Hapus Semua Terpilih' : 'Hapus Siswa'}
+        onConfirm={confirmDeleteAction}
+        onClose={() => setDeleteModal({ isOpen: false })}
+      />
     </div>
   );
 };

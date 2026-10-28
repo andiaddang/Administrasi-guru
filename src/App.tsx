@@ -56,6 +56,11 @@ export default function App() {
   const [rtdbStatus, setRtdbStatus] = useState<RtdbStatus>(() => RtdbService.getStatus());
   const [rtdbToast, setRtdbToast] = useState<string | null>(null);
   const isInitialMount = useRef(true);
+  const lastLocalMutationTime = useRef<number>(0);
+
+  const recordLocalMutation = () => {
+    lastLocalMutationTime.current = Date.now();
+  };
 
   // Monitor Realtime Database connection & subscribe to remote cloud updates
   useEffect(() => {
@@ -114,6 +119,10 @@ export default function App() {
 
     // Realtime Listener
     const unsubRealtime = RtdbService.subscribeToRealtimeCloud((cloudData) => {
+      // Cegah snapshot RTDB menimpa perubahan lokal yang baru saja dilakukan pengguna
+      if (Date.now() - lastLocalMutationTime.current < 8000) {
+        return;
+      }
       if (cloudData.school) setSchool(cloudData.school);
       if (cloudData.classes && Array.isArray(cloudData.classes)) setClasses(cloudData.classes);
       if (cloudData.students && Array.isArray(cloudData.students)) setStudents(cloudData.students);
@@ -264,6 +273,7 @@ export default function App() {
 
   // CLASS HANDLERS
   const handleAddClass = (newClass: Omit<ClassRoom, 'id'>) => {
+    recordLocalMutation();
     const created: ClassRoom = {
       ...newClass,
       id: `cls-${Date.now()}`,
@@ -272,19 +282,23 @@ export default function App() {
   };
 
   const handleUpdateClass = (updated: ClassRoom) => {
+    recordLocalMutation();
     setClasses((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
   };
 
   const handleDeleteClass = (id: string) => {
+    recordLocalMutation();
     setClasses((prev) => prev.filter((c) => c.id !== id));
   };
 
   const handleDeleteBatchClasses = (ids: string[]) => {
+    recordLocalMutation();
     setClasses((prev) => prev.filter((c) => !ids.includes(c.id)));
   };
 
   // STUDENT HANDLERS
   const handleAddStudent = (newStudent: Omit<Student, 'id'>) => {
+    recordLocalMutation();
     const created: Student = {
       ...newStudent,
       id: `std-${Date.now()}`,
@@ -293,10 +307,12 @@ export default function App() {
   };
 
   const handleUpdateStudent = (updated: Student) => {
+    recordLocalMutation();
     setStudents((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
   };
 
   const handleBatchUpdateStudents = (updatedList: Student[]) => {
+    recordLocalMutation();
     setStudents((prev) => {
       const map = new Map(updatedList.map((s) => [s.id, s]));
       return prev.map((s) => map.get(s.id) || s);
@@ -304,14 +320,17 @@ export default function App() {
   };
 
   const handleDeleteStudent = (id: string) => {
+    recordLocalMutation();
     setStudents((prev) => prev.filter((s) => s.id !== id));
   };
 
   const handleDeleteBatchStudents = (ids: string[]) => {
+    recordLocalMutation();
     setStudents((prev) => prev.filter((c) => !ids.includes(c.id)));
   };
 
   const handleBatchImportStudents = (newStudents: Omit<Student, 'id'>[]) => {
+    recordLocalMutation();
     const mapped: Student[] = newStudents.map((s, idx) => ({
       ...s,
       id: `std-${Date.now()}-${idx}`,
@@ -320,11 +339,13 @@ export default function App() {
   };
 
   const handleReorderStudents = (reorderedList: Student[]) => {
+    recordLocalMutation();
     setStudents(reorderedList);
   };
 
   // SCHEDULE HANDLERS
   const handleAddSchedule = (newSchedule: Omit<Schedule, 'id'>) => {
+    recordLocalMutation();
     const created: Schedule = {
       ...newSchedule,
       id: `sch-${Date.now()}`,
@@ -333,10 +354,12 @@ export default function App() {
   };
 
   const handleUpdateSchedule = (updated: Schedule) => {
+    recordLocalMutation();
     setSchedules((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
   };
 
   const handleDeleteSchedule = (id: string) => {
+    recordLocalMutation();
     setSchedules((prev) => prev.filter((s) => s.id !== id));
   };
 
@@ -407,6 +430,7 @@ export default function App() {
 
   // JOURNAL HANDLERS
   const handleAddJournal = (newJournal: Omit<TeachingJournal, 'id'>) => {
+    recordLocalMutation();
     const created: TeachingJournal = {
       ...newJournal,
       id: `jrn-${Date.now()}`,
@@ -415,10 +439,12 @@ export default function App() {
   };
 
   const handleUpdateJournal = (updated: TeachingJournal) => {
+    recordLocalMutation();
     setJournals((prev) => prev.map((j) => (j.id === updated.id ? updated : j)));
   };
 
   const handleDeleteJournal = (id: string) => {
+    recordLocalMutation();
     setJournals((prev) => prev.filter((j) => j.id !== id));
   };
 

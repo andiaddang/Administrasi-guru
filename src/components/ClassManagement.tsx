@@ -10,7 +10,9 @@ import {
   Square,
   X,
   GraduationCap,
+  CheckCircle2,
 } from 'lucide-react';
+import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
 interface ClassManagementProps {
   classes: ClassRoom[];
@@ -33,6 +35,20 @@ export const ClassManagement: React.FC<ClassManagementProps> = ({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<ClassRoom | null>(null);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  // In-app Delete Confirmation Modal State (replaces window.confirm)
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    id?: string;
+    name?: string;
+    isBatch?: boolean;
+  }>({ isOpen: false });
+
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 3000);
+  };
 
   // Form states
   const [name, setName] = useState('');
@@ -77,20 +93,23 @@ export const ClassManagement: React.FC<ClassManagementProps> = ({
         ...editingClass,
         name: name.trim(),
         level,
-        major: major.trim(),
+        major: major.trim() || 'Fase E (Umum)',
         homeroomTeacher: homeroomTeacher.trim() || '-',
-        academicYear,
+        academicYear: academicYear.trim() || '2026/2027',
       });
+      showToast(`Kelas "${name.trim()}" berhasil diperbarui`);
     } else {
       onAddClass({
         name: name.trim(),
         level,
-        major: major.trim(),
+        major: major.trim() || 'Fase E (Umum)',
         homeroomTeacher: homeroomTeacher.trim() || '-',
-        academicYear,
+        academicYear: academicYear.trim() || '2026/2027',
       });
+      showToast(`Kelas baru "${name.trim()}" berhasil ditambahkan`);
     }
     setIsModalOpen(false);
+    setEditingClass(null);
   };
 
   const handleToggleSelectAll = () => {
@@ -109,27 +128,35 @@ export const ClassManagement: React.FC<ClassManagementProps> = ({
     }
   };
 
-  const handleDeleteSelected = () => {
+  const triggerDeleteBatch = () => {
     if (selectedIds.length === 0) return;
-    if (
-      window.confirm(
-        `Apakah Anda yakin ingin menghapus ${selectedIds.length} kelas terpilih? Data siswa yang terhubung dengan kelas ini akan terpengaruh.`
-      )
-    ) {
-      onDeleteBatchClasses(selectedIds);
-      setSelectedIds([]);
-    }
+    setDeleteModal({
+      isOpen: true,
+      isBatch: true,
+      name: `${selectedIds.length} kelas terpilih`,
+    });
   };
 
-  const handleDeleteSingle = (id: string, className: string) => {
-    if (
-      window.confirm(
-        `Hapus kelas "${className}"? Siswa di dalam kelas ini tidak akan terhubung ke kelas lagi.`
-      )
-    ) {
-      onDeleteClass(id);
-      setSelectedIds(selectedIds.filter((item) => item !== id));
+  const triggerDeleteSingle = (id: string, className: string) => {
+    setDeleteModal({
+      isOpen: true,
+      id,
+      name: className,
+      isBatch: false,
+    });
+  };
+
+  const confirmDeleteAction = () => {
+    if (deleteModal.isBatch) {
+      onDeleteBatchClasses(selectedIds);
+      showToast(`${selectedIds.length} kelas berhasil dihapus`);
+      setSelectedIds([]);
+    } else if (deleteModal.id) {
+      onDeleteClass(deleteModal.id);
+      setSelectedIds((prev) => prev.filter((item) => item !== deleteModal.id));
+      showToast(`Kelas "${deleteModal.name}" berhasil dihapus`);
     }
+    setDeleteModal({ isOpen: false });
   };
 
   return (
@@ -179,7 +206,7 @@ export const ClassManagement: React.FC<ClassManagementProps> = ({
               {selectedIds.length} kelas dipilih
             </span>
             <button
-              onClick={handleDeleteSelected}
+              onClick={triggerDeleteBatch}
               className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white rounded-md transition-colors cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -265,7 +292,7 @@ export const ClassManagement: React.FC<ClassManagementProps> = ({
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            onClick={() => handleDeleteSingle(cls.id, cls.name)}
+                            onClick={() => triggerDeleteSingle(cls.id, cls.name)}
                             className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 rounded-md transition-colors cursor-pointer"
                             title="Hapus Kelas"
                           >
@@ -397,6 +424,28 @@ export const ClassManagement: React.FC<ClassManagementProps> = ({
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* In-App Confirm Delete Modal */}
+      <ConfirmDeleteModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false })}
+        onConfirm={confirmDeleteAction}
+        title={deleteModal.isBatch ? 'Hapus Kelas Sekaligus' : 'Hapus Data Kelas'}
+        message={
+          deleteModal.isBatch
+            ? `Apakah Anda yakin ingin menghapus ${deleteModal.name}? Seluruh rombel yang dipilih akan dihapus secara permanen.`
+            : `Apakah Anda yakin ingin menghapus kelas "${deleteModal.name}"? Siswa di kelas ini tidak akan terhubung lagi.`
+        }
+        itemName={deleteModal.name}
+      />
+
+      {/* Floating Success Toast */}
+      {toastMsg && (
+        <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2 bg-slate-900 text-white text-xs px-4 py-2.5 rounded-xl shadow-2xl border border-slate-700 animate-in fade-in slide-in-from-bottom-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <span>{toastMsg}</span>
         </div>
       )}
     </div>

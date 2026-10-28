@@ -9,7 +9,9 @@ import {
   MapPin,
   X,
   BookOpen,
+  CheckCircle2,
 } from 'lucide-react';
+import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
 interface ScheduleManagementProps {
   schedules: Schedule[];
@@ -30,6 +32,19 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
   const [selectedClassFilter, setSelectedClassFilter] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  // In-app Delete Confirmation Modal State (replaces window.confirm)
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    id?: string;
+    name?: string;
+  }>({ isOpen: false });
+
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 3000);
+  };
 
   // Form states
   const [day, setDay] = useState<DayOfWeek>('Senin');
@@ -91,6 +106,7 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
         room: room.trim() || 'Kelas',
         notes: notes.trim(),
       });
+      showToast(`Jadwal "${subject.trim()} (${day})" berhasil diperbarui`);
     } else {
       onAddSchedule({
         day,
@@ -102,14 +118,26 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
         room: room.trim() || 'Kelas',
         notes: notes.trim(),
       });
+      showToast(`Jadwal baru "${subject.trim()} (${day})" berhasil ditambahkan`);
     }
     setIsModalOpen(false);
+    setEditingSchedule(null);
   };
 
-  const handleDelete = (id: string, name: string) => {
-    if (window.confirm(`Hapus jadwal ${name}?`)) {
-      onDeleteSchedule(id);
+  const triggerDelete = (id: string, name: string) => {
+    setDeleteModal({
+      isOpen: true,
+      id,
+      name,
+    });
+  };
+
+  const confirmDeleteAction = () => {
+    if (deleteModal.id) {
+      onDeleteSchedule(deleteModal.id);
+      showToast(`Jadwal "${deleteModal.name}" berhasil dihapus`);
     }
+    setDeleteModal({ isOpen: false });
   };
 
   return (
@@ -248,7 +276,7 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
                     <Edit2 className="w-3.5 h-3.5" />
                   </button>
                   <button
-                    onClick={() => handleDelete(sch.id, `${sch.subject} (${sch.day})`)}
+                    onClick={() => triggerDelete(sch.id, `${sch.subject} (${sch.day})`)}
                     className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 rounded-md transition-colors cursor-pointer"
                     title="Hapus Jadwal"
                   >
@@ -416,6 +444,24 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* In-App Confirm Delete Modal */}
+      <ConfirmDeleteModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false })}
+        onConfirm={confirmDeleteAction}
+        title="Hapus Jadwal Mengajar"
+        message={`Apakah Anda yakin ingin menghapus jadwal ${deleteModal.name}?`}
+        itemName={deleteModal.name}
+      />
+
+      {/* Floating Success Toast */}
+      {toastMsg && (
+        <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2 bg-slate-900 text-white text-xs px-4 py-2.5 rounded-xl shadow-2xl border border-slate-700 animate-in fade-in slide-in-from-bottom-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <span>{toastMsg}</span>
         </div>
       )}
     </div>
