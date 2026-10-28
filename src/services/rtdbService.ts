@@ -54,6 +54,7 @@ class RtdbServiceClass {
   private lastError: string | null = null;
   private syncInProgress: boolean = false;
   private isPermissionDenied: boolean = false;
+  private lastPermissionDeniedTime: number = 0;
   private statusListeners: Array<(status: RtdbStatus) => void> = [];
   private isInitialized: boolean = false;
 
@@ -77,6 +78,7 @@ class RtdbServiceClass {
           console.warn('Realtime Database monitor notice:', err?.message || String(err));
           if (String(err?.message || err).toLowerCase().includes('permission')) {
             this.isPermissionDenied = true;
+            this.lastPermissionDeniedTime = Date.now();
           }
           this.lastError = err?.message || 'Gagal memantau koneksi';
           this.notifyStatus();
@@ -121,11 +123,16 @@ class RtdbServiceClass {
   }
 
   public hasPermissionDenied(): boolean {
+    if (this.isPermissionDenied && Date.now() - this.lastPermissionDeniedTime > 20000) {
+      this.isPermissionDenied = false;
+      return false;
+    }
     return this.isPermissionDenied;
   }
 
   public resetPermissionState(): void {
     this.isPermissionDenied = false;
+    this.lastPermissionDeniedTime = 0;
     this.lastError = null;
     this.notifyStatus();
   }
@@ -144,7 +151,7 @@ class RtdbServiceClass {
     theme?: AppThemeConfig;
     currentUser?: User | null;
   }): Promise<{ success: boolean; error?: string; timestamp?: string }> {
-    if (this.isPermissionDenied) {
+    if (this.isPermissionDenied && Date.now() - this.lastPermissionDeniedTime < 20000) {
       return {
         success: false,
         error: this.lastError || 'Izin akses Realtime Database dibatasi (Permission Denied).',
@@ -193,6 +200,7 @@ class RtdbServiceClass {
 
       if (isPerm) {
         this.isPermissionDenied = true;
+        this.lastPermissionDeniedTime = Date.now();
         this.lastError =
           'Izin akses Realtime Database ditolak. Pastikan Rules di Firebase Console mengizinkan tulis atau lakukan Login.';
       } else {
@@ -253,6 +261,7 @@ class RtdbServiceClass {
 
       if (isPerm) {
         this.isPermissionDenied = true;
+        this.lastPermissionDeniedTime = Date.now();
         this.lastError =
           'Izin akses Realtime Database ditolak. Pastikan Rules di Firebase Console mengizinkan baca atau lakukan Login.';
       } else {
@@ -294,6 +303,7 @@ class RtdbServiceClass {
 
       if (isPerm) {
         this.isPermissionDenied = true;
+        this.lastPermissionDeniedTime = Date.now();
         this.lastError =
           'Aturan keamanan (Rules) Firebase Realtime Database membatasi akses baca/tulis. Pastikan Rules di Firebase Console sudah disetel atau lakukan Login.';
       } else {

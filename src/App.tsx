@@ -59,7 +59,31 @@ export default function App() {
   const lastLocalMutationTime = useRef<number>(0);
 
   const recordLocalMutation = () => {
-    lastLocalMutationTime.current = Date.now();
+    lastLocalMutationTime.current = StorageService.touchLocalMutation();
+  };
+
+  // Helper to instantly persist and push to cloud without waiting
+  const triggerInstantCloudSync = (overrides?: {
+    school?: SchoolProfile;
+    classes?: ClassRoom[];
+    students?: Student[];
+    schedules?: Schedule[];
+    attendances?: AttendanceRecord[];
+    grades?: GradeRecord[];
+    journals?: TeachingJournal[];
+  }) => {
+    recordLocalMutation();
+    RtdbService.syncAllToCloud({
+      school: overrides?.school ?? school,
+      classes: overrides?.classes ?? classes,
+      students: overrides?.students ?? students,
+      schedules: overrides?.schedules ?? schedules,
+      attendances: overrides?.attendances ?? attendances,
+      grades: overrides?.grades ?? grades,
+      journals: overrides?.journals ?? journals,
+      theme,
+      currentUser,
+    });
   };
 
   // Monitor Realtime Database connection & subscribe to remote cloud updates
@@ -68,10 +92,31 @@ export default function App() {
       setRtdbStatus(status);
     });
 
-    // Initial check: jika ada data di Realtime Database, sinkronkan ke local
+    // Initial check: jika ada data di Realtime Database, sinkronkan secara cerdas
     RtdbService.loadAllFromCloud().then((res) => {
       if (res.success && res.data) {
         const d = res.data;
+        const cloudTime = d.lastUpdated ? new Date(d.lastUpdated).getTime() : 0;
+        const localTime = StorageService.getLastLocalMutation();
+
+        // JIKA PERUBAHAN LOKAL LEBIH BARU DARI CLOUD:
+        // Jangan timpa data lokal ke setelan awal cloud! Sinkronkan perubahan lokal ke cloud!
+        if (localTime > cloudTime) {
+          RtdbService.syncAllToCloud({
+            school,
+            classes,
+            students,
+            schedules,
+            attendances,
+            grades,
+            journals,
+            theme,
+            currentUser,
+          });
+          return;
+        }
+
+        // HANYA JIKA CLOUD BENAR-BENAR LEBIH BARU DARI LOKAL:
         if (d.school) {
           setSchool(d.school);
           StorageService.saveSchool(d.school);
@@ -114,13 +159,15 @@ export default function App() {
           currentUser,
         });
       }
-      // Jika res.success === false (misal permission denied atau offline), aplikasi tetap berjalan normal offline-first
     });
 
     // Realtime Listener
     const unsubRealtime = RtdbService.subscribeToRealtimeCloud((cloudData) => {
+      const cloudTime = cloudData.lastUpdated ? new Date(cloudData.lastUpdated).getTime() : 0;
+      const localTime = StorageService.getLastLocalMutation();
+
       // Cegah snapshot RTDB menimpa perubahan lokal yang baru saja dilakukan pengguna
-      if (Date.now() - lastLocalMutationTime.current < 8000) {
+      if (localTime >= cloudTime || Date.now() - localTime < 20000) {
         return;
       }
       if (cloudData.school) setSchool(cloudData.school);
@@ -144,10 +191,6 @@ export default function App() {
       isInitialMount.current = false;
       return;
     }
-    // Jika izin database ditolak, jangan jalankan auto-sync agar tidak memicu error berulang
-    if (RtdbService.hasPermissionDenied()) {
-      return;
-    }
     const timer = setTimeout(() => {
       if (!RtdbService.hasPermissionDenied()) {
         RtdbService.syncAllToCloud({
@@ -162,7 +205,7 @@ export default function App() {
           currentUser,
         });
       }
-    }, 2500);
+    }, 1200);
 
     return () => clearTimeout(timer);
   }, [school, classes, students, schedules, attendances, grades, journals, theme]);

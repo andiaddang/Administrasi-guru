@@ -31,6 +31,7 @@ const KEYS = {
   GRADES: 'sman1gowa_grades',
   JOURNALS: 'sman1gowa_journals',
   THEME: 'sman1gowa_theme_config',
+  LAST_LOCAL_MUTATION: 'sman1gowa_last_local_mutation',
 };
 
 export const DEFAULT_THEME_CONFIG: AppThemeConfig = {
@@ -58,6 +59,25 @@ function safeSet<T>(key: string, value: T): void {
 }
 
 export const StorageService = {
+  touchLocalMutation(): number {
+    const now = Date.now();
+    try {
+      localStorage.setItem(KEYS.LAST_LOCAL_MUTATION, String(now));
+    } catch {
+      // ignore
+    }
+    return now;
+  },
+
+  getLastLocalMutation(): number {
+    try {
+      const v = localStorage.getItem(KEYS.LAST_LOCAL_MUTATION);
+      return v ? Number(v) : 0;
+    } catch {
+      return 0;
+    }
+  },
+
   getSchool(): SchoolProfile {
     const data = safeGet<SchoolProfile>(KEYS.SCHOOL, DEFAULT_SCHOOL);
     return {
@@ -69,6 +89,7 @@ export const StorageService = {
   },
   saveSchool(school: SchoolProfile): void {
     safeSet(KEYS.SCHOOL, school);
+    this.touchLocalMutation();
   },
 
   getCurrentUser(): User | null {
@@ -80,6 +101,7 @@ export const StorageService = {
     } else {
       safeSet(KEYS.CURRENT_USER, user);
     }
+    this.touchLocalMutation();
   },
 
   getAccounts(): Array<User & { passwordHash: string }> {
@@ -95,6 +117,7 @@ export const StorageService = {
   },
   saveClasses(classes: ClassRoom[]): void {
     safeSet(KEYS.CLASSES, classes);
+    this.touchLocalMutation();
   },
 
   getStudents(): Student[] {
@@ -106,6 +129,7 @@ export const StorageService = {
   },
   saveStudents(students: Student[]): void {
     safeSet(KEYS.STUDENTS, students);
+    this.touchLocalMutation();
   },
 
   getTheme(): AppThemeConfig {
@@ -113,6 +137,7 @@ export const StorageService = {
   },
   saveTheme(theme: AppThemeConfig): void {
     safeSet(KEYS.THEME, theme);
+    this.touchLocalMutation();
   },
 
   updateUserProfile(updatedUser: User): void {
@@ -122,6 +147,7 @@ export const StorageService = {
       acc.id === updatedUser.id ? { ...acc, ...updatedUser } : acc
     );
     this.saveAccounts(updatedAccounts);
+    this.touchLocalMutation();
   },
 
   getSchedules(): Schedule[] {
@@ -129,6 +155,7 @@ export const StorageService = {
   },
   saveSchedules(schedules: Schedule[]): void {
     safeSet(KEYS.SCHEDULES, schedules);
+    this.touchLocalMutation();
   },
 
   getAttendances(): AttendanceRecord[] {
@@ -136,6 +163,7 @@ export const StorageService = {
   },
   saveAttendances(attendances: AttendanceRecord[]): void {
     safeSet(KEYS.ATTENDANCES, attendances);
+    this.touchLocalMutation();
   },
 
   getGrades(): GradeRecord[] {
@@ -155,6 +183,7 @@ export const StorageService = {
   },
   saveGrades(grades: GradeRecord[]): void {
     safeSet(KEYS.GRADES, grades);
+    this.touchLocalMutation();
   },
 
   getJournals(): TeachingJournal[] {
@@ -162,6 +191,7 @@ export const StorageService = {
   },
   saveJournals(journals: TeachingJournal[]): void {
     safeSet(KEYS.JOURNALS, journals);
+    this.touchLocalMutation();
   },
 
   resetToDefaults(): void {
@@ -174,5 +204,6 @@ export const StorageService = {
     safeSet(KEYS.GRADES, DEFAULT_GRADES);
     safeSet(KEYS.JOURNALS, DEFAULT_JOURNALS);
     safeSet(KEYS.THEME, DEFAULT_THEME_CONFIG);
+    this.touchLocalMutation();
   },
 };

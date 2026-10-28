@@ -1405,8 +1405,21 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                       </td>
 
                       {/* AKSI */}
-                      <td className="py-2.5 px-2 text-center w-24 whitespace-nowrap">
+                      <td className="py-2.5 px-2 text-center w-28 whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1.5">
+                          {isRowEditing && (
+                            <button
+                              onClick={() => {
+                                setEditingRowId(null);
+                                showSaveToast('Edit baris selesai & tersimpan');
+                              }}
+                              className="p-1.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-200 rounded-md transition-colors cursor-pointer"
+                              title="Selesai & Simpan Edit Baris Ini"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+
                           <button
                             onClick={() => handleOpenEdit(student)}
                             className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-slate-800 rounded-md transition-colors cursor-pointer"
