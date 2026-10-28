@@ -35,7 +35,7 @@ const KEYS = {
 
 export const DEFAULT_THEME_CONFIG: AppThemeConfig = {
   mode: 'light',
-  menuColor: 'indigo',
+  menuColor: 'navy',
 };
 
 function safeGet<T>(key: string, fallback: T): T {

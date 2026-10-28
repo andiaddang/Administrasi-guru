@@ -63,6 +63,10 @@ export const Header: React.FC<HeaderProps> = ({
           return 'bg-stone-900 border-b border-rose-950';
         case 'amethyst':
           return 'bg-slate-900 border-b border-purple-900/50';
+        case 'teal':
+          return 'bg-slate-900 border-b border-teal-900/50';
+        case 'amber':
+          return 'bg-stone-900 border-b border-amber-950/60';
         case 'slate':
           return 'bg-zinc-900 border-b border-zinc-800';
         default:
@@ -71,15 +75,19 @@ export const Header: React.FC<HeaderProps> = ({
     }
     switch (menuColor) {
       case 'emerald':
-        return 'bg-emerald-50/50 border-b border-emerald-200/80';
+        return 'bg-emerald-50/60 border-b border-emerald-200/80';
       case 'navy':
-        return 'bg-blue-50/40 border-b border-blue-200/80';
+        return 'bg-blue-50/50 border-b border-blue-200/80';
       case 'maroon':
-        return 'bg-rose-50/40 border-b border-rose-200/80';
+        return 'bg-rose-50/50 border-b border-rose-200/80';
       case 'amethyst':
-        return 'bg-purple-50/40 border-b border-purple-200/80';
+        return 'bg-purple-50/50 border-b border-purple-200/80';
+      case 'teal':
+        return 'bg-teal-50/50 border-b border-teal-200/80';
+      case 'amber':
+        return 'bg-amber-50/50 border-b border-amber-200/80';
       case 'slate':
-        return 'bg-slate-100/60 border-b border-slate-300';
+        return 'bg-slate-100/70 border-b border-slate-300';
       default:
         return 'bg-white border-b border-slate-200';
     }
@@ -95,6 +103,10 @@ export const Header: React.FC<HeaderProps> = ({
         return 'bg-rose-700';
       case 'amethyst':
         return 'bg-purple-600';
+      case 'teal':
+        return 'bg-teal-500';
+      case 'amber':
+        return 'bg-amber-600';
       case 'slate':
         return 'bg-slate-700';
       default:

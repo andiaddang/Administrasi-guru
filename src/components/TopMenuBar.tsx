@@ -76,6 +76,22 @@ export const TopMenuBar: React.FC<TopMenuBarProps> = ({
           activeIcon: 'text-purple-600 dark:text-purple-400',
           hoverBtn: 'hover:bg-purple-100/60 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300',
         };
+      case 'teal':
+        return {
+          barBg: 'bg-teal-50/50 dark:bg-slate-900/95 border-b border-teal-200/80 dark:border-teal-950',
+          activeBtn:
+            'bg-white dark:bg-teal-950/80 text-teal-800 dark:text-teal-200 font-bold border-b-2 border-teal-600 dark:border-teal-400 shadow-2xs',
+          activeIcon: 'text-teal-600 dark:text-teal-400',
+          hoverBtn: 'hover:bg-teal-100/60 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300',
+        };
+      case 'amber':
+        return {
+          barBg: 'bg-amber-50/50 dark:bg-stone-900/95 border-b border-amber-200/80 dark:border-amber-950',
+          activeBtn:
+            'bg-white dark:bg-amber-950/80 text-amber-800 dark:text-amber-200 font-bold border-b-2 border-amber-600 dark:border-amber-400 shadow-2xs',
+          activeIcon: 'text-amber-600 dark:text-amber-400',
+          hoverBtn: 'hover:bg-amber-100/60 dark:hover:bg-stone-800 text-slate-600 dark:text-slate-300',
+        };
       case 'slate':
         return {
           barBg: 'bg-slate-100/70 dark:bg-zinc-900/95 border-b border-slate-300 dark:border-zinc-800',

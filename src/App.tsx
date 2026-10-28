@@ -180,16 +180,20 @@ export default function App() {
     setTimeout(() => setRtdbToast(null), 5000);
   };
 
-  // Apply dark mode class to documentElement whenever theme.mode changes
+  // Apply dark mode & active theme to documentElement whenever theme changes
   useEffect(() => {
     if (typeof document !== 'undefined') {
+      const root = document.documentElement;
       if (theme.mode === 'dark') {
-        document.documentElement.classList.add('dark');
+        root.classList.add('dark');
+        root.setAttribute('data-mode', 'dark');
       } else {
-        document.documentElement.classList.remove('dark');
+        root.classList.remove('dark');
+        root.setAttribute('data-mode', 'light');
       }
+      root.setAttribute('data-theme', theme.menuColor || 'navy');
     }
-  }, [theme.mode]);
+  }, [theme.mode, theme.menuColor]);
 
   // Check URL query parameters on mount for deep linking (e.g. from shared QR code)
   useEffect(() => {

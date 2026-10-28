@@ -79,6 +79,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
           btn: 'bg-purple-50 dark:bg-purple-950/60 text-purple-800 dark:text-purple-200 font-semibold shadow-xs border-r-2 border-purple-600',
           icon: 'text-purple-600 dark:text-purple-400',
         };
+      case 'teal':
+        return {
+          btn: 'bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-200 font-semibold shadow-xs border-r-2 border-teal-600',
+          icon: 'text-teal-600 dark:text-teal-400',
+        };
+      case 'amber':
+        return {
+          btn: 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-200 font-semibold shadow-xs border-r-2 border-amber-600',
+          icon: 'text-amber-600 dark:text-amber-400',
+        };
       case 'slate':
         return {
           btn: 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold shadow-xs border-r-2 border-slate-600',

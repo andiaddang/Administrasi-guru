@@ -54,7 +54,15 @@ export interface ClassRoom {
 
 export type ThemeMode = 'light' | 'dark';
 
-export type MenuTheme = 'indigo' | 'emerald' | 'navy' | 'slate' | 'maroon' | 'amethyst';
+export type MenuTheme =
+  | 'indigo'
+  | 'emerald'
+  | 'navy'
+  | 'slate'
+  | 'maroon'
+  | 'amethyst'
+  | 'teal'
+  | 'amber';
 
 export interface AppThemeConfig {
   mode: ThemeMode;
