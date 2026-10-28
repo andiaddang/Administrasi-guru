@@ -1,13 +1,22 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, signInAnonymously } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { initializeFirestore, doc, getDocFromServer, setLogLevel } from 'firebase/firestore';
 import { getDatabase, ref as rtdbRef, get as getRtdb } from 'firebase/database';
 import firebaseConfig from '../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
 
-// CRITICAL: getFirestore must pass firebaseConfig.firestoreDatabaseId
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+// Set Firestore log level to error to avoid noisy connection status logs in sandboxed preview
+setLogLevel('error');
+
+// CRITICAL: initializeFirestore with experimentalForceLongPolling to avoid WebSocket disconnects in iframe previews
+export const db = initializeFirestore(
+  app,
+  {
+    experimentalForceLongPolling: true,
+  },
+  firebaseConfig.firestoreDatabaseId
+);
 
 // Firebase Realtime Database initialization
 export const RTDB_URL =
@@ -85,14 +94,25 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 export async function testFirestoreConnection() {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
+  } catch (error: any) {
+    if (error?.code === 'permission-denied' || error?.code === 'not-found') {
+      // Backend is online and responding
+      return;
+    }
+    if (
+      error?.code === 'unavailable' ||
+      (error instanceof Error && error.message.includes('the client is offline'))
+    ) {
       console.warn('Firestore is operating in offline/fallback mode.');
     }
   }
 }
 
-testFirestoreConnection().catch(() => {});
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    testFirestoreConnection().catch(() => {});
+  }, 1000);
+}
 
 export async function testRtdbConnection(): Promise<boolean> {
   try {
