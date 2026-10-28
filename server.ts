@@ -1,9 +1,10 @@
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
+import fs from 'fs';
 import dotenv from 'dotenv';
 import { GoogleGenAI, ThinkingLevel } from '@google/genai';
-import { generateSubjectExamPackage } from './src/services/smartQuestionService.js';
+import { generateSubjectExamPackage } from './src/services/smartQuestionService.ts';
 
 dotenv.config();
 
@@ -507,8 +508,12 @@ Berikan respons dalam format JSON valid persis seperti berikut:
 
 // Setup Vite middleware in dev or static serving in production
 async function startServer() {
-  if (process.env.NODE_ENV === 'production') {
-    const distPath = path.resolve(process.cwd(), 'dist');
+  const distPath = path.resolve(process.cwd(), 'dist');
+  const isProduction =
+    process.env.NODE_ENV === 'production' ||
+    (fs.existsSync(distPath) && process.env.NODE_ENV !== 'development');
+
+  if (isProduction && fs.existsSync(distPath)) {
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
       res.sendFile(path.resolve(distPath, 'index.html'));

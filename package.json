@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build && esbuild server.ts --platform=node --format=esm --outfile=server.js --packages=external",
+    "build": "vite build && esbuild src/services/smartQuestionService.ts --format=esm --outfile=src/services/smartQuestionService.js && esbuild server.ts --bundle --platform=node --format=esm --outfile=server.js --packages=external",
     "start": "node server.ts",
     "preview": "vite preview",
-    "clean": "rm -rf dist server.js",
+    "clean": "rm -rf dist server.js src/services/smartQuestionService.js",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
