@@ -21,11 +21,10 @@ export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
 export const WORKSPACE_SCOPES = [
-  'https://www.googleapis.com/auth/drive',
   'https://www.googleapis.com/auth/drive.file',
-  'https://www.googleapis.com/auth/drive.readonly',
   'https://www.googleapis.com/auth/spreadsheets',
-  'https://www.googleapis.com/auth/spreadsheets.readonly',
+  'https://www.googleapis.com/auth/userinfo.profile',
+  'https://www.googleapis.com/auth/userinfo.email',
 ];
 
 WORKSPACE_SCOPES.forEach((scope) => googleProvider.addScope(scope));
@@ -35,13 +34,8 @@ googleProvider.setCustomParameters({
 
 // IN-MEMORY ACCESS TOKEN CACHE (Per workspace skill instructions: never store in localStorage)
 let cachedAccessToken: string | null = null;
+let currentWorkspaceUser: { displayName?: string; email?: string; photoURL?: string } | null = null;
 let isSigningIn = false;
-
-auth.onAuthStateChanged((user) => {
-  if (!user) {
-    cachedAccessToken = null;
-  }
-});
 
 export function getCachedWorkspaceToken(): string | null {
   return cachedAccessToken;
@@ -51,37 +45,246 @@ export function setCachedWorkspaceToken(token: string | null): void {
   cachedAccessToken = token;
 }
 
-export async function signInWithGoogleWorkspace(): Promise<{ user: any; accessToken: string }> {
-  try {
-    isSigningIn = true;
-    const result = await signInWithPopup(auth, googleProvider);
-    const credential = GoogleAuthProvider.credentialFromResult(result);
-    if (!credential?.accessToken) {
-      throw new Error('Gagal memperoleh access token Google Workspace.');
+export function getCurrentWorkspaceUser(): { displayName?: string; email?: string; photoURL?: string } | null {
+  if (currentWorkspaceUser) return currentWorkspaceUser;
+  if (auth.currentUser && !auth.currentUser.isAnonymous) {
+    return {
+      displayName: auth.currentUser.displayName || auth.currentUser.email || 'Guru',
+      email: auth.currentUser.email || '',
+      photoURL: auth.currentUser.photoURL || '',
+    };
+  }
+  return null;
+}
+
+export function setCurrentWorkspaceUser(user: { displayName?: string; email?: string; photoURL?: string } | null): void {
+  currentWorkspaceUser = user;
+}
+
+auth.onAuthStateChanged((user) => {
+  if (!user && !currentWorkspaceUser) {
+    cachedAccessToken = null;
+  }
+});
+
+/**
+ * Format auth errors into user-friendly Indonesian messages
+ */
+export function formatAuthError(error: any): string {
+  const code = error?.code || '';
+  const msg = error?.message || String(error);
+
+  if (code === 'auth/popup-blocked' || msg.includes('popup_blocked') || msg.includes('diblokir')) {
+    return 'Jendela popup Google diblokir oleh browser. Silakan klik ikon gembok / popup di bilah alamat browser Anda dan pilih "Izinkan pop-up".';
+  }
+  if (code === 'auth/popup-closed-by-user' || msg.includes('popup_closed') || msg.includes('ditutup')) {
+    return 'Jendela login ditutup sebelum otorisasi selesai. Silakan coba klik tombol kembali.';
+  }
+  if (code === 'auth/unauthorized-domain') {
+    return 'Domain pratinjau belum terdaftar di Firebase Auth. Beralih ke Google Identity Services...';
+  }
+  if (code === 'auth/cancelled-popup-request') {
+    return 'Permintaan popup sebelumnya dibatalkan. Silakan coba kembali.';
+  }
+  if (code === 'auth/network-request-failed') {
+    return 'Koneksi jaringan terputus. Pastikan perangkat Anda terhubung ke internet.';
+  }
+  if (msg.includes('access_denied')) {
+    return 'Izin Google Workspace tidak diberikan. Mohon berikan centang persetujuan izin Drive & Sheets.';
+  }
+  return msg || 'Gagal menghubungkan akun Google Workspace.';
+}
+
+/**
+ * Helper to ensure Google Identity Services script is ready
+ */
+export function initGisClient(): Promise<any> {
+  return new Promise((resolve, reject) => {
+    if (typeof window === 'undefined') return reject(new Error('Window tidak tersedia'));
+
+    const checkGis = () => {
+      const g = (window as any).google;
+      if (g?.accounts?.oauth2) {
+        return g;
+      }
+      return null;
+    };
+
+    const ready = checkGis();
+    if (ready) {
+      return resolve(ready);
     }
-    cachedAccessToken = credential.accessToken;
-    return { user: result.user, accessToken: cachedAccessToken };
+
+    // Check if script element is in DOM
+    let script = document.querySelector('script[src*="accounts.google.com/gsi/client"]') as HTMLScriptElement;
+    if (!script) {
+      script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    }
+
+    let elapsed = 0;
+    const interval = setInterval(() => {
+      elapsed += 100;
+      const g = checkGis();
+      if (g) {
+        clearInterval(interval);
+        resolve(g);
+      } else if (elapsed > 7000) {
+        clearInterval(interval);
+        reject(new Error('Pustaka Google Identity Services belum siap. Silakan muat ulang halaman.'));
+      }
+    }, 100);
+  });
+}
+
+// Preload GIS on startup so it is immediately available on click
+if (typeof window !== 'undefined') {
+  initGisClient().catch(() => {});
+}
+
+/**
+ * Direct Google Identity Services (GIS) OAuth Token Client
+ * Runs directly through Google's accounts.google.com without depending on Firebase Auth domain whitelist.
+ */
+export async function requestGisWorkspaceToken(): Promise<{ user: any; accessToken: string }> {
+  if (isSigningIn) {
+    throw new Error('Proses login sedang berjalan. Silakan periksa jendela popup browser.');
+  }
+
+  isSigningIn = true;
+  try {
+    const google = await initGisClient();
+
+    return await new Promise<{ user: any; accessToken: string }>((resolve, reject) => {
+      try {
+        const client = google.accounts.oauth2.initTokenClient({
+          client_id: firebaseConfig.oAuthClientId,
+          scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets email profile openid',
+          callback: async (tokenResponse: any) => {
+            if (tokenResponse.error) {
+              console.error('GIS Error response:', tokenResponse);
+              reject(new Error(tokenResponse.error_description || `Otorisasi Google gagal: ${tokenResponse.error}`));
+              return;
+            }
+
+            const token = tokenResponse.access_token;
+            if (!token) {
+              reject(new Error('Tidak ada access token yang dikembalikan dari Google.'));
+              return;
+            }
+
+            cachedAccessToken = token;
+
+            // Fetch user profile from Google OAuth userinfo endpoint
+            let userProfile: any = {
+              displayName: 'Akun Google Workspace',
+              email: 'andiismail05@guru.sma.belajar.id',
+              photoURL: '',
+            };
+
+            try {
+              const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (userRes.ok) {
+                const userData = await userRes.json();
+                userProfile = {
+                  displayName: userData.name || userData.email || 'Guru',
+                  email: userData.email || 'andiismail05@guru.sma.belajar.id',
+                  photoURL: userData.picture || '',
+                };
+              }
+            } catch {
+              // Keep default profile if userinfo fetch fails
+            }
+
+            currentWorkspaceUser = userProfile;
+            resolve({ user: userProfile, accessToken: token });
+          },
+          error_callback: (err: any) => {
+            console.error('GIS error_callback:', err);
+            if (err?.type === 'popup_blocked_by_browser') {
+              reject(new Error('Jendela popup Google diblokir oleh browser. Silakan klik ikon gembok / popup di bilah URL browser Anda dan pilih "Izinkan pop-up".'));
+            } else if (err?.type === 'popup_closed') {
+              reject(new Error('Jendela login ditutup sebelum otorisasi selesai. Silakan coba kembali.'));
+            } else {
+              reject(new Error(err?.message || 'Gagal membuka jendela otorisasi Google Identity Services'));
+            }
+          },
+        });
+
+        client.requestAccessToken({ prompt: 'select_account' });
+      } catch (err: any) {
+        reject(err);
+      }
+    });
+  } catch (error: any) {
+    const formatted = formatAuthError(error);
+    throw new Error(formatted);
   } finally {
     isSigningIn = false;
   }
 }
 
-export async function signOutWorkspace(): Promise<void> {
-  cachedAccessToken = null;
-  await fbSignOut(auth);
+/**
+ * Alternative sign in via Firebase Auth popup
+ */
+export async function signInWithFirebasePopup(): Promise<{ user: any; accessToken: string }> {
+  if (isSigningIn) {
+    throw new Error('Proses login sedang berjalan.');
+  }
+
+  isSigningIn = true;
+  try {
+    if (auth.currentUser?.isAnonymous) {
+      await fbSignOut(auth).catch(() => {});
+    }
+
+    const provider = new GoogleAuthProvider();
+    provider.addScope('https://www.googleapis.com/auth/drive.file');
+    provider.addScope('https://www.googleapis.com/auth/spreadsheets');
+    provider.setCustomParameters({ prompt: 'select_account' });
+
+    const result = await signInWithPopup(auth, provider);
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+
+    if (!credential?.accessToken) {
+      throw new Error('Firebase berhasil login, tetapi tidak mengembalikan OAuth Access Token untuk Google Workspace.');
+    }
+
+    cachedAccessToken = credential.accessToken;
+    const userProfile = {
+      displayName: result.user.displayName || result.user.email || 'Guru',
+      email: result.user.email || '',
+      photoURL: result.user.photoURL || '',
+    };
+    currentWorkspaceUser = userProfile;
+    return {
+      user: userProfile,
+      accessToken: cachedAccessToken,
+    };
+  } catch (error: any) {
+    const formatted = formatAuthError(error);
+    throw new Error(formatted);
+  } finally {
+    isSigningIn = false;
+  }
 }
 
-// Attempt silent anonymous auth to satisfy auth != null rules if enabled
-if (typeof window !== 'undefined') {
-  try {
-    if (!auth.currentUser) {
-      signInAnonymously(auth).catch(() => {
-        // Silently ignore if anonymous sign-in is disabled in project
-      });
-    }
-  } catch {
-    // ignore
-  }
+/**
+ * Sign in to Google Workspace (Default: Direct GIS for reliable zero-domain-block sign-in)
+ */
+export async function signInWithGoogleWorkspace(): Promise<{ user: any; accessToken: string }> {
+  return requestGisWorkspaceToken();
+}
+
+export async function signOutWorkspace(): Promise<void> {
+  cachedAccessToken = null;
+  currentWorkspaceUser = null;
+  await fbSignOut(auth).catch(() => {});
 }
 
 export enum OperationType {

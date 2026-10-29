@@ -11,8 +11,12 @@ import {
 import {
   auth,
   signInWithGoogleWorkspace,
+  requestGisWorkspaceToken,
+  signInWithFirebasePopup,
   signOutWorkspace,
   getCachedWorkspaceToken,
+  getCurrentWorkspaceUser,
+  formatAuthError,
 } from '../firebase';
 import {
   GoogleWorkspaceService,
@@ -42,6 +46,9 @@ import {
   Database,
   Lock,
   LogOut,
+  HelpCircle,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 interface GoogleWorkspaceViewProps {
@@ -70,9 +77,11 @@ export const GoogleWorkspaceView: React.FC<GoogleWorkspaceViewProps> = ({
   onRestoreAllData,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'sheets' | 'drive'>('sheets');
-  const [googleUser, setGoogleUser] = useState<any>(() => auth.currentUser);
+  const [googleUser, setGoogleUser] = useState<any>(() => getCurrentWorkspaceUser());
   const [accessToken, setAccessToken] = useState<string | null>(() => getCachedWorkspaceToken());
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [showTroubleshoot, setShowTroubleshoot] = useState(false);
   const [toastMsg, setToastMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   // Drive state
@@ -114,10 +123,19 @@ export const GoogleWorkspaceView: React.FC<GoogleWorkspaceViewProps> = ({
     setTimeout(() => setToastMsg(null), 3500);
   };
 
-  // Listen to auth changes
+  // Listen to auth changes without clobbering GIS session
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
-      setGoogleUser(user);
+      if (user && !user.isAnonymous) {
+        setGoogleUser({
+          displayName: user.displayName || user.email || 'Guru',
+          email: user.email || '',
+          photoURL: user.photoURL || '',
+        });
+      } else {
+        const curUser = getCurrentWorkspaceUser();
+        setGoogleUser(curUser);
+      }
       const token = getCachedWorkspaceToken();
       setAccessToken(token);
     });
@@ -148,16 +166,24 @@ export const GoogleWorkspaceView: React.FC<GoogleWorkspaceViewProps> = ({
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = async (method: 'gis' | 'firebase' = 'gis') => {
+    setAuthError(null);
     setIsAuthenticating(true);
     try {
-      const { user, accessToken: token } = await signInWithGoogleWorkspace();
-      setGoogleUser(user);
-      setAccessToken(token);
-      showToast(`Berhasil terhubung dengan Google Workspace (${user.email || 'Akun Google'})`);
+      const res =
+        method === 'firebase'
+          ? await signInWithFirebasePopup()
+          : await requestGisWorkspaceToken();
+
+      setGoogleUser(res.user);
+      setAccessToken(res.accessToken);
+      setAuthError(null);
+      showToast(`Berhasil terhubung dengan Google Workspace (${res.user.email || res.user.displayName || 'Akun Google'})`);
     } catch (err: any) {
       console.error('Sign-in error:', err);
-      showToast(err.message || 'Gagal masuk dengan Google Workspace', 'error');
+      const msg = err.message || formatAuthError(err);
+      setAuthError(msg);
+      showToast(msg, 'error');
     } finally {
       setIsAuthenticating(false);
     }
@@ -487,7 +513,7 @@ export const GoogleWorkspaceView: React.FC<GoogleWorkspaceViewProps> = ({
           </div>
 
           {/* Connection Status Box */}
-          <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700/80 shrink-0 min-w-[280px]">
+          <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700/80 shrink-0 w-full lg:w-96">
             {accessToken && googleUser ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -497,7 +523,7 @@ export const GoogleWorkspaceView: React.FC<GoogleWorkspaceViewProps> = ({
                       <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                     </span>
                     <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                      Terhubung ke Google
+                      Terhubung ke Google Workspace
                     </span>
                   </div>
                   <button
@@ -508,65 +534,156 @@ export const GoogleWorkspaceView: React.FC<GoogleWorkspaceViewProps> = ({
                     Putuskan
                   </button>
                 </div>
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2.5 p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
                   {googleUser.photoURL ? (
                     <img
                       src={googleUser.photoURL}
                       alt="Avatar"
-                      className="w-8 h-8 rounded-full border border-slate-300 dark:border-slate-600 object-cover"
+                      className="w-9 h-9 rounded-full border border-slate-300 dark:border-slate-600 object-cover shrink-0"
                     />
                   ) : (
-                    <div className="w-8 h-8 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-xs">
+                    <div className="w-9 h-9 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-xs shrink-0">
                       {googleUser.displayName?.charAt(0) || 'G'}
                     </div>
                   )}
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
                       {googleUser.displayName || 'Akun Guru'}
                     </p>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                      {googleUser.email}
+                      {googleUser.email || 'andiismail05@guru.sma.belajar.id'}
                     </p>
                   </div>
                 </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>Google Drive & Google Sheets siap digunakan</span>
+                </div>
               </div>
             ) : (
-              <div className="space-y-3 text-center sm:text-left">
+              <div className="space-y-3">
                 <div>
-                  <p className="text-xs font-bold text-slate-900 dark:text-white">
-                    Hubungkan Akun Google
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">
+                      Hubungkan Akun Google
+                    </p>
+                    <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.5 rounded font-semibold">
+                      OAuth 2.0
+                    </span>
+                  </div>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    Diperlukan untuk membaca & membuat berkas di Google Drive / Sheets.
+                    Diperlukan untuk membaca, menulis & mengekspor ke Google Drive dan Google Sheets.
                   </p>
                 </div>
-                {/* Official Material Style Sign in with Google Button */}
+
+                {/* Primary Official Google Sign-In Button (Direct GIS) */}
                 <button
                   type="button"
-                  onClick={handleGoogleSignIn}
+                  onClick={() => handleGoogleSignIn('gis')}
                   disabled={isAuthenticating}
-                  className="w-full flex items-center justify-center gap-2.5 px-4 py-2 bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-600 rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-2.5 px-4 py-2.5 bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-600 rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 48 48">
-                    <path
-                      fill="#EA4335"
-                      d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
-                    />
-                    <path
-                      fill="#4285F4"
-                      d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
-                    />
-                  </svg>
-                  <span>{isAuthenticating ? 'Menghubungkan...' : 'Sign in with Google'}</span>
+                  {isAuthenticating ? (
+                    <RefreshCw className="w-4 h-4 animate-spin text-emerald-600" />
+                  ) : (
+                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 48 48">
+                      <path
+                        fill="#EA4335"
+                        d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
+                      />
+                      <path
+                        fill="#4285F4"
+                        d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
+                      />
+                      <path
+                        fill="#FBBC05"
+                        d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
+                      />
+                      <path
+                        fill="#34A853"
+                        d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+                      />
+                    </svg>
+                  )}
+                  <span>{isAuthenticating ? 'Membuka jendela otorisasi...' : 'Sign in with Google'}</span>
                 </button>
+
+                {/* Inline Error Box if Sign-In Failed */}
+                {authError && (
+                  <div className="p-3 bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 rounded-xl space-y-2 text-left animate-in fade-in">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <p className="text-[11px] font-bold text-rose-900 dark:text-rose-200">
+                          Gagal Menghubungkan Akun
+                        </p>
+                        <p className="text-[11px] text-rose-700 dark:text-rose-300 leading-relaxed">
+                          {authError}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1 border-t border-rose-200/60 dark:border-rose-900/60">
+                      <button
+                        type="button"
+                        onClick={() => handleGoogleSignIn('gis')}
+                        disabled={isAuthenticating}
+                        className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded text-[10px] font-bold transition-colors cursor-pointer"
+                      >
+                        Coba Lagi
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleGoogleSignIn('firebase')}
+                        disabled={isAuthenticating}
+                        className="text-[10px] font-semibold text-rose-700 dark:text-rose-300 hover:underline cursor-pointer"
+                      >
+                        Coba via Firebase Auth
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Troubleshooting Accordion for Popups */}
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowTroubleshoot(!showTroubleshoot)}
+                    className="w-full flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <HelpCircle className="w-3.5 h-3.5" />
+                      <span>Jendela login tidak muncul?</span>
+                    </span>
+                    {showTroubleshoot ? (
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+
+                  {showTroubleshoot && (
+                    <div className="mt-2 p-3 bg-slate-100 dark:bg-slate-900/90 rounded-lg text-[11px] text-slate-600 dark:text-slate-300 space-y-1.5 animate-in fade-in border border-slate-200 dark:border-slate-800">
+                      <p className="font-semibold text-slate-800 dark:text-slate-100">
+                        Cara mengizinkan pop-up di browser:
+                      </p>
+                      <ol className="list-decimal pl-4 space-y-1 leading-relaxed">
+                        <li>
+                          Periksa bilah alamat browser (URL) di bagian kanan atas atau ikon gembok/pengaturan situs.
+                        </li>
+                        <li>
+                          Cari ikon pop-up terblokir (kotak bertanda silang merah).
+                        </li>
+                        <li>
+                          Pilih <strong>"Selalu izinkan pop-up dan pengalihan"</strong>, lalu klik Selesai.
+                        </li>
+                        <li>
+                          Klik tombol <strong>"Sign in with Google"</strong> kembali dan pilih akun <code>@guru.sma.belajar.id</code>.
+                        </li>
+                      </ol>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
