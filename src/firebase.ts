@@ -1,7 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, signInAnonymously } from 'firebase/auth';
 import { initializeFirestore, doc, getDocFromServer, setLogLevel } from 'firebase/firestore';
-import { getDatabase, ref as rtdbRef, get as getRtdb } from 'firebase/database';
 import firebaseConfig from '../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
@@ -15,19 +14,62 @@ export const db = initializeFirestore(
   {
     experimentalForceLongPolling: true,
   },
-  firebaseConfig.firestoreDatabaseId
+  (firebaseConfig as any).firestoreDatabaseId
 );
 
-// Firebase Realtime Database initialization
-export const RTDB_URL =
-  (firebaseConfig as any).databaseURL ||
-  'https://administrasiguru159-default-rtdb.firebaseio.com';
-export const RTDB_PROJECT_NAME = 'Aplikasi Administrasi Guru SMAN 1 Gowa';
-export const RTDB_PROJECT_ID = 'administrasiguru159';
-
-export const rtdb = getDatabase(app, RTDB_URL);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+
+export const WORKSPACE_SCOPES = [
+  'https://www.googleapis.com/auth/drive',
+  'https://www.googleapis.com/auth/drive.file',
+  'https://www.googleapis.com/auth/drive.readonly',
+  'https://www.googleapis.com/auth/spreadsheets',
+  'https://www.googleapis.com/auth/spreadsheets.readonly',
+];
+
+WORKSPACE_SCOPES.forEach((scope) => googleProvider.addScope(scope));
+googleProvider.setCustomParameters({
+  prompt: 'select_account',
+});
+
+// IN-MEMORY ACCESS TOKEN CACHE (Per workspace skill instructions: never store in localStorage)
+let cachedAccessToken: string | null = null;
+let isSigningIn = false;
+
+auth.onAuthStateChanged((user) => {
+  if (!user) {
+    cachedAccessToken = null;
+  }
+});
+
+export function getCachedWorkspaceToken(): string | null {
+  return cachedAccessToken;
+}
+
+export function setCachedWorkspaceToken(token: string | null): void {
+  cachedAccessToken = token;
+}
+
+export async function signInWithGoogleWorkspace(): Promise<{ user: any; accessToken: string }> {
+  try {
+    isSigningIn = true;
+    const result = await signInWithPopup(auth, googleProvider);
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    if (!credential?.accessToken) {
+      throw new Error('Gagal memperoleh access token Google Workspace.');
+    }
+    cachedAccessToken = credential.accessToken;
+    return { user: result.user, accessToken: cachedAccessToken };
+  } finally {
+    isSigningIn = false;
+  }
+}
+
+export async function signOutWorkspace(): Promise<void> {
+  cachedAccessToken = null;
+  await fbSignOut(auth);
+}
 
 // Attempt silent anonymous auth to satisfy auth != null rules if enabled
 if (typeof window !== 'undefined') {
@@ -112,17 +154,6 @@ if (typeof window !== 'undefined') {
   setTimeout(() => {
     testFirestoreConnection().catch(() => {});
   }, 1000);
-}
-
-export async function testRtdbConnection(): Promise<boolean> {
-  try {
-    const connectedRef = rtdbRef(rtdb, '.info/connected');
-    const snapshot = await getRtdb(connectedRef);
-    return snapshot.val() === true;
-  } catch (error) {
-    console.warn('Realtime Database connection check:', error);
-    return false;
-  }
 }
 
 export async function signInWithGoogle() {

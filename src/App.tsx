@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   SchoolProfile,
   User,
@@ -11,8 +11,6 @@ import {
   AppThemeConfig,
 } from './types';
 import { StorageService, DEFAULT_THEME_CONFIG } from './services/storageService';
-import { RtdbService, RtdbStatus } from './services/rtdbService';
-import { Cloud, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { Header } from './components/Header';
 import { TopMenuBar } from './components/TopMenuBar';
 import { Sidebar } from './components/Sidebar';
@@ -29,9 +27,11 @@ import { AuthModal } from './components/AuthModal';
 import { ShareModal } from './components/ShareModal';
 import { ThemeModal } from './components/ThemeModal';
 import { EditProfileModal } from './components/EditProfileModal';
+import { ConfirmDeleteModal } from './components/ConfirmDeleteModal';
+import { GoogleWorkspaceView } from './components/GoogleWorkspaceView';
 
 export default function App() {
-  // Application Data States
+  // Application Data States (Pure Offline-First Local Storage)
   const [school, setSchool] = useState<SchoolProfile>(() => StorageService.getSchool());
   const [currentUser, setCurrentUser] = useState<User | null>(() => StorageService.getCurrentUser());
   const [classes, setClasses] = useState<ClassRoom[]>(() => StorageService.getClasses());
@@ -51,186 +51,8 @@ export default function App() {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
-
-  // Firebase Realtime Database States
-  const [rtdbStatus, setRtdbStatus] = useState<RtdbStatus>(() => RtdbService.getStatus());
-  const [rtdbToast, setRtdbToast] = useState<string | null>(null);
-  const isInitialMount = useRef(true);
-  const lastLocalMutationTime = useRef<number>(0);
-
-  const recordLocalMutation = () => {
-    lastLocalMutationTime.current = StorageService.touchLocalMutation();
-  };
-
-  // Helper to instantly persist and push to cloud without waiting
-  const triggerInstantCloudSync = (overrides?: {
-    school?: SchoolProfile;
-    classes?: ClassRoom[];
-    students?: Student[];
-    schedules?: Schedule[];
-    attendances?: AttendanceRecord[];
-    grades?: GradeRecord[];
-    journals?: TeachingJournal[];
-  }) => {
-    recordLocalMutation();
-    RtdbService.syncAllToCloud({
-      school: overrides?.school ?? school,
-      classes: overrides?.classes ?? classes,
-      students: overrides?.students ?? students,
-      schedules: overrides?.schedules ?? schedules,
-      attendances: overrides?.attendances ?? attendances,
-      grades: overrides?.grades ?? grades,
-      journals: overrides?.journals ?? journals,
-      theme,
-      currentUser,
-    });
-  };
-
-  // Monitor Realtime Database connection & subscribe to remote cloud updates
-  useEffect(() => {
-    const unsubStatus = RtdbService.subscribeStatus((status) => {
-      setRtdbStatus(status);
-    });
-
-    // Initial check: jika ada data di Realtime Database, sinkronkan secara cerdas
-    RtdbService.loadAllFromCloud().then((res) => {
-      if (res.success && res.data) {
-        const d = res.data;
-        const cloudTime = d.lastUpdated ? new Date(d.lastUpdated).getTime() : 0;
-        const localTime = StorageService.getLastLocalMutation();
-
-        // JIKA PERUBAHAN LOKAL LEBIH BARU DARI CLOUD:
-        // Jangan timpa data lokal ke setelan awal cloud! Sinkronkan perubahan lokal ke cloud!
-        if (localTime > cloudTime) {
-          RtdbService.syncAllToCloud({
-            school,
-            classes,
-            students,
-            schedules,
-            attendances,
-            grades,
-            journals,
-            theme,
-            currentUser,
-          });
-          return;
-        }
-
-        // HANYA JIKA CLOUD BENAR-BENAR LEBIH BARU DARI LOKAL:
-        if (d.school) {
-          setSchool(d.school);
-          StorageService.saveSchool(d.school);
-        }
-        if (d.classes && Array.isArray(d.classes)) {
-          setClasses(d.classes);
-          StorageService.saveClasses(d.classes);
-        }
-        if (d.students && Array.isArray(d.students)) {
-          setStudents(d.students);
-          StorageService.saveStudents(d.students);
-        }
-        if (d.schedules && Array.isArray(d.schedules)) {
-          setSchedules(d.schedules);
-          StorageService.saveSchedules(d.schedules);
-        }
-        if (d.attendances && Array.isArray(d.attendances)) {
-          setAttendances(d.attendances);
-          StorageService.saveAttendances(d.attendances);
-        }
-        if (d.grades && Array.isArray(d.grades)) {
-          setGrades(d.grades);
-          StorageService.saveGrades(d.grades);
-        }
-        if (d.journals && Array.isArray(d.journals)) {
-          setJournals(d.journals);
-          StorageService.saveJournals(d.journals);
-        }
-      } else if (res.success && res.data === null) {
-        // Hanya jika pemanggilan cloud berhasil dan memang belum ada data sama sekali di cloud
-        RtdbService.syncAllToCloud({
-          school,
-          classes,
-          students,
-          schedules,
-          attendances,
-          grades,
-          journals,
-          theme,
-          currentUser,
-        });
-      }
-    });
-
-    // Realtime Listener
-    const unsubRealtime = RtdbService.subscribeToRealtimeCloud((cloudData) => {
-      const cloudTime = cloudData.lastUpdated ? new Date(cloudData.lastUpdated).getTime() : 0;
-      const localTime = StorageService.getLastLocalMutation();
-
-      // Cegah snapshot RTDB menimpa perubahan lokal yang baru saja dilakukan pengguna
-      if (localTime >= cloudTime || Date.now() - localTime < 20000) {
-        return;
-      }
-      if (cloudData.school) setSchool(cloudData.school);
-      if (cloudData.classes && Array.isArray(cloudData.classes)) setClasses(cloudData.classes);
-      if (cloudData.students && Array.isArray(cloudData.students)) setStudents(cloudData.students);
-      if (cloudData.schedules && Array.isArray(cloudData.schedules)) setSchedules(cloudData.schedules);
-      if (cloudData.attendances && Array.isArray(cloudData.attendances)) setAttendances(cloudData.attendances);
-      if (cloudData.grades && Array.isArray(cloudData.grades)) setGrades(cloudData.grades);
-      if (cloudData.journals && Array.isArray(cloudData.journals)) setJournals(cloudData.journals);
-    });
-
-    return () => {
-      unsubStatus();
-      unsubRealtime();
-    };
-  }, []);
-
-  // Debounced Auto-sync to Firebase Realtime Database on data mutation
-  useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-    const timer = setTimeout(() => {
-      if (!RtdbService.hasPermissionDenied()) {
-        RtdbService.syncAllToCloud({
-          school,
-          classes,
-          students,
-          schedules,
-          attendances,
-          grades,
-          journals,
-          theme,
-          currentUser,
-        });
-      }
-    }, 1200);
-
-    return () => clearTimeout(timer);
-  }, [school, classes, students, schedules, attendances, grades, journals, theme]);
-
-  const handleManualRtdbSync = async () => {
-    setRtdbToast('Menghubungkan ke Firebase Realtime Database...');
-    RtdbService.resetPermissionState();
-    const res = await RtdbService.syncAllToCloud({
-      school,
-      classes,
-      students,
-      schedules,
-      attendances,
-      grades,
-      journals,
-      theme,
-      currentUser,
-    });
-    if (res.success) {
-      setRtdbToast('Data berhasil disinkronkan ke Firebase Realtime Database!');
-    } else {
-      setRtdbToast(`Status sinkronisasi: ${res.error || 'Periksa aturan Rules database atau koneksi Anda.'}`);
-    }
-    setTimeout(() => setRtdbToast(null), 5000);
-  };
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   // Apply dark mode & active theme to documentElement whenever theme changes
   useEffect(() => {
@@ -254,9 +76,18 @@ export default function App() {
       const tabParam = params.get('tab');
       if (
         tabParam &&
-        ['dashboard', 'classes', 'students', 'schedules', 'attendance', 'grades', 'ai-assistant', 'journals', 'settings'].includes(
-          tabParam
-        )
+        [
+          'dashboard',
+          'classes',
+          'students',
+          'schedules',
+          'attendance',
+          'grades',
+          'ai-assistant',
+          'journals',
+          'google-workspace',
+          'settings',
+        ].includes(tabParam)
       ) {
         setActiveTab(tabParam);
       }
@@ -294,82 +125,120 @@ export default function App() {
     StorageService.saveJournals(journals);
   }, [journals]);
 
-  // RESET TO FACTORY DEFAULTS
-  const handleResetToDefaults = () => {
-    if (
-      window.confirm(
-        'Apakah Anda yakin ingin mengatur ulang data ke data awal SMA Negeri 1 Gowa? Seluruh perubahan lokal akan ditimpa dengan data percontohan default.'
-      )
-    ) {
-      StorageService.resetToDefaults();
-      setSchool(StorageService.getSchool());
-      setCurrentUser(StorageService.getCurrentUser());
-      setClasses(StorageService.getClasses());
-      setStudents(StorageService.getStudents());
-      setSchedules(StorageService.getSchedules());
-      setAttendances(StorageService.getAttendances());
-      setGrades(StorageService.getGrades());
-      setJournals(StorageService.getJournals());
-      setActiveTab('dashboard');
-    }
+  // Local mutation timestamp recorder (pure offline local storage)
+  const recordLocalMutation = () => {
+    StorageService.touchLocalMutation();
   };
 
-  // CLASS HANDLERS
+  // RESET TO FACTORY DEFAULTS
+  const handleResetToDefaults = () => {
+    setIsResetConfirmOpen(true);
+  };
+
+  const handleConfirmReset = () => {
+    StorageService.resetToDefaults();
+    setSchool(StorageService.getSchool());
+    setCurrentUser(StorageService.getCurrentUser());
+    setClasses(StorageService.getClasses());
+    setStudents(StorageService.getStudents());
+    setSchedules(StorageService.getSchedules());
+    setAttendances(StorageService.getAttendances());
+    setGrades(StorageService.getGrades());
+    setJournals(StorageService.getJournals());
+    setActiveTab('dashboard');
+    setIsResetConfirmOpen(false);
+  };
+
+  // CLASS HANDLERS (Direct, instantaneous local persistence)
   const handleAddClass = (newClass: Omit<ClassRoom, 'id'>) => {
     recordLocalMutation();
     const created: ClassRoom = {
       ...newClass,
       id: `cls-${Date.now()}`,
     };
-    setClasses((prev) => [...prev, created]);
+    setClasses((prev) => {
+      const updated = [...prev, created];
+      StorageService.saveClasses(updated);
+      return updated;
+    });
   };
 
   const handleUpdateClass = (updated: ClassRoom) => {
     recordLocalMutation();
-    setClasses((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+    setClasses((prev) => {
+      const updatedList = prev.map((c) => (c.id === updated.id ? updated : c));
+      StorageService.saveClasses(updatedList);
+      return updatedList;
+    });
   };
 
   const handleDeleteClass = (id: string) => {
     recordLocalMutation();
-    setClasses((prev) => prev.filter((c) => c.id !== id));
+    setClasses((prev) => {
+      const updated = prev.filter((c) => c.id !== id);
+      StorageService.saveClasses(updated);
+      return updated;
+    });
   };
 
   const handleDeleteBatchClasses = (ids: string[]) => {
     recordLocalMutation();
-    setClasses((prev) => prev.filter((c) => !ids.includes(c.id)));
+    setClasses((prev) => {
+      const updated = prev.filter((c) => !ids.includes(c.id));
+      StorageService.saveClasses(updated);
+      return updated;
+    });
   };
 
-  // STUDENT HANDLERS
+  // STUDENT HANDLERS (Direct, instantaneous local persistence)
   const handleAddStudent = (newStudent: Omit<Student, 'id'>) => {
     recordLocalMutation();
     const created: Student = {
       ...newStudent,
       id: `std-${Date.now()}`,
     };
-    setStudents((prev) => [...prev, created]);
+    setStudents((prev) => {
+      const updated = [...prev, created];
+      StorageService.saveStudents(updated);
+      return updated;
+    });
   };
 
   const handleUpdateStudent = (updated: Student) => {
     recordLocalMutation();
-    setStudents((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+    setStudents((prev) => {
+      const updatedList = prev.map((s) => (s.id === updated.id ? updated : s));
+      StorageService.saveStudents(updatedList);
+      return updatedList;
+    });
   };
 
   const handleBatchUpdateStudents = (updatedList: Student[]) => {
     recordLocalMutation();
     setStudents((prev) => {
       const map = new Map(updatedList.map((s) => [s.id, s]));
-      return prev.map((s) => map.get(s.id) || s);
+      const updated = prev.map((s) => map.get(s.id) || s);
+      StorageService.saveStudents(updated);
+      return updated;
     });
   };
 
   const handleDeleteStudent = (id: string) => {
     recordLocalMutation();
-    setStudents((prev) => prev.filter((s) => s.id !== id));
+    setStudents((prev) => {
+      const updated = prev.filter((s) => s.id !== id);
+      StorageService.saveStudents(updated);
+      return updated;
+    });
   };
 
   const handleDeleteBatchStudents = (ids: string[]) => {
     recordLocalMutation();
-    setStudents((prev) => prev.filter((c) => !ids.includes(c.id)));
+    setStudents((prev) => {
+      const updated = prev.filter((c) => !ids.includes(c.id));
+      StorageService.saveStudents(updated);
+      return updated;
+    });
   };
 
   const handleBatchImportStudents = (newStudents: Omit<Student, 'id'>[]) => {
@@ -378,37 +247,55 @@ export default function App() {
       ...s,
       id: `std-${Date.now()}-${idx}`,
     }));
-    setStudents((prev) => [...prev, ...mapped]);
+    setStudents((prev) => {
+      const updated = [...prev, ...mapped];
+      StorageService.saveStudents(updated);
+      return updated;
+    });
   };
 
   const handleReorderStudents = (reorderedList: Student[]) => {
     recordLocalMutation();
     setStudents(reorderedList);
+    StorageService.saveStudents(reorderedList);
   };
 
-  // SCHEDULE HANDLERS
+  // SCHEDULE HANDLERS (Direct, instantaneous local persistence)
   const handleAddSchedule = (newSchedule: Omit<Schedule, 'id'>) => {
     recordLocalMutation();
     const created: Schedule = {
       ...newSchedule,
       id: `sch-${Date.now()}`,
     };
-    setSchedules((prev) => [...prev, created]);
+    setSchedules((prev) => {
+      const updated = [...prev, created];
+      StorageService.saveSchedules(updated);
+      return updated;
+    });
   };
 
   const handleUpdateSchedule = (updated: Schedule) => {
     recordLocalMutation();
-    setSchedules((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+    setSchedules((prev) => {
+      const updatedList = prev.map((s) => (s.id === updated.id ? updated : s));
+      StorageService.saveSchedules(updatedList);
+      return updatedList;
+    });
   };
 
   const handleDeleteSchedule = (id: string) => {
     recordLocalMutation();
-    setSchedules((prev) => prev.filter((s) => s.id !== id));
+    setSchedules((prev) => {
+      const updated = prev.filter((s) => s.id !== id);
+      StorageService.saveSchedules(updated);
+      return updated;
+    });
   };
 
   // ATTENDANCE HANDLERS
   const handleSaveAttendances = (records: AttendanceRecord[]) => {
     setAttendances(records);
+    StorageService.saveAttendances(records);
   };
 
   // GRADE HANDLERS
@@ -431,6 +318,7 @@ export default function App() {
           updated.push(ng);
         }
       });
+      StorageService.saveGrades(updated);
       return updated;
     });
   };
@@ -446,69 +334,131 @@ export default function App() {
             g.title.trim().toLowerCase() === grade.title.trim().toLowerCase() &&
             g.date === grade.date)
       );
+      let updated: GradeRecord[];
       if (existingIdx >= 0) {
-        const copy = [...prev];
-        copy[existingIdx] = { ...copy[existingIdx], ...grade };
-        return copy;
+        updated = [...prev];
+        updated[existingIdx] = { ...updated[existingIdx], ...grade };
+      } else {
+        updated = [...prev, grade];
       }
-      return [...prev, grade];
+      StorageService.saveGrades(updated);
+      return updated;
     });
   };
 
   const handleDeleteGrade = (id: string) => {
-    setGrades((prev) => prev.filter((g) => g.id !== id));
+    setGrades((prev) => {
+      const updated = prev.filter((g) => g.id !== id);
+      StorageService.saveGrades(updated);
+      return updated;
+    });
   };
 
   const handleDeleteBatchGrades = (ids: string[]) => {
-    setGrades((prev) => prev.filter((g) => !ids.includes(g.id)));
+    setGrades((prev) => {
+      const updated = prev.filter((g) => !ids.includes(g.id));
+      StorageService.saveGrades(updated);
+      return updated;
+    });
   };
 
   // Synchronize entire class grades (removes cleared/empty grades permanently)
   const handleSyncClassGrades = (classId: string, updatedClassGrades: GradeRecord[]) => {
     setGrades((prev) => {
       const otherClassesGrades = prev.filter((g) => g.classId !== classId);
-      return [...otherClassesGrades, ...updatedClassGrades];
+      const updated = [...otherClassesGrades, ...updatedClassGrades];
+      StorageService.saveGrades(updated);
+      return updated;
     });
   };
 
-  // JOURNAL HANDLERS
+  // JOURNAL HANDLERS (Direct, instantaneous local persistence)
   const handleAddJournal = (newJournal: Omit<TeachingJournal, 'id'>) => {
     recordLocalMutation();
     const created: TeachingJournal = {
       ...newJournal,
       id: `jrn-${Date.now()}`,
     };
-    setJournals((prev) => [created, ...prev]);
+    setJournals((prev) => {
+      const updated = [created, ...prev];
+      StorageService.saveJournals(updated);
+      return updated;
+    });
   };
 
   const handleUpdateJournal = (updated: TeachingJournal) => {
     recordLocalMutation();
-    setJournals((prev) => prev.map((j) => (j.id === updated.id ? updated : j)));
+    setJournals((prev) => {
+      const updatedList = prev.map((j) => (j.id === updated.id ? updated : j));
+      StorageService.saveJournals(updatedList);
+      return updatedList;
+    });
   };
 
   const handleDeleteJournal = (id: string) => {
     recordLocalMutation();
-    setJournals((prev) => prev.filter((j) => j.id !== id));
+    setJournals((prev) => {
+      const updated = prev.filter((j) => j.id !== id);
+      StorageService.saveJournals(updated);
+      return updated;
+    });
   };
 
   // SCHOOL PROFILE HANDLER
   const handleSaveSchool = (profile: SchoolProfile) => {
     setSchool(profile);
+    StorageService.saveSchool(profile);
   };
 
   // AUTH HANDLERS
   const handleLogout = () => {
-    if (window.confirm('Keluar dari sesi akun guru saat ini?')) {
-      setCurrentUser(null);
-      StorageService.saveCurrentUser(null);
-      setIsAuthModalOpen(true);
-    }
+    setIsLogoutConfirmOpen(true);
+  };
+
+  const handleConfirmLogout = () => {
+    setCurrentUser(null);
+    StorageService.saveCurrentUser(null);
+    setIsAuthModalOpen(true);
+    setIsLogoutConfirmOpen(false);
   };
 
   // TEACHER PROFILE HANDLER
   const handleSaveProfile = (updatedUser: User) => {
     setCurrentUser(updatedUser);
     StorageService.updateUserProfile(updatedUser);
+  };
+
+  // RESTORE FROM GOOGLE DRIVE BACKUP HANDLER
+  const handleRestoreFromDriveBackup = (restoredData: any) => {
+    if (!restoredData) return;
+    if (restoredData.school) {
+      setSchool(restoredData.school);
+      StorageService.saveSchool(restoredData.school);
+    }
+    if (Array.isArray(restoredData.classes)) {
+      setClasses(restoredData.classes);
+      StorageService.saveClasses(restoredData.classes);
+    }
+    if (Array.isArray(restoredData.students)) {
+      setStudents(restoredData.students);
+      StorageService.saveStudents(restoredData.students);
+    }
+    if (Array.isArray(restoredData.schedules)) {
+      setSchedules(restoredData.schedules);
+      StorageService.saveSchedules(restoredData.schedules);
+    }
+    if (Array.isArray(restoredData.attendances)) {
+      setAttendances(restoredData.attendances);
+      StorageService.saveAttendances(restoredData.attendances);
+    }
+    if (Array.isArray(restoredData.grades)) {
+      setGrades(restoredData.grades);
+      StorageService.saveGrades(restoredData.grades);
+    }
+    if (Array.isArray(restoredData.journals)) {
+      setJournals(restoredData.journals);
+      StorageService.saveJournals(restoredData.journals);
+    }
   };
 
   // THEME HANDLER
@@ -607,6 +557,7 @@ export default function App() {
               onDeleteBatchStudents={handleDeleteBatchStudents}
               onBatchImportStudents={handleBatchImportStudents}
               onReorderStudents={handleReorderStudents}
+              onNavigateTab={setActiveTab}
             />
           )}
 
@@ -682,28 +633,31 @@ export default function App() {
             />
           )}
 
+          {activeTab === 'google-workspace' && (
+            <GoogleWorkspaceView
+              school={school}
+              currentUser={currentUser}
+              classes={classes}
+              students={students}
+              attendances={attendances}
+              grades={grades}
+              journals={journals}
+              schedules={schedules}
+              onImportStudents={handleBatchImportStudents}
+              onRestoreAllData={handleRestoreFromDriveBackup}
+            />
+          )}
+
           {activeTab === 'settings' && (
             <SchoolSettings
               school={school}
               onSaveSchool={handleSaveSchool}
               currentUser={currentUser}
               onSaveProfile={handleSaveProfile}
-              rtdbStatus={rtdbStatus}
-              onManualRtdbSync={handleManualRtdbSync}
             />
           )}
         </main>
       </div>
-
-      {/* Realtime Database Toast Notification */}
-      {rtdbToast && (
-        <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-3 duration-200 pointer-events-none">
-          <div className="flex items-center gap-2.5 px-4 py-3 bg-slate-900 text-white rounded-xl shadow-2xl border border-slate-700 text-xs">
-            <Cloud className="w-4 h-4 text-emerald-400 shrink-0 animate-pulse" />
-            <span className="font-medium">{rtdbToast}</span>
-          </div>
-        </div>
-      )}
 
       {/* Auth Modal (Login / Register) */}
       <AuthModal
@@ -738,6 +692,28 @@ export default function App() {
         onClose={() => setIsEditProfileModalOpen(false)}
         currentUser={currentUser}
         onSaveProfile={handleSaveProfile}
+      />
+
+      {/* Reset Data Confirmation Modal (Strictly in-app, no window.confirm) */}
+      <ConfirmDeleteModal
+        isOpen={isResetConfirmOpen}
+        onClose={() => setIsResetConfirmOpen(false)}
+        onConfirm={handleConfirmReset}
+        title="Reset Data ke Pengaturan Awal"
+        message="Apakah Anda yakin ingin mengatur ulang data ke data awal SMA Negeri 1 Gowa? Seluruh perubahan lokal Anda akan dikembalikan ke data percontohan bawaan."
+        confirmLabel="Ya, Atur Ulang Data"
+        cancelLabel="Batal"
+      />
+
+      {/* Logout Confirmation Modal */}
+      <ConfirmDeleteModal
+        isOpen={isLogoutConfirmOpen}
+        onClose={() => setIsLogoutConfirmOpen(false)}
+        onConfirm={handleConfirmLogout}
+        title="Keluar Sesi Akun Guru"
+        message="Keluar dari sesi akun guru aktif saat ini? Anda dapat masuk kembali kapan saja."
+        confirmLabel="Ya, Keluar Akun"
+        cancelLabel="Batal"
       />
     </div>
   );

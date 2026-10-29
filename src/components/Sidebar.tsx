@@ -16,6 +16,7 @@ import {
   Palette,
   Edit3,
   Sparkles,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -54,6 +55,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'grades', label: 'Manajemen Nilai', icon: GraduationCap },
     { id: 'ai-assistant', label: 'Asisten Guru AI', icon: Sparkles },
     { id: 'journals', label: 'Jurnal Harian Guru', icon: BookOpenCheck },
+    { id: 'google-workspace', label: 'Google Drive & Sheets', icon: FileSpreadsheet },
     { id: 'settings', label: 'Profil & Kop Surat', icon: Building },
   ];
 

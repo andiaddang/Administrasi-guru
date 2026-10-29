@@ -39,9 +39,10 @@ interface StudentManagementProps {
   onDeleteBatchStudents: (ids: string[]) => void;
   onBatchImportStudents: (newStudents: Omit<Student, 'id'>[]) => void;
   onReorderStudents?: (reorderedStudents: Student[]) => void;
+  onNavigateTab?: (tab: string) => void;
 }
 
-// Universal parser for external clipboard text (Excel, Sheets, Word, WhatsApp, Web table)
+// Universal parser for external clipboard text (Excel, Sheets, Word, WhatsApp, Web table, plain lists)
 export function parseExternalStudentText(
   rawText: string,
   defaultClassId: string,
@@ -56,102 +57,192 @@ export function parseExternalStudentText(
 
   const result: Array<Omit<Student, 'id'>> = [];
 
-  for (const line of lines) {
-    // 1. Remove leading list numbering like "1. ", "1) ", "1 - ", "1: ", "#1 "
-    const cleanLine = line.replace(/^\s*(?:#|\b)?\d+[\.\)\-:\s]+\s*/, '').trim();
+  // Helper to determine gender from a string token
+  const extractGender = (str: string): Gender | null => {
+    const s = str.trim().toUpperCase();
+    if (
+      s === 'P' ||
+      s === 'PR' ||
+      s === 'F' ||
+      s.startsWith('PER') ||
+      s.startsWith('WAN')
+    ) {
+      return 'P';
+    }
+    if (
+      s === 'L' ||
+      s === 'LK' ||
+      s === 'M' ||
+      s.startsWith('LAK') ||
+      s.startsWith('PRI')
+    ) {
+      return 'L';
+    }
+    return null;
+  };
+
+  // Helper to guess gender for Indonesian names when unspecified
+  const guessIndonesianGender = (fullName: string): Gender => {
+    const lower = fullName.toLowerCase();
+    const femaleIndicators = [
+      'siti', 'nur', 'nurul', 'putri', 'dewi', 'ayu', 'aisyah', 'fatimah',
+      'zahra', 'indah', 'lestari', 'rahma', 'wulandari', 'fitri', 'annisa',
+      'novita', 'dian', 'safitri', 'khadijah', 'marwah', 'kartika', 'amelia',
+      'nadia', 'tri', 'mega', 'anggun', 'nisa', 'salma', 'mutiara', 'rizka'
+    ];
+    for (const indicator of femaleIndicators) {
+      if (new RegExp(`\\b${indicator}\\b`, 'i').test(lower)) {
+        return 'P';
+      }
+    }
+    return 'L';
+  };
+
+  let autoIdCounter = 1;
+
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+    const rawLine = lines[lineIndex];
+
+    // 1. Remove leading list numbering like "1. ", "1) ", "1 - ", "1: ", "#1 ", "No. 1 ", "[1] "
+    let cleanLine = rawLine
+      .replace(/^\s*(?:no\.?|#)?\s*\d+[\.\)\-:\s\]]+\s*/i, '')
+      .trim();
     if (!cleanLine) continue;
 
-    // Skip table headers if copied with header row like "NISN\tNama\tJK"
+    // Check if line is a table header row (e.g. "NISN   Nama Siswa   JK")
     const lowerLine = cleanLine.toLowerCase();
     if (
-      (lowerLine.includes('nisn') || lowerLine.includes('nomor induk')) &&
+      (lowerLine.includes('nisn') || lowerLine.includes('nomor induk') || lowerLine.includes('no.')) &&
       (lowerLine.includes('nama') || lowerLine.includes('siswa'))
     ) {
       continue;
     }
 
-    // 2. Try splitting by tab, semicolon, comma, or double/multiple space
     let tokens: string[] = [];
+
+    // Split based on delimiter if present
     if (cleanLine.includes('\t')) {
       tokens = cleanLine.split('\t').map((t) => t.trim());
     } else if (cleanLine.includes(';')) {
       tokens = cleanLine.split(';').map((t) => t.trim());
-    } else if (cleanLine.includes(',')) {
+    } else if (cleanLine.includes('|')) {
+      tokens = cleanLine.split('|').map((t) => t.trim()).filter(Boolean);
+    } else if (cleanLine.includes(',') && cleanLine.split(',').length >= 2 && !/,\s*s\.pd|,\s*m\.pd/i.test(cleanLine)) {
       tokens = cleanLine.split(',').map((t) => t.trim());
     } else if (/\s{2,}/.test(cleanLine)) {
       tokens = cleanLine.split(/\s{2,}/).map((t) => t.trim());
-    } else {
-      // Single space separated pattern: [NISN/NIS] [Nama Siswa] [L/P/Laki-laki/Perempuan]
-      const spaceMatch = cleanLine.match(
-        /^(\S+(?:\s*\/\s*\S+)?)\s+(.+?)(?:\s+([LP]|Laki-laki|Perempuan|Wanita|Pria))?(?:\s+(\+?\d[\d\s\-]{7,}\d))?$/i
-      );
-      if (spaceMatch) {
-        tokens = [spaceMatch[1], spaceMatch[2]];
-        if (spaceMatch[3]) tokens.push(spaceMatch[3]);
-        if (spaceMatch[4]) tokens.push(spaceMatch[4]);
-      } else {
-        tokens = cleanLine.split(/\s+/).map((t) => t.trim());
-      }
     }
 
-    // Filter empty tokens
-    tokens = tokens.filter((t) => t.length > 0);
-    if (tokens.length < 2) continue;
-
-    // Token 0: NISN or NISN/NIS
-    const rawNis = tokens[0];
-    // Token 1: Nama
-    const rawName = tokens[1];
-
-    let parsedGender: Gender = 'L';
+    let rawNis = '';
+    let rawName = '';
+    let parsedGender: Gender | null = null;
     let targetClassId = defaultClassId;
     let rawPhone = '-';
 
-    for (let i = 2; i < tokens.length; i++) {
-      const tok = tokens[i].trim();
-      const tokUpper = tok.toUpperCase();
-      if (
-        tokUpper === 'P' ||
-        tokUpper.startsWith('PER') ||
-        tokUpper === 'PR' ||
-        tokUpper === 'F' ||
-        tokUpper.startsWith('WAN')
-      ) {
-        parsedGender = 'P';
-      } else if (
-        tokUpper === 'L' ||
-        tokUpper.startsWith('LAK') ||
-        tokUpper.startsWith('PRI') ||
-        tokUpper === 'M'
-      ) {
-        parsedGender = 'L';
-      } else if (tok.match(/^\+?0?8[\d\-]{7,}$/) || tok.match(/^\d{9,}$/)) {
-        rawPhone = tok;
-      } else {
-        // Attempt to match a class name
-        const matchedClass = classes.find(
-          (c) =>
-            c.name.toLowerCase() === tok.toLowerCase() ||
-            c.name.toLowerCase().includes(tok.toLowerCase())
-        );
-        if (matchedClass) {
-          targetClassId = matchedClass.id;
+    if (tokens.length >= 2) {
+      // Multiple columns detected (e.g. from Excel, CSV, or Tab-separated text)
+      // Check if token[0] was just an integer row number (e.g., 1, 2, 3)
+      if (/^\d{1,3}$/.test(tokens[0]) && tokens.length >= 3 && !/^\d{1,3}$/.test(tokens[1])) {
+        tokens.shift();
+      }
+
+      // Check if token 0 looks like an ID (contains digits, e.g. 0081234901 or 2425001 or 008123/2425)
+      const token0IsId = /^[\d\/\-\.\s]{4,}$/.test(tokens[0]);
+      if (token0IsId) {
+        rawNis = tokens[0];
+        rawName = tokens[1];
+        // Remaining tokens for Gender, Phone, Class
+        for (let i = 2; i < tokens.length; i++) {
+          const tok = tokens[i];
+          const g = extractGender(tok);
+          if (g && !parsedGender) {
+            parsedGender = g;
+          } else if (tok.match(/^\+?0?8[\d\-]{7,}$/) || tok.match(/^\d{9,}$/)) {
+            rawPhone = tok;
+          } else {
+            const matchedClass = classes.find(
+              (c) =>
+                c.name.toLowerCase() === tok.toLowerCase() ||
+                c.name.toLowerCase().includes(tok.toLowerCase())
+            );
+            if (matchedClass) {
+              targetClassId = matchedClass.id;
+            }
+          }
         }
+      } else {
+        // Token 0 is likely the Student Name! E.g. [Nama, JK] or [Nama, NISN, JK]
+        rawName = tokens[0];
+        for (let i = 1; i < tokens.length; i++) {
+          const tok = tokens[i];
+          const g = extractGender(tok);
+          if (g && !parsedGender) {
+            parsedGender = g;
+          } else if (/^[\d\/\-\.\s]{4,}$/.test(tok) && !rawNis) {
+            rawNis = tok;
+          } else if (tok.match(/^\+?0?8[\d\-]{7,}$/) || tok.match(/^\d{9,}$/)) {
+            rawPhone = tok;
+          } else {
+            const matchedClass = classes.find(
+              (c) =>
+                c.name.toLowerCase() === tok.toLowerCase() ||
+                c.name.toLowerCase().includes(tok.toLowerCase())
+            );
+            if (matchedClass) {
+              targetClassId = matchedClass.id;
+            }
+          }
+        }
+      }
+    } else {
+      // Single continuous line without standard column delimiters (e.g. WhatsApp list or plain text)
+      // Check if gender is tagged at the end: e.g. "Andi Fauzi (L)", "Siti Aisyah - P", "Budi Santoso Perempuan"
+      const genderEndMatch = cleanLine.match(/[\(\[\-\s]+([LP]|Laki-laki|Perempuan|Wanita|Pria)[\)\]]?$/i);
+      if (genderEndMatch) {
+        parsedGender = extractGender(genderEndMatch[1]);
+        cleanLine = cleanLine.substring(0, cleanLine.length - genderEndMatch[0].length).trim();
+      }
+
+      // Check if line starts with NISN/NIS: e.g. "0081234901 / 2425001 Ahmad Fauzi" or "0081234901 Ahmad Fauzi"
+      const idPrefixMatch = cleanLine.match(/^([\d\/\-\.]{4,})\s+(.+)$/);
+      if (idPrefixMatch) {
+        rawNis = idPrefixMatch[1].trim();
+        rawName = idPrefixMatch[2].trim();
+      } else {
+        // Just the student name!
+        rawName = cleanLine;
       }
     }
 
-    if (rawName && rawName.toLowerCase() !== 'nama' && rawName.toLowerCase() !== 'nama lengkap') {
-      result.push({
-        nisnNis: rawNis,
-        nisn: rawNis,
-        nis: rawNis,
-        name: rawName,
-        gender: parsedGender,
-        classId: targetClassId,
-        parentPhone: rawPhone,
-        status: 'Aktif',
-      });
+    // Clean up student name
+    rawName = rawName.replace(/^[\-\.\s,]+|[\-\.\s,]+$/g, '').trim();
+    if (!rawName || rawName.toLowerCase() === 'nama' || rawName.toLowerCase() === 'nama lengkap') {
+      continue;
     }
+
+    // If gender wasn't explicitly found, guess or default
+    if (!parsedGender) {
+      parsedGender = guessIndonesianGender(rawName);
+    }
+
+    // If NIS wasn't provided, generate a clean sequential NIS
+    if (!rawNis || rawNis === '-') {
+      const yearPrefix = '2425';
+      const seqStr = String(autoIdCounter).padStart(3, '0');
+      rawNis = `${yearPrefix}${seqStr}`;
+      autoIdCounter++;
+    }
+
+    result.push({
+      nisnNis: rawNis,
+      nisn: rawNis,
+      nis: rawNis,
+      name: rawName,
+      gender: parsedGender,
+      classId: targetClassId,
+      parentPhone: rawPhone,
+      status: 'Aktif',
+    });
   }
 
   return result;
@@ -167,6 +258,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
   onDeleteBatchStudents,
   onBatchImportStudents,
   onReorderStudents,
+  onNavigateTab,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClassFilter, setSelectedClassFilter] = useState<string>(() => classes[0]?.id || '');
@@ -892,6 +984,18 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
             Export (.xlsx)
           </button>
 
+          {onNavigateTab && (
+            <button
+              type="button"
+              onClick={() => onNavigateTab('google-workspace')}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-xs font-semibold rounded-lg transition-colors cursor-pointer border border-emerald-200 dark:border-emerald-800"
+              title="Buka Google Sheets & Drive untuk ekspor atau impor data siswa"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>Google Sheets</span>
+            </button>
+          )}
+
           <button
             onClick={handleOpenAdd}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
@@ -955,17 +1059,105 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
               </div>
             </div>
 
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                Tempel teks dari Excel / WhatsApp:
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      if (navigator.clipboard && navigator.clipboard.readText) {
+                        const text = await navigator.clipboard.readText();
+                        if (text) {
+                          setQuickPasteText(text);
+                          showSaveToast('Teks berhasil ditempel dari clipboard!');
+                        }
+                      } else {
+                        showSaveToast('Gunakan pintasan Ctrl+V pada kotak teks.');
+                      }
+                    } catch {
+                      showSaveToast('Gunakan pintasan Ctrl+V untuk menempel.');
+                    }
+                  }}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/80 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded text-[11px] font-semibold cursor-pointer"
+                >
+                  <ClipboardPaste className="w-3 h-3" />
+                  <span>Tempel dari Clipboard</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuickPasteText(
+                      `0081234991 / 2425001\tAndi Muhammad Ilham\tL\n0081234992 / 2425002\tSiti Fatimah Zahra\tP\n0081234993\tBudi Gunawan\tLaki-laki`
+                    );
+                  }}
+                  className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300 rounded text-[11px] font-medium cursor-pointer"
+                >
+                  Contoh Data
+                </button>
+              </div>
+            </div>
+
             <textarea
               ref={quickPasteInputRef}
               rows={3}
               value={quickPasteText}
               onChange={(e) => setQuickPasteText(e.target.value)}
+              onPaste={(e) => {
+                const text = e.clipboardData?.getData('text');
+                if (text) {
+                  setQuickPasteText(text);
+                }
+              }}
               placeholder="Tempel (Ctrl+V) data siswa di sini... Contoh:
 0081234991 / 2425001	Andi Muhammad Ilham	L
 0081234992 / 2425002	Siti Fatimah Zahra	P
 0081234993	Budi Gunawan	Laki-laki"
-              className="w-full p-3 font-mono text-xs border border-indigo-200 dark:border-indigo-900/60 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="allow-global-paste-intercept w-full p-3 font-mono text-xs border border-indigo-200 dark:border-indigo-900/60 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
+
+            {/* Live Table Preview inside Quick Paste Drawer */}
+            {parsedQuickPasteStudents.length > 0 && (
+              <div className="border border-emerald-200 dark:border-emerald-900/60 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-xs">
+                <div className="p-2 bg-emerald-50 dark:bg-emerald-950/40 border-b border-emerald-200 dark:border-emerald-900/50 flex items-center justify-between text-[11px]">
+                  <span className="font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    Hasil Preview ({parsedQuickPasteStudents.length} Siswa Terdeteksi):
+                  </span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                    Target: <strong>{classes.find((c) => c.id === quickPasteClassId)?.name || 'Aktif'}</strong>
+                  </span>
+                </div>
+                <div className="max-h-40 overflow-y-auto">
+                  <table className="w-full text-left text-[11px]">
+                    <thead className="bg-slate-100 dark:bg-slate-800 sticky top-0 font-semibold text-slate-700 dark:text-slate-200">
+                      <tr>
+                        <th className="p-1.5 w-8 text-center">No</th>
+                        <th className="p-1.5">NISN / NIS</th>
+                        <th className="p-1.5">Nama Lengkap Siswa</th>
+                        <th className="p-1.5 text-center w-12">L/P</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {parsedQuickPasteStudents.map((s, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                          <td className="p-1.5 text-center text-slate-400">{idx + 1}</td>
+                          <td className="p-1.5 font-mono font-medium text-slate-900 dark:text-slate-100">{s.nisnNis}</td>
+                          <td className="p-1.5 font-bold text-slate-900 dark:text-white">{s.name}</td>
+                          <td className="p-1.5 text-center">
+                            <span className={`font-semibold ${s.gender === 'L' ? 'text-blue-600 dark:text-blue-400' : 'text-pink-600 dark:text-pink-400'}`}>
+                              {s.gender}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
               <div className="text-xs">
@@ -978,7 +1170,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                   </span>
                 ) : (
                   <span className="text-slate-500 dark:text-slate-400 text-[11px]">
-                    Tip: Format didukung: Tab (Excel), Titik Koma (;), Koma (,), atau Spasi.
+                    Tip: Format didukung: Tab (Excel), Titik Koma (;), Koma (,), WhatsApp numbering, atau Spasi.
                   </span>
                 )}
               </div>
@@ -1679,101 +1871,196 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
                   </span>
                 </div>
 
-                {/* Paste Area */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="font-bold text-slate-800 dark:text-slate-100">
-                      Tempelkan Teks Siswa di Bawah Ini:
+                {/* Paste Area & Action Controls */}
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                      <Clipboard className="w-4 h-4 text-indigo-500" />
+                      <span>Tempelkan Teks Siswa di Bawah Ini:</span>
                     </label>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                      Format: [NISN/NIS] [NAMA LENGKAP] [L/P]
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            if (navigator.clipboard && navigator.clipboard.readText) {
+                              const text = await navigator.clipboard.readText();
+                              if (text) {
+                                setRawPastedText(text);
+                                showSaveToast('Teks berhasil ditempel dari clipboard!');
+                              }
+                            } else {
+                              showSaveToast('Gunakan pintasan Ctrl+V pada kotak teks.');
+                            }
+                          } catch (err) {
+                            showSaveToast('Gunakan pintasan Ctrl+V untuk menempel.');
+                          }
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950/80 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-lg font-semibold text-[11px] transition-colors cursor-pointer"
+                      >
+                        <ClipboardPaste className="w-3.5 h-3.5" />
+                        <span>Tempel dari Clipboard (Tombol Paste)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRawPastedText(
+                            `0081234901 / 2425001\tAndi Muhammad Rifky\tL\n0081234902 / 2425002\tNurul Fadhilah Putri\tP\n0081234903 / 2425003\tSiti Aisyah Rahma\tPerempuan\n0081234904 / 2425004\tFajar Hidayatullah\tLaki-laki`
+                          );
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-medium text-[11px] transition-colors cursor-pointer"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                        <span>Contoh Teks</span>
+                      </button>
+
+                      {rawPastedText && (
+                        <button
+                          type="button"
+                          onClick={() => setRawPastedText('')}
+                          className="px-2 py-1 text-rose-500 hover:text-rose-600 dark:text-rose-400 font-medium text-[11px] transition-colors cursor-pointer"
+                        >
+                          Hapus Teks
+                        </button>
+                      )}
+                    </div>
                   </div>
+
                   <textarea
-                    rows={5}
+                    rows={4}
                     value={rawPastedText}
                     onChange={(e) => setRawPastedText(e.target.value)}
+                    onPaste={(e) => {
+                      const text = e.clipboardData?.getData('text');
+                      if (text) {
+                        setRawPastedText(text);
+                      }
+                    }}
                     placeholder="Contoh salinan dari Excel / WhatsApp:
 0081234901 / 2425001	Andi Muhammad Rifky	L
 0081234902 / 2425002	Nurul Fadhilah Putri	P
 0081234903 / 2425003	Siti Aisyah Rahma	Perempuan
 0081234904 / 2425004	Fajar Hidayatullah	Laki-laki"
-                    className="w-full p-3 font-mono text-xs border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="allow-global-paste-intercept w-full p-3 font-mono text-xs border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
-                  <div className="flex items-center justify-between mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
                     <span>
-                      Dapat menggunakan pemisah Tab, Titik Koma (;), Koma (,), atau Spasi bertingkat.
+                      Mendukung format kolom Tab (Excel), Titik Koma (;), Koma (,), WhatsApp numbering (1. Nama Siswa), atau spasi.
                     </span>
-                    {rawPastedText && (
-                      <button
-                        type="button"
-                        onClick={() => setRawPastedText('')}
-                        className="text-rose-500 hover:text-rose-600 dark:text-rose-400 hover:underline cursor-pointer font-medium"
-                      >
-                        Hapus Teks
-                      </button>
-                    )}
+                    <span className="font-mono">
+                      {rawPastedText ? `${rawPastedText.split(/\r?\n/).filter(Boolean).length} baris teks` : '0 baris'}
+                    </span>
                   </div>
                 </div>
 
-                {/* Parsed Live Preview Table */}
-                {parsedPastedStudents.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>
-                          {parsedPastedStudents.length} Siswa Terdeteksi Siap Ditambahkan:
+                {/* HASIL TAMPILAN LANGSUNG YANG DI-PASTE (LIVE PREVIEW) */}
+                <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                        <FileText className="w-4 h-4 text-indigo-500" />
+                        <span>Hasil Tampilan Langsung yang Di-Paste:</span>
+                      </span>
+                      {parsedPastedStudents.length > 0 && (
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                          {parsedPastedStudents.length} Siswa Terbaca
                         </span>
-                      </div>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                      )}
+                    </div>
+                    {parsedPastedStudents.length > 0 && (
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
                         ({parsedPastedStudents.filter((s) => s.gender === 'L').length} Laki-laki,{' '}
                         {parsedPastedStudents.filter((s) => s.gender === 'P').length} Perempuan)
                       </span>
-                    </div>
-
-                    <div className="max-h-48 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl">
-                      <table className="w-full text-left text-[11px]">
-                        <thead className="bg-slate-100 dark:bg-slate-800 sticky top-0 font-semibold text-slate-700 dark:text-slate-200">
-                          <tr>
-                            <th className="p-2 w-8 text-center">No</th>
-                            <th className="p-2">NISN / NIS</th>
-                            <th className="p-2">Nama Lengkap Siswa</th>
-                            <th className="p-2 text-center">L/P</th>
-                            <th className="p-2">Kelas</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                          {parsedPastedStudents.map((s, idx) => {
-                            const cls = classes.find((c) => c.id === s.classId);
-                            return (
-                              <tr
-                                key={idx}
-                                className="hover:bg-slate-50 dark:hover:bg-slate-800/50"
-                              >
-                                <td className="p-2 text-center text-slate-500 dark:text-slate-400">{idx + 1}</td>
-                                <td className="p-2 font-mono font-medium text-slate-900 dark:text-slate-100">{s.nisnNis}</td>
-                                <td className="p-2 font-bold text-slate-900 dark:text-white">{s.name}</td>
-                                <td className="p-2 text-center">
-                                  <span
-                                    className={`font-semibold ${
-                                      s.gender === 'L'
-                                        ? 'text-blue-600 dark:text-blue-400'
-                                        : 'text-pink-600 dark:text-pink-400'
-                                    }`}
-                                  >
-                                    {s.gender}
-                                  </span>
-                                </td>
-                                <td className="p-2 text-slate-700 dark:text-slate-200">{cls?.name || 'Dipilih'}</td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+                    )}
                   </div>
-                )}
+
+                  {parsedPastedStudents.length > 0 ? (
+                    <div className="border border-emerald-200 dark:border-emerald-900/60 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-xs">
+                      <div className="p-2.5 bg-emerald-50/80 dark:bg-emerald-950/40 border-b border-emerald-200 dark:border-emerald-900/50 flex items-center justify-between">
+                        <span className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                          Pratinjau data siswa hasil paste (siap ditambahkan ke database):
+                        </span>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                          Target Kelas: <strong>{classes.find((c) => c.id === pasteTargetClassId)?.name || 'Aktif'}</strong>
+                        </span>
+                      </div>
+
+                      <div className="max-h-56 overflow-y-auto">
+                        <table className="w-full text-left text-[11px]">
+                          <thead className="bg-slate-100 dark:bg-slate-800 sticky top-0 font-semibold text-slate-700 dark:text-slate-200 shadow-xs">
+                            <tr>
+                              <th className="p-2 w-10 text-center">No</th>
+                              <th className="p-2">NISN / NIS</th>
+                              <th className="p-2">Nama Lengkap Siswa</th>
+                              <th className="p-2 text-center w-16">L/P</th>
+                              <th className="p-2">Kelas Tujuan</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            {parsedPastedStudents.map((s, idx) => {
+                              const cls = classes.find((c) => c.id === s.classId);
+                              return (
+                                <tr
+                                  key={idx}
+                                  className="hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 transition-colors"
+                                >
+                                  <td className="p-2 text-center text-slate-500 dark:text-slate-400 font-medium">
+                                    {idx + 1}
+                                  </td>
+                                  <td className="p-2 font-mono font-semibold text-slate-900 dark:text-slate-100">
+                                    {s.nisnNis}
+                                  </td>
+                                  <td className="p-2 font-bold text-slate-900 dark:text-white">
+                                    {s.name}
+                                  </td>
+                                  <td className="p-2 text-center">
+                                    <span
+                                      className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                        s.gender === 'L'
+                                          ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
+                                          : 'bg-pink-100 dark:bg-pink-950 text-pink-700 dark:text-pink-300'
+                                      }`}
+                                    >
+                                      {s.gender === 'L' ? 'Laki-laki' : 'Perempuan'}
+                                    </span>
+                                  </td>
+                                  <td className="p-2 text-slate-700 dark:text-slate-200 font-medium">
+                                    {cls?.name || 'Dipilih'}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ) : rawPastedText.trim().length > 0 ? (
+                    <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-xl text-amber-800 dark:text-amber-200 flex items-start gap-2.5">
+                      <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                      <div className="space-y-1">
+                        <p className="font-semibold text-xs">Teks terdeteksi namun belum dapat dipetakan.</p>
+                        <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                          Pastikan teks yang ditempel memiliki nama siswa pada setiap baris. Klik tombol <strong>"Contoh Teks"</strong> di atas untuk melihat format yang didukung.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-6 bg-slate-50 dark:bg-slate-800/40 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl text-center space-y-2">
+                      <div className="w-10 h-10 mx-auto rounded-full bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                        <ClipboardPaste className="w-5 h-5" />
+                      </div>
+                      <p className="font-semibold text-slate-700 dark:text-slate-200 text-xs">
+                        Hasil copy-paste akan langsung muncul di sini secara otomatis
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+                        Copy kolom data siswa dari Excel, Sheets, WhatsApp, atau Word, lalu klik tombol <strong>"Tempel dari Clipboard"</strong> atau tekan <strong>Ctrl+V</strong> di atas.
+                      </p>
+                    </div>
+                  )}
+                </div>
 
                 {/* Modal Footer */}
                 <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
