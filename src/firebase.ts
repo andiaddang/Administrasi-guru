@@ -74,6 +74,17 @@ export function formatAuthError(error: any): string {
   const code = error?.code || '';
   const msg = error?.message || String(error);
 
+  if (
+    msg.includes('admin_policy_enforced') ||
+    msg.includes('Akses diblokir') ||
+    msg.includes('blocked_by_admin') ||
+    code === 'auth/admin-restricted-operation'
+  ) {
+    return 'Akses diblokir oleh kebijakan administrator akun sekolah/belajar.id (admin_policy_enforced). Gunakan akun Google Pribadi (@gmail.com) atau unduh langsung file Excel (.xlsx) untuk Google Sheets di bawah.';
+  }
+  if (msg.includes('origin_mismatch') || msg.includes('redirect_uri_mismatch')) {
+    return 'Asal domain browser dibatasi oleh Google OAuth Client. Gunakan mode login Firebase Auth resmi atau unduh langsung file spreadsheet (.xlsx).';
+  }
   if (code === 'auth/popup-blocked' || msg.includes('popup_blocked') || msg.includes('diblokir')) {
     return 'Jendela popup Google diblokir oleh browser. Silakan klik ikon gembok / popup di bilah alamat browser Anda dan pilih "Izinkan pop-up".';
   }
@@ -81,7 +92,7 @@ export function formatAuthError(error: any): string {
     return 'Jendela login ditutup sebelum otorisasi selesai. Silakan coba klik tombol kembali.';
   }
   if (code === 'auth/unauthorized-domain') {
-    return 'Domain pratinjau belum terdaftar di Firebase Auth. Beralih ke Google Identity Services...';
+    return 'Domain pratinjau belum terdaftar di Firebase Auth Authorized Domains. Anda tetap dapat menggunakan tombol "Unduh File Excel (.xlsx) Siap Google Sheets" di bawah tanpa perlu login!';
   }
   if (code === 'auth/cancelled-popup-request') {
     return 'Permintaan popup sebelumnya dibatalkan. Silakan coba kembali.';
@@ -90,7 +101,7 @@ export function formatAuthError(error: any): string {
     return 'Koneksi jaringan terputus. Pastikan perangkat Anda terhubung ke internet.';
   }
   if (msg.includes('access_denied')) {
-    return 'Izin Google Workspace tidak diberikan. Mohon berikan centang persetujuan izin Drive & Sheets.';
+    return 'Izin akses Google Workspace tidak diberikan. Mohon berikan centang persetujuan izin Drive & Sheets.';
   }
   return msg || 'Gagal menghubungkan akun Google Workspace.';
 }
@@ -275,10 +286,11 @@ export async function signInWithFirebasePopup(): Promise<{ user: any; accessToke
 }
 
 /**
- * Sign in to Google Workspace (Default: Direct GIS for reliable zero-domain-block sign-in)
+ * Sign in to Google Workspace using official Firebase Auth Popup flow
+ * (Uses gen-lang-client-0594554728.firebaseapp.com authorized redirect handler to prevent origin_mismatch)
  */
 export async function signInWithGoogleWorkspace(): Promise<{ user: any; accessToken: string }> {
-  return requestGisWorkspaceToken();
+  return signInWithFirebasePopup();
 }
 
 export async function signOutWorkspace(): Promise<void> {

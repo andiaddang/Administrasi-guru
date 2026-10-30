@@ -166,7 +166,7 @@ export const GoogleWorkspaceView: React.FC<GoogleWorkspaceViewProps> = ({
     }
   };
 
-  const handleGoogleSignIn = async (method: 'gis' | 'firebase' = 'gis') => {
+  const handleGoogleSignIn = async (method: 'firebase' | 'gis' = 'firebase') => {
     setAuthError(null);
     setIsAuthenticating(true);
     try {
@@ -199,6 +199,128 @@ export const GoogleWorkspaceView: React.FC<GoogleWorkspaceViewProps> = ({
     } catch (err: any) {
       showToast('Gagal memutuskan koneksi', 'error');
     }
+  };
+
+  // DIRECT LOCAL EXCEL DOWNLOADS (Zero-Login Fallback for Google Sheets)
+  const handleDownloadStudentsExcel = () => {
+    const XLSX = (window as any).XLSX;
+    if (!XLSX) {
+      showToast('Pustaka SheetJS belum dimuat di browser', 'error');
+      return;
+    }
+    const exportData = students.map((s, idx) => {
+      const cls = classes.find((c) => c.id === s.classId);
+      return {
+        'No': idx + 1,
+        'NISN': s.nisn || s.nisnNis || '-',
+        'NIS': s.nis || '-',
+        'Nama Lengkap Siswa': s.name,
+        'Jenis Kelamin': s.gender === 'L' ? 'Laki-laki' : 'Perempuan',
+        'Kelas': cls ? cls.name : '-',
+        'Kontak Orang Tua': s.parentPhone || '-',
+        'Status': s.status || 'Aktif',
+      };
+    });
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Siswa');
+    XLSX.writeFile(
+      workbook,
+      `Data_Siswa_${school.name.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`
+    );
+    showToast('File Excel siswa berhasil diunduh (siap dibuka di Google Sheets)');
+  };
+
+  const handleDownloadAttendanceExcel = () => {
+    const XLSX = (window as any).XLSX;
+    if (!XLSX) {
+      showToast('Pustaka SheetJS belum dimuat di browser', 'error');
+      return;
+    }
+    const exportData = attendances.map((a, idx) => {
+      const stu = students.find((s) => s.id === a.studentId);
+      const cls = classes.find((c) => c.id === (stu?.classId || a.classId));
+      return {
+        'No': idx + 1,
+        'Tanggal': a.date,
+        'NISN': stu?.nisn || stu?.nisnNis || '-',
+        'Nama Siswa': stu ? stu.name : 'Siswa',
+        'Kelas': cls ? cls.name : '-',
+        'Status Kehadiran': a.status,
+        'Catatan': a.notes || '-',
+      };
+    });
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Rekap Presensi');
+    XLSX.writeFile(
+      workbook,
+      `Rekap_Presensi_${school.name.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`
+    );
+    showToast('File Excel presensi berhasil diunduh (siap dibuka di Google Sheets)');
+  };
+
+  const handleDownloadGradesExcel = () => {
+    const XLSX = (window as any).XLSX;
+    if (!XLSX) {
+      showToast('Pustaka SheetJS belum dimuat di browser', 'error');
+      return;
+    }
+    const exportData = grades.map((g, idx) => {
+      const stu = students.find((s) => s.id === g.studentId);
+      const cls = classes.find((c) => c.id === (stu?.classId || g.classId));
+      return {
+        'No': idx + 1,
+        'NISN': stu?.nisn || stu?.nisnNis || '-',
+        'Nama Siswa': stu ? stu.name : 'Siswa',
+        'Kelas': cls ? cls.name : '-',
+        'Mata Pelajaran': g.subject,
+        'Jenis Penilaian': g.type,
+        'Nilai': g.score,
+        'Keterangan': g.score >= 75 ? 'Tuntas' : 'Perlu Bimbingan',
+      };
+    });
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Rekap Nilai');
+    XLSX.writeFile(
+      workbook,
+      `Rekap_Nilai_${school.name.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`
+    );
+    showToast('File Excel rekap nilai berhasil diunduh (siap dibuka di Google Sheets)');
+  };
+
+  const handleDownloadJournalsExcel = () => {
+    const XLSX = (window as any).XLSX;
+    if (!XLSX) {
+      showToast('Pustaka SheetJS belum dimuat di browser', 'error');
+      return;
+    }
+    const exportData = journals.map((j, idx) => {
+      const cls = classes.find((c) => c.id === j.classId);
+      return {
+        'No': idx + 1,
+        'Tanggal': j.date,
+        'Pertemuan Ke': j.meetingNumber,
+        'Waktu / Jam': j.time || '-',
+        'Kelas': cls ? cls.name : '-',
+        'Mata Pelajaran': j.subject,
+        'Materi Pokok / Topik': j.topic,
+        'Kegiatan Pembelajaran': j.learningActivities || '-',
+        'Kendala': j.obstacles || '-',
+        'Solusi / Tindak Lanjut': j.solutions || '-',
+        'Jumlah Hadir': j.presentCount,
+        'Jumlah Tidak Hadir': j.absentCount,
+      };
+    });
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Jurnal Mengajar');
+    XLSX.writeFile(
+      workbook,
+      `Jurnal_Mengajar_${school.name.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`
+    );
+    showToast('File Excel jurnal mengajar berhasil diunduh (siap dibuka di Google Sheets)');
   };
 
   // EXPORT HANDLERS
@@ -576,10 +698,10 @@ export const GoogleWorkspaceView: React.FC<GoogleWorkspaceViewProps> = ({
                   </p>
                 </div>
 
-                {/* Primary Official Google Sign-In Button (Direct GIS) */}
+                {/* Primary Official Google Sign-In Button (Firebase Auth Popup) */}
                 <button
                   type="button"
-                  onClick={() => handleGoogleSignIn('gis')}
+                  onClick={() => handleGoogleSignIn('firebase')}
                   disabled={isAuthenticating}
                   className="w-full flex items-center justify-center gap-2.5 px-4 py-2.5 bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-600 rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-50"
                 >
@@ -605,8 +727,27 @@ export const GoogleWorkspaceView: React.FC<GoogleWorkspaceViewProps> = ({
                       />
                     </svg>
                   )}
-                  <span>{isAuthenticating ? 'Membuka jendela otorisasi...' : 'Sign in with Google'}</span>
+                  <span>{isAuthenticating ? 'Membuka jendela otorisasi Google...' : 'Sign in with Google'}</span>
                 </button>
+
+                {/* Important Workspace Guide Note */}
+                <div className="p-2.5 bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-xl text-[11px] text-blue-900 dark:text-blue-200 space-y-1">
+                  <p className="font-bold flex items-center gap-1.5 text-blue-950 dark:text-blue-100">
+                    <ShieldCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                    <span>Petunjuk Akun Belajar.id & Otorisasi:</span>
+                  </p>
+                  <p className="text-[10.5px] leading-relaxed text-blue-800 dark:text-blue-300">
+                    Jika muncul pesan <em>"Akses diblokir: Error Otorisasi"</em>, akun <code>@guru.sma.belajar.id</code> Anda dibatasi oleh kebijakan admin Kemendikbudristek.
+                  </p>
+                  <div className="pt-0.5 space-y-0.5 text-[10.5px]">
+                    <p className="font-medium text-emerald-800 dark:text-emerald-300">
+                      ✓ Pilih <strong>Akun Google Pribadi (@gmail.com)</strong> saat popup terbuka, ATAU
+                    </p>
+                    <p className="font-medium text-slate-700 dark:text-slate-300">
+                      ✓ Klik tombol <strong>"Unduh Excel (.xlsx) Siap Sheets"</strong> di bawah tanpa perlu login!
+                    </p>
+                  </div>
+                </div>
 
                 {/* Inline Error Box if Sign-In Failed */}
                 {authError && (
@@ -615,7 +756,7 @@ export const GoogleWorkspaceView: React.FC<GoogleWorkspaceViewProps> = ({
                       <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
                       <div className="space-y-1">
                         <p className="text-[11px] font-bold text-rose-900 dark:text-rose-200">
-                          Gagal Menghubungkan Akun
+                          Kendala Otorisasi Akun
                         </p>
                         <p className="text-[11px] text-rose-700 dark:text-rose-300 leading-relaxed">
                           {authError}
@@ -626,19 +767,19 @@ export const GoogleWorkspaceView: React.FC<GoogleWorkspaceViewProps> = ({
                     <div className="flex items-center gap-2 pt-1 border-t border-rose-200/60 dark:border-rose-900/60">
                       <button
                         type="button"
-                        onClick={() => handleGoogleSignIn('gis')}
+                        onClick={() => handleGoogleSignIn('firebase')}
                         disabled={isAuthenticating}
                         className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded text-[10px] font-bold transition-colors cursor-pointer"
                       >
-                        Coba Lagi
+                        Coba Lagi (Firebase Auth)
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleGoogleSignIn('firebase')}
+                        onClick={() => handleGoogleSignIn('gis')}
                         disabled={isAuthenticating}
                         className="text-[10px] font-semibold text-rose-700 dark:text-rose-300 hover:underline cursor-pointer"
                       >
-                        Coba via Firebase Auth
+                        Coba Google Identity
                       </button>
                     </div>
                   </div>
@@ -678,7 +819,7 @@ export const GoogleWorkspaceView: React.FC<GoogleWorkspaceViewProps> = ({
                           Pilih <strong>"Selalu izinkan pop-up dan pengalihan"</strong>, lalu klik Selesai.
                         </li>
                         <li>
-                          Klik tombol <strong>"Sign in with Google"</strong> kembali dan pilih akun <code>@guru.sma.belajar.id</code>.
+                          Klik tombol <strong>"Sign in with Google"</strong> kembali dan pilih akun yang diinginkan.
                         </li>
                       </ol>
                     </div>
@@ -755,7 +896,7 @@ export const GoogleWorkspaceView: React.FC<GoogleWorkspaceViewProps> = ({
                 <span>Ekspor Cepat Data Sekolah ke Google Sheets</span>
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Pilih data yang ingin Anda ekspor langsung menjadi file Google Spreadsheet baru di Drive
+                Pilih data yang ingin Anda ekspor langsung menjadi file Google Spreadsheet baru di Drive atau unduh file Excel siap pakai.
               </p>
             </div>
 
@@ -773,18 +914,28 @@ export const GoogleWorkspaceView: React.FC<GoogleWorkspaceViewProps> = ({
                     Ekspor seluruh daftar {students.length} siswa dengan NISN, jenis kelamin, kelas, dan kontak orang tua.
                   </p>
                 </div>
-                <button
-                  onClick={handleExportStudents}
-                  disabled={isExporting !== null || !accessToken}
-                  className="mt-4 w-full py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 dark:disabled:bg-slate-800 text-white disabled:text-slate-400 text-xs font-semibold rounded-lg shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
-                >
-                  {isExporting === 'students' ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  )}
-                  <span>Ekspor Data Siswa</span>
-                </button>
+                <div className="mt-4 space-y-2">
+                  <button
+                    onClick={handleExportStudents}
+                    disabled={isExporting !== null || !accessToken}
+                    className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 dark:disabled:bg-slate-800 text-white disabled:text-slate-400 text-xs font-semibold rounded-lg shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    {isExporting === 'students' ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    )}
+                    <span>Ekspor ke Sheets Cloud</span>
+                  </button>
+                  <button
+                    onClick={handleDownloadStudentsExcel}
+                    className="w-full py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    title="Unduh file Excel (.xlsx) langsung tanpa perlu login Google"
+                  >
+                    <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>Unduh Excel (.xlsx) Siap Sheets</span>
+                  </button>
+                </div>
               </div>
 
               {/* Card 2: Presensi */}
@@ -800,18 +951,28 @@ export const GoogleWorkspaceView: React.FC<GoogleWorkspaceViewProps> = ({
                     Ekspor rekap {attendances.length} catatan kehadiran harian siswa per tanggal, status Hadir/Sakit/Izin/Alpa.
                   </p>
                 </div>
-                <button
-                  onClick={handleExportAttendance}
-                  disabled={isExporting !== null || !accessToken}
-                  className="mt-4 w-full py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 dark:disabled:bg-slate-800 text-white disabled:text-slate-400 text-xs font-semibold rounded-lg shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
-                >
-                  {isExporting === 'attendance' ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  )}
-                  <span>Ekspor Presensi</span>
-                </button>
+                <div className="mt-4 space-y-2">
+                  <button
+                    onClick={handleExportAttendance}
+                    disabled={isExporting !== null || !accessToken}
+                    className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 dark:disabled:bg-slate-800 text-white disabled:text-slate-400 text-xs font-semibold rounded-lg shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    {isExporting === 'attendance' ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    )}
+                    <span>Ekspor ke Sheets Cloud</span>
+                  </button>
+                  <button
+                    onClick={handleDownloadAttendanceExcel}
+                    className="w-full py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    title="Unduh file Excel (.xlsx) langsung tanpa perlu login Google"
+                  >
+                    <Download className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                    <span>Unduh Excel (.xlsx) Siap Sheets</span>
+                  </button>
+                </div>
               </div>
 
               {/* Card 3: Nilai */}
@@ -827,18 +988,28 @@ export const GoogleWorkspaceView: React.FC<GoogleWorkspaceViewProps> = ({
                     Ekspor {grades.length} nilai tugas, UH, PTS, dan PAS lengkap dengan mata pelajaran dan nama siswa.
                   </p>
                 </div>
-                <button
-                  onClick={handleExportGrades}
-                  disabled={isExporting !== null || !accessToken}
-                  className="mt-4 w-full py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 dark:disabled:bg-slate-800 text-white disabled:text-slate-400 text-xs font-semibold rounded-lg shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
-                >
-                  {isExporting === 'grades' ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  )}
-                  <span>Ekspor Rekap Nilai</span>
-                </button>
+                <div className="mt-4 space-y-2">
+                  <button
+                    onClick={handleExportGrades}
+                    disabled={isExporting !== null || !accessToken}
+                    className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 dark:disabled:bg-slate-800 text-white disabled:text-slate-400 text-xs font-semibold rounded-lg shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    {isExporting === 'grades' ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    )}
+                    <span>Ekspor ke Sheets Cloud</span>
+                  </button>
+                  <button
+                    onClick={handleDownloadGradesExcel}
+                    className="w-full py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    title="Unduh file Excel (.xlsx) langsung tanpa perlu login Google"
+                  >
+                    <Download className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                    <span>Unduh Excel (.xlsx) Siap Sheets</span>
+                  </button>
+                </div>
               </div>
 
               {/* Card 4: Jurnal */}
@@ -854,18 +1025,28 @@ export const GoogleWorkspaceView: React.FC<GoogleWorkspaceViewProps> = ({
                     Ekspor {journals.length} catatan pertemuan mengajar, materi pokok, kendala, serta tindak lanjut ke Google Sheets.
                   </p>
                 </div>
-                <button
-                  onClick={handleExportJournals}
-                  disabled={isExporting !== null || !accessToken}
-                  className="mt-4 w-full py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 dark:disabled:bg-slate-800 text-white disabled:text-slate-400 text-xs font-semibold rounded-lg shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
-                >
-                  {isExporting === 'journals' ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  )}
-                  <span>Ekspor Jurnal Guru</span>
-                </button>
+                <div className="mt-4 space-y-2">
+                  <button
+                    onClick={handleExportJournals}
+                    disabled={isExporting !== null || !accessToken}
+                    className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 dark:disabled:bg-slate-800 text-white disabled:text-slate-400 text-xs font-semibold rounded-lg shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    {isExporting === 'journals' ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    )}
+                    <span>Ekspor ke Sheets Cloud</span>
+                  </button>
+                  <button
+                    onClick={handleDownloadJournalsExcel}
+                    className="w-full py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    title="Unduh file Excel (.xlsx) langsung tanpa perlu login Google"
+                  >
+                    <Download className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                    <span>Unduh Excel (.xlsx) Siap Sheets</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
