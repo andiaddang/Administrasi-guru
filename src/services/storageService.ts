@@ -32,7 +32,18 @@ const KEYS = {
   JOURNALS: 'sman1gowa_journals',
   THEME: 'sman1gowa_theme_config',
   LAST_LOCAL_MUTATION: 'sman1gowa_last_local_mutation',
+  SYNC_CONFIG: 'sman1gowa_google_sync_config',
 };
+
+export interface GoogleSyncConfig {
+  spreadsheetId?: string;
+  spreadsheetUrl?: string;
+  folderId?: string;
+  folderUrl?: string;
+  lastSyncedAt?: string;
+  autoSync: boolean;
+  connectedEmail?: string;
+}
 
 export const DEFAULT_THEME_CONFIG: AppThemeConfig = {
   mode: 'light',
@@ -192,6 +203,20 @@ export const StorageService = {
   saveJournals(journals: TeachingJournal[]): void {
     safeSet(KEYS.JOURNALS, journals);
     this.touchLocalMutation();
+  },
+
+  getGoogleSyncConfig(): GoogleSyncConfig {
+    return safeGet<GoogleSyncConfig>(KEYS.SYNC_CONFIG, { autoSync: true });
+  },
+  saveGoogleSyncConfig(partial: Partial<GoogleSyncConfig>): GoogleSyncConfig {
+    const current = this.getGoogleSyncConfig();
+    const merged: GoogleSyncConfig = {
+      ...current,
+      ...partial,
+      autoSync: partial.autoSync !== undefined ? partial.autoSync : (current.autoSync ?? true),
+    };
+    safeSet(KEYS.SYNC_CONFIG, merged);
+    return merged;
   },
 
   resetToDefaults(): void {

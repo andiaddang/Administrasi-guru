@@ -241,23 +241,28 @@ export async function requestGisWorkspaceToken(): Promise<{ user: any; accessTok
 }
 
 /**
- * Alternative sign in via Firebase Auth popup
+ * Sign in via official Firebase Auth popup with explicit account chooser
  */
 export async function signInWithFirebasePopup(): Promise<{ user: any; accessToken: string }> {
   if (isSigningIn) {
-    throw new Error('Proses login sedang berjalan.');
+    throw new Error('Proses login sedang berjalan. Silakan periksa jendela popup browser.');
   }
 
   isSigningIn = true;
   try {
-    if (auth.currentUser?.isAnonymous) {
-      await fbSignOut(auth).catch(() => {});
-    }
+    // Explicitly sign out previous session first so Google always displays the account chooser dialog
+    await fbSignOut(auth).catch(() => {});
+    cachedAccessToken = null;
+    currentWorkspaceUser = null;
 
     const provider = new GoogleAuthProvider();
     provider.addScope('https://www.googleapis.com/auth/drive.file');
     provider.addScope('https://www.googleapis.com/auth/spreadsheets');
-    provider.setCustomParameters({ prompt: 'select_account' });
+    // Forces Google to show the account chooser ("Pilih akun Google Anda") every time
+    provider.setCustomParameters({
+      prompt: 'select_account',
+      auth_type: 'rerequest',
+    });
 
     const result = await signInWithPopup(auth, provider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
@@ -287,9 +292,16 @@ export async function signInWithFirebasePopup(): Promise<{ user: any; accessToke
 
 /**
  * Sign in to Google Workspace using official Firebase Auth Popup flow
- * (Uses gen-lang-client-0594554728.firebaseapp.com authorized redirect handler to prevent origin_mismatch)
  */
 export async function signInWithGoogleWorkspace(): Promise<{ user: any; accessToken: string }> {
+  return signInWithFirebasePopup();
+}
+
+/**
+ * Switch account: Explicitly sign out, clear cache, and prompt Google account chooser
+ */
+export async function switchGoogleWorkspaceAccount(): Promise<{ user: any; accessToken: string }> {
+  await signOutWorkspace();
   return signInWithFirebasePopup();
 }
 

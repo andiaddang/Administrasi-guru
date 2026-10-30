@@ -13,6 +13,7 @@ import {
   signInWithGoogleWorkspace,
   requestGisWorkspaceToken,
   signInWithFirebasePopup,
+  switchGoogleWorkspaceAccount,
   signOutWorkspace,
   getCachedWorkspaceToken,
   getCurrentWorkspaceUser,
@@ -23,6 +24,7 @@ import {
   DriveFileItem,
   ExportResult,
 } from '../services/googleWorkspaceService';
+import { StorageService, GoogleSyncConfig } from '../services/storageService';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import {
   HardDrive,
@@ -49,6 +51,10 @@ import {
   HelpCircle,
   ChevronDown,
   ChevronUp,
+  Zap,
+  UserCheck,
+  Check,
+  FolderCheck,
 } from 'lucide-react';
 
 interface GoogleWorkspaceViewProps {
@@ -83,6 +89,10 @@ export const GoogleWorkspaceView: React.FC<GoogleWorkspaceViewProps> = ({
   const [authError, setAuthError] = useState<string | null>(null);
   const [showTroubleshoot, setShowTroubleshoot] = useState(false);
   const [toastMsg, setToastMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  // Sync config & 1-click state
+  const [syncConfig, setSyncConfig] = useState<GoogleSyncConfig>(() => StorageService.getGoogleSyncConfig());
+  const [isSyncingMaster, setIsSyncingMaster] = useState(false);
 
   // Drive state
   const [driveFiles, setDriveFiles] = useState<DriveFileItem[]>([]);
@@ -179,6 +189,17 @@ export const GoogleWorkspaceView: React.FC<GoogleWorkspaceViewProps> = ({
       setAccessToken(res.accessToken);
       setAuthError(null);
       showToast(`Berhasil terhubung dengan Google Workspace (${res.user.email || res.user.displayName || 'Akun Google'})`);
+
+      // Update connected email in sync config
+      const updatedConfig = StorageService.saveGoogleSyncConfig({
+        connectedEmail: res.user.email || undefined,
+      });
+      setSyncConfig(updatedConfig);
+
+      // Automatic 1-click sync if autoSync enabled
+      if (updatedConfig.autoSync) {
+        handleMasterSync(res.accessToken);
+      }
     } catch (err: any) {
       console.error('Sign-in error:', err);
       const msg = err.message || formatAuthError(err);
@@ -187,6 +208,79 @@ export const GoogleWorkspaceView: React.FC<GoogleWorkspaceViewProps> = ({
     } finally {
       setIsAuthenticating(false);
     }
+  };
+
+  const handleSwitchAccount = async () => {
+    setAuthError(null);
+    setIsAuthenticating(true);
+    try {
+      const res = await switchGoogleWorkspaceAccount();
+      setGoogleUser(res.user);
+      setAccessToken(res.accessToken);
+      setAuthError(null);
+      showToast(`Berhasil beralih ke akun Google: ${res.user.email || res.user.displayName || 'Akun Baru'}`);
+
+      const updatedConfig = StorageService.saveGoogleSyncConfig({
+        connectedEmail: res.user.email || undefined,
+      });
+      setSyncConfig(updatedConfig);
+
+      if (updatedConfig.autoSync) {
+        handleMasterSync(res.accessToken);
+      }
+    } catch (err: any) {
+      console.error('Switch account error:', err);
+      const msg = err.message || formatAuthError(err);
+      setAuthError(msg);
+      showToast(msg, 'error');
+    } finally {
+      setIsAuthenticating(false);
+    }
+  };
+
+  const handleMasterSync = async (tokenOverride?: string) => {
+    const token = tokenOverride || accessToken;
+    if (!token) {
+      showToast('Silakan hubungkan akun Google Workspace Anda terlebih dahulu', 'error');
+      return;
+    }
+    setIsSyncingMaster(true);
+    try {
+      const fullData = {
+        school,
+        classes,
+        students,
+        attendances,
+        grades,
+        journals,
+        schedules,
+      };
+      const res = await GoogleWorkspaceService.syncAllDataToMasterSpreadsheet(token, fullData, syncConfig.spreadsheetId);
+      const updated = StorageService.saveGoogleSyncConfig({
+        spreadsheetId: res.spreadsheetId,
+        spreadsheetUrl: res.spreadsheetUrl,
+        folderId: res.folderId,
+        folderUrl: res.folderUrl,
+        lastSyncedAt: res.lastSyncedAt,
+        connectedEmail: googleUser?.email || undefined,
+      });
+      setSyncConfig(updated);
+      showToast('Sinkronisasi otomatis berhasil! Folder & Spreadsheet Terpadu 4-Tab telah diperbarui.');
+      // Refresh drive files list if in drive tab
+      loadDriveFiles();
+    } catch (err: any) {
+      console.error('Master sync error:', err);
+      showToast(err.message || 'Gagal melakukan sinkronisasi otomatis', 'error');
+    } finally {
+      setIsSyncingMaster(false);
+    }
+  };
+
+  const handleToggleAutoSync = () => {
+    const nextVal = !syncConfig.autoSync;
+    const updated = StorageService.saveGoogleSyncConfig({ autoSync: nextVal });
+    setSyncConfig(updated);
+    showToast(nextVal ? 'Sinkronisasi otomatis diaktifkan' : 'Sinkronisasi otomatis dinonaktifkan');
   };
 
   const handleDisconnect = async () => {
@@ -645,17 +739,32 @@ export const GoogleWorkspaceView: React.FC<GoogleWorkspaceViewProps> = ({
                       <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                     </span>
                     <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                      Terhubung ke Google Workspace
+                      Terhubung ke Google
                     </span>
                   </div>
-                  <button
-                    onClick={handleDisconnect}
-                    className="text-[11px] font-semibold text-rose-500 hover:text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <LogOut className="w-3 h-3" />
-                    Putuskan
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSwitchAccount}
+                      disabled={isAuthenticating}
+                      title="Ganti akun Google (buka dialog pemilih akun)"
+                      className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300 hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                    >
+                      <UserCheck className="w-3.5 h-3.5" />
+                      Ganti Akun
+                    </button>
+                    <span className="text-slate-300 dark:text-slate-600">|</span>
+                    <button
+                      type="button"
+                      onClick={handleDisconnect}
+                      className="text-[11px] font-semibold text-rose-500 hover:text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <LogOut className="w-3 h-3" />
+                      Putuskan
+                    </button>
+                  </div>
                 </div>
+
                 <div className="flex items-center gap-2.5 p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
                   {googleUser.photoURL ? (
                     <img
@@ -673,13 +782,20 @@ export const GoogleWorkspaceView: React.FC<GoogleWorkspaceViewProps> = ({
                       {googleUser.displayName || 'Akun Guru'}
                     </p>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                      {googleUser.email || 'andiismail05@guru.sma.belajar.id'}
+                      {googleUser.email || 'Akun Terhubung'}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5 text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">
-                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                  <span>Google Drive & Google Sheets siap digunakan</span>
+
+                <div className="flex flex-col gap-1 text-[10.5px]">
+                  <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-medium">
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                    <span>Google Drive & Sheets siap disinkronkan</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                    <ShieldCheck className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                    <span>OAuth 2.0 • Izin Terbatas (Tanpa Password)</span>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -690,15 +806,15 @@ export const GoogleWorkspaceView: React.FC<GoogleWorkspaceViewProps> = ({
                       Hubungkan Akun Google
                     </p>
                     <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.5 rounded font-semibold">
-                      OAuth 2.0
+                      OAuth 2.0 Resmi
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    Diperlukan untuk membaca, menulis & mengekspor ke Google Drive dan Google Sheets.
+                    Bebas memilih akun Google apa saja (pribadi atau dinas). Tidak otomatis menggunakan akun aktif di perangkat.
                   </p>
                 </div>
 
-                {/* Primary Official Google Sign-In Button (Firebase Auth Popup) */}
+                {/* Primary Official Google Sign-In Button (Firebase Auth Popup with prompt=select_account) */}
                 <button
                   type="button"
                   onClick={() => handleGoogleSignIn('firebase')}
@@ -727,26 +843,29 @@ export const GoogleWorkspaceView: React.FC<GoogleWorkspaceViewProps> = ({
                       />
                     </svg>
                   )}
-                  <span>{isAuthenticating ? 'Membuka jendela otorisasi Google...' : 'Sign in with Google'}</span>
+                  <span>{isAuthenticating ? 'Membuka pemilih akun Google...' : 'Pilih Akun Google (OAuth 2.0)'}</span>
                 </button>
+
+                {/* Security Reassurance Box */}
+                <div className="p-2.5 bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-[10.5px] text-emerald-900 dark:text-emerald-200 space-y-1">
+                  <p className="font-bold flex items-center gap-1.5 text-emerald-950 dark:text-emerald-100">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>Keamanan Akun Guru Terjamin</span>
+                  </p>
+                  <p className="leading-relaxed text-emerald-800 dark:text-emerald-300">
+                    Aplikasi <strong>tidak pernah meminta atau menyimpan kata sandi Google Anda</strong>. Otorisasi dilakukan langsung melalui Google resmi dengan izin seperlunya (Drive & Sheets).
+                  </p>
+                </div>
 
                 {/* Important Workspace Guide Note */}
                 <div className="p-2.5 bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-xl text-[11px] text-blue-900 dark:text-blue-200 space-y-1">
                   <p className="font-bold flex items-center gap-1.5 text-blue-950 dark:text-blue-100">
-                    <ShieldCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
-                    <span>Petunjuk Akun Belajar.id & Otorisasi:</span>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                    <span>Pilihan Akun Bebas & Mandiri:</span>
                   </p>
                   <p className="text-[10.5px] leading-relaxed text-blue-800 dark:text-blue-300">
-                    Jika muncul pesan <em>"Akses diblokir: Error Otorisasi"</em>, akun <code>@guru.sma.belajar.id</code> Anda dibatasi oleh kebijakan admin Kemendikbudristek.
+                    Anda bebas memilih akun <strong>@gmail.com pribadi</strong> atau akun dinas. Bila akun belajar.id dibatasi admin sekolah, cukup pilih akun pribadi atau gunakan tombol unduh Excel langsung.
                   </p>
-                  <div className="pt-0.5 space-y-0.5 text-[10.5px]">
-                    <p className="font-medium text-emerald-800 dark:text-emerald-300">
-                      ✓ Pilih <strong>Akun Google Pribadi (@gmail.com)</strong> saat popup terbuka, ATAU
-                    </p>
-                    <p className="font-medium text-slate-700 dark:text-slate-300">
-                      ✓ Klik tombol <strong>"Unduh Excel (.xlsx) Siap Sheets"</strong> di bawah tanpa perlu login!
-                    </p>
-                  </div>
                 </div>
 
                 {/* Inline Error Box if Sign-In Failed */}
@@ -854,6 +973,153 @@ export const GoogleWorkspaceView: React.FC<GoogleWorkspaceViewProps> = ({
             <HardDrive className="w-4 h-4" />
             <span>Google Drive (File Manager & Cadangan Cloud)</span>
           </button>
+        </div>
+      </div>
+
+      {/* PUSAT SINKRONISASI OTOMATIS GOOGLE CLOUD (1-KLIK) */}
+      <div className="bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-blue-500/10 dark:from-emerald-950/40 dark:via-slate-900 dark:to-blue-950/30 rounded-2xl border-2 border-emerald-500/30 dark:border-emerald-500/20 p-5 sm:p-6 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+          <div className="space-y-2.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider uppercase bg-emerald-600 text-white flex items-center gap-1 shadow-xs">
+                <Zap className="w-3 h-3 fill-current" />
+                Integrasi Otomatis Terpadu
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-semibold bg-blue-100 dark:bg-blue-950/80 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-800 flex items-center gap-1">
+                <Database className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                Database Aplikasi = Sumber Data Utama
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-semibold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
+                <Cloud className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                Google Sheets = Penyimpanan & Backup
+              </span>
+            </div>
+
+            <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+              <span>Sinkronisasi Otomatis 1-Klik ke Google Drive & Google Sheets</span>
+            </h2>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 max-w-3xl leading-relaxed">
+              Cukup hubungkan akun Google Anda <strong>satu kali</strong>. Sistem kami secara otomatis mengurus
+              pembuatan folder khusus di Drive, pembuatan satu <strong>Google Spreadsheet Terpadu (4 Tab: Data Siswa, Presensi, Nilai, Jurnal)</strong>,
+              serta pencadangan berkas cadangan JSON. Guru dapat fokus penuh pada presensi dan penilaian siswa tanpa repot mengatur file manual!
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row lg:flex-col gap-2.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => handleMasterSync()}
+              disabled={isSyncingMaster || !accessToken}
+              className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white disabled:text-slate-500 font-bold text-xs rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+              title={accessToken ? 'Sinkronkan semua data sekarang' : 'Hubungkan akun Google terlebih dahulu'}
+            >
+              {isSyncingMaster ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Sedang Menyinkronkan...</span>
+                </>
+              ) : (
+                <>
+                  <Zap className="w-4 h-4 fill-current" />
+                  <span>⚡ Sinkronkan Semua Data (1-Klik)</span>
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleToggleAutoSync}
+              className="px-3.5 py-2 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[11px] font-semibold rounded-xl transition-colors flex items-center justify-between gap-2 cursor-pointer"
+            >
+              <span>Auto-Sync saat Terhubung:</span>
+              {syncConfig.autoSync ? (
+                <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
+                  <Check className="w-3.5 h-3.5" /> Aktif
+                </span>
+              ) : (
+                <span className="text-slate-400">Nonaktif</span>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Sync Status & Direct Target Cloud Links */}
+        <div className="mt-4 pt-4 border-t border-emerald-500/20 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+          {/* Target Folder */}
+          <div className="p-3 bg-white/80 dark:bg-slate-900/80 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 shadow-xs">
+            <div className="min-w-0">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">Folder Khusus Google Drive</span>
+              <p className="font-bold text-slate-900 dark:text-white truncate text-[11px] flex items-center gap-1.5 mt-0.5">
+                <Folder className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                <span>Administrasi Guru - SMAN 1 Gowa</span>
+              </p>
+            </div>
+            {syncConfig.folderUrl ? (
+              <a
+                href={syncConfig.folderUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="p-1.5 bg-blue-50 dark:bg-blue-950/80 hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-600 dark:text-blue-400 rounded-lg shrink-0 transition-colors flex items-center gap-1 text-[10px] font-bold"
+                title="Buka Folder di Google Drive"
+              >
+                <span>Buka</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            ) : (
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 italic bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                Dibuat Otomatis
+              </span>
+            )}
+          </div>
+
+          {/* Master Spreadsheet */}
+          <div className="p-3 bg-white/80 dark:bg-slate-900/80 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 shadow-xs">
+            <div className="min-w-0">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">Master Spreadsheet (4-Tab)</span>
+              <p className="font-bold text-slate-900 dark:text-white truncate text-[11px] flex items-center gap-1.5 mt-0.5">
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>Administrasi Guru Terpadu</span>
+              </p>
+            </div>
+            {syncConfig.spreadsheetUrl ? (
+              <a
+                href={syncConfig.spreadsheetUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="p-1.5 bg-emerald-50 dark:bg-emerald-950/80 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-emerald-700 dark:text-emerald-300 rounded-lg shrink-0 transition-colors flex items-center gap-1 text-[10px] font-bold"
+                title="Buka Master Spreadsheet di Google Sheets"
+              >
+                <span>Buka Sheets</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            ) : (
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 italic bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                Dibuat Otomatis
+              </span>
+            )}
+          </div>
+
+          {/* Last Sync Timestamp */}
+          <div className="p-3 bg-white/80 dark:bg-slate-900/80 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 shadow-xs">
+            <div>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">Status Sinkronisasi Terakhir</span>
+              <p className="font-bold text-slate-900 dark:text-white text-[11px] mt-0.5">
+                {syncConfig.lastSyncedAt
+                  ? new Date(syncConfig.lastSyncedAt).toLocaleString('id-ID', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
+                  : 'Belum pernah disinkronkan'}
+              </p>
+            </div>
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncingMaster ? 'animate-spin' : ''}`} />
+            </div>
+          </div>
         </div>
       </div>
 

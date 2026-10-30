@@ -602,4 +602,394 @@ export const GoogleWorkspaceService = {
       folderId
     );
   },
+
+  /**
+   * Find or create the unified Master Spreadsheet in Google Drive folder
+   */
+  async getOrCreateMasterSpreadsheet(
+    accessToken: string,
+    school: SchoolProfile,
+    existingSpreadsheetId?: string,
+    folderId?: string
+  ): Promise<{ spreadsheetId: string; spreadsheetUrl: string; title: string }> {
+    const expectedTitle = `Administrasi Guru Terpadu - ${school.name || 'SMAN 1 Gowa'}`;
+    const requiredSheets = ['Data Siswa', 'Rekap Presensi', 'Rekap Nilai', 'Jurnal Mengajar'];
+
+    // 1. If we already have a saved spreadsheetId, verify it exists and is accessible
+    if (existingSpreadsheetId) {
+      try {
+        const info = await this.getSpreadsheetInfo(accessToken, existingSpreadsheetId);
+        const existingSheetTitles = info.sheets.map((s) => s.title);
+        const missingSheets = requiredSheets.filter((req) => !existingSheetTitles.includes(req));
+
+        // Add any missing tabs to the existing spreadsheet
+        if (missingSheets.length > 0) {
+          const requests = missingSheets.map((title) => ({
+            addSheet: {
+              properties: {
+                title,
+                gridProperties: { frozenRowCount: 1 },
+              },
+            },
+          }));
+          await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${existingSpreadsheetId}:batchUpdate`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ requests }),
+          });
+        }
+
+        return {
+          spreadsheetId: existingSpreadsheetId,
+          spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${existingSpreadsheetId}/edit`,
+          title: info.title,
+        };
+      } catch (e) {
+        console.warn('Saved Master Spreadsheet not accessible, searching or creating a new one...', e);
+      }
+    }
+
+    // 2. Search for existing Master Spreadsheet in Drive
+    try {
+      const query = folderId
+        ? `'${folderId}' in parents and name contains 'Administrasi Guru Terpadu' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false`
+        : `name contains 'Administrasi Guru Terpadu' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false`;
+
+      const searchRes = await fetch(
+        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,webViewLink)&pageSize=1`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+
+      if (searchRes.ok) {
+        const searchData = await searchRes.json();
+        if (searchData.files && searchData.files.length > 0) {
+          const found = searchData.files[0];
+          return {
+            spreadsheetId: found.id,
+            spreadsheetUrl: found.webViewLink || `https://docs.google.com/spreadsheets/d/${found.id}/edit`,
+            title: found.name,
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('Search for master spreadsheet failed, creating fresh...', e);
+    }
+
+    // 3. Create fresh unified Master Spreadsheet with all 4 tabs
+    const createRes = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        properties: {
+          title: expectedTitle,
+        },
+        sheets: requiredSheets.map((title) => ({
+          properties: {
+            title,
+            gridProperties: { frozenRowCount: 1 },
+          },
+        })),
+      }),
+    });
+
+    if (!createRes.ok) {
+      const err = await createRes.json().catch(() => ({}));
+      throw new Error(err?.error?.message || 'Gagal membuat Master Spreadsheet Terpadu di Google Sheets');
+    }
+
+    const created = await createRes.json();
+    const spreadsheetId: string = created.spreadsheetId;
+    const spreadsheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
+
+    // Move to dedicated folder if provided
+    if (folderId) {
+      try {
+        await fetch(
+          `https://www.googleapis.com/drive/v3/files/${spreadsheetId}?addParents=${encodeURIComponent(folderId)}&fields=id,parents`,
+          {
+            method: 'PATCH',
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
+      } catch (e) {
+        console.warn('Could not move spreadsheet to folder:', e);
+      }
+    }
+
+    return {
+      spreadsheetId,
+      spreadsheetUrl,
+      title: expectedTitle,
+    };
+  },
+
+  /**
+   * Ultra-Simple 1-Click Automated Sync:
+   * Synchronizes all application data (Students, Attendance, Grades, Journals, and JSON Backup)
+   * into a single unified Google Drive folder and Master Spreadsheet.
+   */
+  async syncAllDataToMasterSpreadsheet(
+    accessToken: string,
+    data: {
+      school: SchoolProfile;
+      students: Student[];
+      classes: ClassRoom[];
+      attendances: AttendanceRecord[];
+      grades: GradeRecord[];
+      journals: TeachingJournal[];
+      schedules?: any[];
+    },
+    savedSpreadsheetId?: string
+  ): Promise<{
+    spreadsheetId: string;
+    spreadsheetUrl: string;
+    folderId: string;
+    folderUrl: string;
+    lastSyncedAt: string;
+    counts: {
+      students: number;
+      attendances: number;
+      grades: number;
+      journals: number;
+    };
+  }> {
+    // 1. Automatically ensure dedicated school folder exists in Google Drive
+    const folderName = `Administrasi Guru - ${data.school.name || 'SMAN 1 Gowa'}`;
+    const folderId = await this.getOrCreateFolder(accessToken, folderName);
+    const folderUrl = `https://drive.google.com/drive/folders/${folderId}`;
+
+    // 2. Automatically ensure Master Spreadsheet exists in that folder
+    const masterSheet = await this.getOrCreateMasterSpreadsheet(
+      accessToken,
+      data.school,
+      savedSpreadsheetId,
+      folderId
+    );
+
+    // 3. Format rows for all 4 modules
+    // Tab 1: Data Siswa
+    const studentHeader = [
+      'No',
+      'NISN / NIS',
+      'Nama Lengkap Siswa',
+      'Jenis Kelamin (L/P)',
+      'Kelas / Rombel',
+      'Kontak / No. HP Ortu',
+      'Status Siswa',
+    ];
+    const studentRows = data.students.map((s, idx) => {
+      const cls = data.classes.find((c) => c.id === s.classId);
+      return [
+        String(idx + 1),
+        s.nisnNis || `${s.nisn || ''} / ${s.nis || ''}`.trim() || '-',
+        s.name,
+        s.gender === 'L' ? 'Laki-laki' : 'Perempuan',
+        cls?.name || 'Tidak Ditentukan',
+        s.parentPhone || '-',
+        s.status || 'Aktif',
+      ];
+    });
+
+    // Tab 2: Rekap Presensi
+    const attendanceHeader = [
+      'No',
+      'Tanggal',
+      'Nama Siswa',
+      'NISN / NIS',
+      'Kelas',
+      'Status Kehadiran',
+      'Keterangan / Catatan',
+    ];
+    const attendanceRows = data.attendances.map((att, idx) => {
+      const std = data.students.find((s) => s.id === att.studentId);
+      const cls = data.classes.find((c) => c.id === att.classId);
+      const statusLabel =
+        att.status === 'HADIR'
+          ? 'Hadir'
+          : att.status === 'SAKIT'
+          ? 'Sakit'
+          : att.status === 'IZIN'
+          ? 'Izin'
+          : 'Alpa (Tanpa Keterangan)';
+      return [
+        String(idx + 1),
+        att.date,
+        std?.name || 'Siswa',
+        std?.nisnNis || '-',
+        cls?.name || '-',
+        statusLabel,
+        att.notes || '-',
+      ];
+    });
+
+    // Tab 3: Rekap Nilai
+    const gradeHeader = [
+      'No',
+      'Nama Siswa',
+      'NISN / NIS',
+      'Kelas',
+      'Mata Pelajaran',
+      'Jenis Penilaian',
+      'Judul Tugas / Ulangan',
+      'Nilai / Skor',
+      'Tanggal Penilaian',
+    ];
+    const gradeRows = data.grades.map((g, idx) => {
+      const std = data.students.find((s) => s.id === g.studentId);
+      const cls = data.classes.find((c) => c.id === g.classId);
+      return [
+        String(idx + 1),
+        std?.name || 'Siswa',
+        std?.nisnNis || '-',
+        cls?.name || '-',
+        g.subject,
+        g.type,
+        g.title,
+        String(g.score),
+        g.date,
+      ];
+    });
+
+    // Tab 4: Jurnal Mengajar
+    const journalHeader = [
+      'Pertemuan Ke',
+      'Tanggal',
+      'Alokasi Jam',
+      'Kelas',
+      'Mata Pelajaran',
+      'Materi Pokok / Pembahasan',
+      'Kegiatan Pembelajaran',
+      'Hambatan Pembelajaran',
+      'Solusi & Tindak Lanjut',
+      'Jml Siswa Hadir',
+      'Jml Siswa Absen',
+    ];
+    const journalRows = data.journals.map((j) => {
+      const cls = data.classes.find((c) => c.id === j.classId);
+      return [
+        `Pertemuan ${j.meetingNumber}`,
+        j.date,
+        j.time,
+        cls?.name || '-',
+        j.subject,
+        j.topic,
+        j.learningActivities,
+        j.obstacles || '-',
+        j.solutions || '-',
+        String(j.presentCount),
+        String(j.absentCount),
+      ];
+    });
+
+    // 4. Batch clear old ranges so deleted records don't leave stale rows
+    try {
+      await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${masterSheet.spreadsheetId}/values:batchClear`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ranges: [
+              "'Data Siswa'!A1:Z5000",
+              "'Rekap Presensi'!A1:Z10000",
+              "'Rekap Nilai'!A1:Z10000",
+              "'Jurnal Mengajar'!A1:Z5000",
+            ],
+          }),
+        }
+      );
+    } catch (e) {
+      console.warn('Batch clear warning:', e);
+    }
+
+    // 5. Batch update all 4 sheets in one call
+    const updateRes = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${masterSheet.spreadsheetId}/values:batchUpdate`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          valueInputOption: 'USER_ENTERED',
+          data: [
+            { range: "'Data Siswa'!A1", values: [studentHeader, ...studentRows] },
+            { range: "'Rekap Presensi'!A1", values: [attendanceHeader, ...attendanceRows] },
+            { range: "'Rekap Nilai'!A1", values: [gradeHeader, ...gradeRows] },
+            { range: "'Jurnal Mengajar'!A1", values: [journalHeader, ...journalRows] },
+          ],
+        }),
+      }
+    );
+
+    if (!updateRes.ok) {
+      const err = await updateRes.json().catch(() => ({}));
+      throw new Error(err?.error?.message || 'Gagal memperbarui data pada Master Spreadsheet Google');
+    }
+
+    // 6. Also save full state JSON backup in Google Drive folder
+    try {
+      const backupPayload = {
+        school: data.school,
+        classes: data.classes,
+        students: data.students,
+        schedules: data.schedules || [],
+        attendances: data.attendances,
+        grades: data.grades,
+        journals: data.journals,
+      };
+      await this.uploadFileToDrive(
+        accessToken,
+        'Backup_Otomatis_Administrasi_Guru.json',
+        JSON.stringify(
+          {
+            version: '2.0',
+            syncedAt: new Date().toISOString(),
+            schoolName: data.school.name,
+            data: backupPayload,
+          },
+          null,
+          2
+        ),
+        'application/json',
+        folderId
+      );
+    } catch (backupErr) {
+      console.warn('Automated JSON backup warning:', backupErr);
+    }
+
+    const nowFormatted = new Date().toLocaleString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    return {
+      spreadsheetId: masterSheet.spreadsheetId,
+      spreadsheetUrl: masterSheet.spreadsheetUrl,
+      folderId,
+      folderUrl,
+      lastSyncedAt: nowFormatted,
+      counts: {
+        students: data.students.length,
+        attendances: data.attendances.length,
+        grades: data.grades.length,
+        journals: data.journals.length,
+      },
+    };
+  },
 };
