@@ -11,14 +11,12 @@ import {
   CheckSquare,
   Calendar,
   Save,
-  Printer,
   Sparkles,
   Info,
   CheckCircle,
   Clock,
   FileText,
 } from 'lucide-react';
-import { PrintDocumentModal } from './PrintDocumentModal';
 
 interface AttendanceManagementProps {
   students: Student[];
@@ -39,7 +37,7 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'input' | 'rekap'>('input');
 
-  // Input tab state
+  // Unified class selection state (automatically synced between input and rekap)
   const [selectedClassId, setSelectedClassId] = useState<string>(classes[0]?.id || '');
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().slice(0, 10)
@@ -50,12 +48,10 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
   >({});
   const [saveSuccessMsg, setSaveSuccessMsg] = useState(false);
 
-  // Rekap tab state
-  const [rekapClassId, setRekapClassId] = useState<string>(classes[0]?.id || '');
+  // Rekap month filter
   const [rekapMonth, setRekapMonth] = useState<string>(
     new Date().toISOString().slice(0, 7) // '2026-10'
   );
-  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
   // Current class students
   const classStudents = useMemo(() => {
@@ -136,15 +132,15 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
     setTimeout(() => setSaveSuccessMsg(false), 3000);
   };
 
-  // REKAP DATA CALCULATION
+  // REKAP DATA CALCULATION (Uses unified selectedClassId)
   const rekapStudents = useMemo(() => {
-    return students.filter((s) => s.classId === rekapClassId);
-  }, [students, rekapClassId]);
+    return students.filter((s) => s.classId === selectedClassId);
+  }, [students, selectedClassId]);
 
   const rekapData = useMemo(() => {
     // Filter attendances for selected class and month
     const monthRecords = attendances.filter(
-      (a) => a.classId === rekapClassId && a.date.startsWith(rekapMonth)
+      (a) => a.classId === selectedClassId && a.date.startsWith(rekapMonth)
     );
 
     return rekapStudents.map((student, idx) => {
@@ -170,10 +166,10 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
         percentage,
       };
     });
-  }, [rekapStudents, attendances, rekapClassId, rekapMonth]);
+  }, [rekapStudents, attendances, selectedClassId, rekapMonth]);
 
   const selectedClassObj = classes.find((c) => c.id === selectedClassId);
-  const rekapClassObj = classes.find((c) => c.id === rekapClassId);
+  const rekapClassObj = selectedClassObj;
 
   // Format Month in Indonesian
   const monthLabel = useMemo(() => {
@@ -391,12 +387,12 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
           {/* Controls Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
             <div className="flex flex-wrap items-center gap-3">
-              {/* Select Class */}
+              {/* Select Class (Synced with Input Harian) */}
               <div className="flex items-center gap-2">
                 <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Kelas:</label>
                 <select
-                  value={rekapClassId}
-                  onChange={(e) => setRekapClassId(e.target.value)}
+                  value={selectedClassId}
+                  onChange={(e) => setSelectedClassId(e.target.value)}
                   className="px-3 py-1.5 text-xs font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                 >
                   {classes.map((c) => (
@@ -418,15 +414,6 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                 />
               </div>
             </div>
-
-            <button
-              type="button"
-              onClick={() => setIsPrintModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer self-start sm:self-auto"
-            >
-              <Printer className="w-4 h-4" />
-              Cetak Rekap Presensi
-            </button>
           </div>
 
           {/* Rekap Table */}
@@ -503,57 +490,6 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
           </div>
         </div>
       )}
-
-      {/* PRINT REKAP PRESENSI MODAL */}
-      <PrintDocumentModal
-        isOpen={isPrintModalOpen}
-        onClose={() => setIsPrintModalOpen(false)}
-        title="REKAPITULASI PRESENSI KEHADIRAN SISWA"
-        subtitle={`Bulan: ${monthLabel} · Tahun Pelajaran ${school.academicYear}`}
-        school={school}
-        currentUser={currentUser}
-        metaInfo={[
-          { label: 'Kelas / Rombel', value: rekapClassObj?.name || '-' },
-          { label: 'Wali Kelas', value: rekapClassObj?.homeroomTeacher || '-' },
-          { label: 'Mata Pelajaran', value: currentUser?.subject || '-' },
-          { label: 'Bulan / Periode', value: monthLabel },
-        ]}
-      >
-        <table className="w-full text-xs border border-slate-900 border-collapse print:border-black">
-          <thead>
-            <tr className="bg-slate-100 print:bg-slate-200 text-slate-900 font-bold border-b border-slate-900">
-              <th className="p-2 border border-slate-900 text-center w-8">No</th>
-              <th className="p-2 border border-slate-900 text-center">NISN / NIS</th>
-              <th className="p-2 border border-slate-900 text-left">Nama Lengkap Siswa</th>
-              <th className="p-2 border border-slate-900 text-center w-10">L/P</th>
-              <th className="p-2 border border-slate-900 text-center w-12">Hadir</th>
-              <th className="p-2 border border-slate-900 text-center w-12">Izin</th>
-              <th className="p-2 border border-slate-900 text-center w-12">Sakit</th>
-              <th className="p-2 border border-slate-900 text-center w-12">Alpa</th>
-              <th className="p-2 border border-slate-900 text-center w-16">Total Hari</th>
-              <th className="p-2 border border-slate-900 text-center w-16">% Hadir</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rekapData.map((row) => (
-              <tr key={row.id} className="border-b border-slate-900">
-                <td className="p-1.5 border border-slate-900 text-center font-mono">{row.no}</td>
-                <td className="p-1.5 border border-slate-900 text-center font-mono font-medium">{row.nisnNis}</td>
-                <td className="p-1.5 border border-slate-900 font-medium">{row.name}</td>
-                <td className="p-1.5 border border-slate-900 text-center">{row.gender}</td>
-                <td className="p-1.5 border border-slate-900 text-center font-mono">{row.hadir}</td>
-                <td className="p-1.5 border border-slate-900 text-center font-mono">{row.izin}</td>
-                <td className="p-1.5 border border-slate-900 text-center font-mono">{row.sakit}</td>
-                <td className="p-1.5 border border-slate-900 text-center font-mono">{row.alpa}</td>
-                <td className="p-1.5 border border-slate-900 text-center font-mono">{row.totalDays}</td>
-                <td className="p-1.5 border border-slate-900 text-center font-mono font-bold">
-                  {row.percentage}%
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </PrintDocumentModal>
     </div>
   );
 };

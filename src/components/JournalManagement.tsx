@@ -6,7 +6,6 @@ import {
   Edit2,
   BookOpenCheck,
   Search,
-  Printer,
   Calendar,
   X,
   Clock,
@@ -14,7 +13,6 @@ import {
   Lightbulb,
   CheckCircle2,
 } from 'lucide-react';
-import { PrintDocumentModal } from './PrintDocumentModal';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
 interface JournalManagementProps {
@@ -40,7 +38,6 @@ export const JournalManagement: React.FC<JournalManagementProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingJournal, setEditingJournal] = useState<TeachingJournal | null>(null);
-  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   // In-app Delete Confirmation Modal State (replaces window.confirm)
@@ -186,14 +183,6 @@ export const JournalManagement: React.FC<JournalManagementProps> = ({
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
-          <button
-            onClick={() => setIsPrintModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg transition-colors cursor-pointer border border-slate-200 dark:border-slate-700"
-          >
-            <Printer className="w-4 h-4" />
-            Cetak Jurnal
-          </button>
-
           <button
             onClick={handleOpenAdd}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
@@ -534,59 +523,6 @@ export const JournalManagement: React.FC<JournalManagementProps> = ({
           </div>
         </div>
       )}
-
-      {/* PRINT JURNAL MENGAJAR MODAL */}
-      <PrintDocumentModal
-        isOpen={isPrintModalOpen}
-        onClose={() => setIsPrintModalOpen(false)}
-        title="BUKU JURNAL HARIAN MENGAJAR GURU"
-        subtitle={`Tahun Pelajaran ${school.academicYear} · Semester ${school.semester}`}
-        school={school}
-        currentUser={currentUser}
-        metaInfo={[
-          { label: 'Nama Guru', value: currentUser?.name || '-' },
-          { label: 'NIP / NUPTK', value: currentUser?.nip || '-' },
-          { label: 'Mata Pelajaran', value: currentUser?.subject || '-' },
-          { label: 'Satuan Pendidikan', value: school.name },
-        ]}
-      >
-        <table className="w-full text-xs border border-slate-900 border-collapse print:border-black">
-          <thead>
-            <tr className="bg-slate-100 print:bg-slate-200 text-slate-900 font-bold border-b border-slate-900">
-              <th className="p-2 border border-slate-900 text-center w-8">No</th>
-              <th className="p-2 border border-slate-900 text-center w-20">Hari/Tgl</th>
-              <th className="p-2 border border-slate-900 text-center w-14">Kelas</th>
-              <th className="p-2 border border-slate-900 text-center w-12">Jam Ke</th>
-              <th className="p-2 border border-slate-900 text-left w-48">Materi Pokok / CP</th>
-              <th className="p-2 border border-slate-900 text-left">Kegiatan Pembelajaran</th>
-              <th className="p-2 border border-slate-900 text-left w-36">Hambatan & Solusi</th>
-              <th className="p-2 border border-slate-900 text-center w-16">Absensi (H/A)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredJournals.map((j, idx) => {
-              const cls = classes.find((c) => c.id === j.classId);
-              return (
-                <tr key={j.id} className="border-b border-slate-900">
-                  <td className="p-2 border border-slate-900 text-center font-mono">{idx + 1}</td>
-                  <td className="p-2 border border-slate-900 text-center font-mono">{j.date}</td>
-                  <td className="p-2 border border-slate-900 text-center font-semibold">{cls?.name}</td>
-                  <td className="p-2 border border-slate-900 text-center font-mono">Ke-{j.meetingNumber}</td>
-                  <td className="p-2 border border-slate-900 font-semibold">{j.topic}</td>
-                  <td className="p-2 border border-slate-900 leading-snug">{j.learningActivities}</td>
-                  <td className="p-2 border border-slate-900 text-[11px] leading-tight">
-                    <p className="font-semibold">H: {j.obstacles}</p>
-                    <p className="mt-1">S: {j.solutions}</p>
-                  </td>
-                  <td className="p-2 border border-slate-900 text-center font-mono">
-                    {j.presentCount} / {j.absentCount}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </PrintDocumentModal>
 
       {/* In-app Deletion Confirmation Modal */}
       <ConfirmDeleteModal

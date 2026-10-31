@@ -27,7 +27,6 @@ import {
   Info,
   GripVertical,
   ArrowUpDown,
-  Printer,
 } from 'lucide-react';
 
 interface StudentManagementProps {
@@ -984,18 +983,6 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
             <Download className="w-4 h-4" />
             Export (.xlsx)
           </button>
-
-          {onNavigateTab && (
-            <button
-              type="button"
-              onClick={() => onNavigateTab('print-documents')}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-xs font-semibold rounded-lg transition-colors cursor-pointer border border-emerald-200 dark:border-emerald-800"
-              title="Buka Cetak & Ekspor Dokumen Resmi"
-            >
-              <Printer className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>Cetak Dokumen</span>
-            </button>
-          )}
 
           <button
             onClick={handleOpenAdd}

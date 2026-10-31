@@ -25,7 +25,6 @@ import {
   X,
   FileSpreadsheet,
   Clock,
-  Printer,
   BarChart3,
   Search,
   Filter,
@@ -37,7 +36,6 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import { PrintDocumentModal } from './PrintDocumentModal';
 import { GradeTrendAnalytics } from './GradeTrendAnalytics';
 
 export interface AssessmentColumn {
@@ -297,7 +295,6 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
 
   // Modal & UI States
   const [showTrendChart, setShowTrendChart] = useState<boolean>(false);
-  const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -1536,16 +1533,6 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
 
           {/* Tombol Aksi Utama */}
           <div className="flex flex-wrap items-center gap-2.5">
-            {/* Tombol Cetak Leger */}
-            <button
-              type="button"
-              onClick={() => setIsPrintModalOpen(true)}
-              className="px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
-            >
-              <Printer className="w-3.5 h-3.5 text-indigo-500" />
-              <span>Cetak Leger Rapor</span>
-            </button>
-
             {/* Tombol Simpan Semua Nilai */}
             <button
               type="button"
@@ -1914,15 +1901,6 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                 >
                   <Download className="w-3.5 h-3.5 text-emerald-300" />
                   <span>Ekspor Excel (.csv)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setIsPrintModalOpen(true)}
-                  className="px-3 py-2 text-xs font-bold rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
-                >
-                  <Printer className="w-3.5 h-3.5 text-emerald-300" />
-                  <span>Cetak Leger Sikap & Keterampilan</span>
                 </button>
 
                 <button
@@ -3745,135 +3723,6 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
           </div>
         </div>
       )}
-
-      {/* MODAL: CETAK DOKUMEN RESMI LEGER RAPOR */}
-      <PrintDocumentModal
-        isOpen={isPrintModalOpen}
-        onClose={() => setIsPrintModalOpen(false)}
-        title={
-          viewMode === '3komponen'
-            ? 'PENILAIAN SISWA (PSIKOMOTORIK DAN SIKAP)'
-            : 'LEGER NILAI HASIL BELAJAR SISWA'
-        }
-        subtitle={`Kelas: ${currentClass?.name || ''} | Mata Pelajaran: ${selectedSubject} | Semester: ${school.semester} T.A ${school.academicYear}`}
-        school={school}
-        currentUser={currentUser}
-        metaInfo={[
-          { label: 'Kelas', value: currentClass?.name || '-' },
-          { label: 'Wali Kelas', value: currentClass?.homeroomTeacher || '-' },
-          { label: 'Mata Pelajaran', value: selectedSubject },
-          { label: 'Semester', value: school.semester },
-          { label: 'Tahun Ajaran', value: school.academicYear },
-        ]}
-      >
-        <div className="p-4 space-y-4">
-          {viewMode === '3komponen' ? (
-            <div className="space-y-3">
-              <div className="text-center font-black text-xs tracking-wider uppercase border border-slate-900 bg-slate-100 py-1 print:border-black">
-                PENILAIAN SISWA (PSIKOMOTORIK DAN SIKAP)
-              </div>
-              <table className="w-full text-[9px] border border-slate-900 border-collapse print:border-black">
-                <thead>
-                  <tr className="bg-slate-200 text-slate-900 font-bold border-b border-slate-900 text-center uppercase">
-                    <th colSpan={4} className="p-1 border border-slate-900 bg-slate-300">DATA SISWA</th>
-                    <th colSpan={4} className="p-1 border border-slate-900 bg-amber-100">1. KOMPONEN AFEKTIF (SIKAP)</th>
-                    <th colSpan={5} className="p-1 border border-slate-900 bg-purple-100">2. KOMPONEN PSIKOMOTORIK (KETERAMPILAN)</th>
-                  </tr>
-                  <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-900 text-center uppercase">
-                    <th className="p-1 border border-slate-900 w-6">NO</th>
-                    <th className="p-1 border border-slate-900 w-16">NISN</th>
-                    <th className="p-1 border border-slate-900 text-left min-w-[120px]">NAMA SISWA</th>
-                    <th className="p-1 border border-slate-900 w-6">JK</th>
-                    <th className="p-1 border border-slate-900 w-12">DISIPLIN</th>
-                    <th className="p-1 border border-slate-900 w-12">KERJASAMA</th>
-                    <th className="p-1 border border-slate-900 w-12">TNG JAWAB</th>
-                    <th className="p-1 border border-slate-900 w-14 bg-amber-100 font-black">TOTAL SKOR</th>
-                    <th className="p-1 border border-slate-900 w-16">PROSES/PRAKTIK</th>
-                    <th className="p-1 border border-slate-900 w-12">PRODUK</th>
-                    <th className="p-1 border border-slate-900 w-12">PRESENTASI</th>
-                    <th className="p-1 border border-slate-900 w-14 bg-purple-100 font-black">NA PSIKOMOTOR</th>
-                    <th className="p-1 border border-slate-900 w-20 bg-purple-50">PREDIKAT</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {threeCompEvaluations.map((row) => (
-                    <tr key={row.student.id} className="border-b border-slate-900 text-center">
-                      <td className="p-1 border border-slate-900 font-mono">{row.no}</td>
-                      <td className="p-1 border border-slate-900 font-mono">{row.student.nisnNis || row.student.nisn || '-'}</td>
-                      <td className="p-1 border border-slate-900 text-left font-medium">{row.student.name}</td>
-                      <td className="p-1 border border-slate-900">{row.student.gender}</td>
-                      <td className="p-1 border border-slate-900 font-mono">{row.scores.disiplin !== '' ? row.scores.disiplin : '-'}</td>
-                      <td className="p-1 border border-slate-900 font-mono">{row.scores.kerjasama !== '' ? row.scores.kerjasama : '-'}</td>
-                      <td className="p-1 border border-slate-900 font-mono">{row.scores.tngJawab !== '' ? row.scores.tngJawab : '-'}</td>
-                      <td className="p-1 border border-slate-900 font-mono font-black bg-amber-100/50">{row.totalSkorAfektif !== null ? row.totalSkorAfektif : '-'}</td>
-                      <td className="p-1 border border-slate-900 font-mono">{row.scores.proses !== '' ? row.scores.proses : '-'}</td>
-                      <td className="p-1 border border-slate-900 font-mono">{row.scores.produk !== '' ? row.scores.produk : '-'}</td>
-                      <td className="p-1 border border-slate-900 font-mono">{row.scores.presentasi !== '' ? row.scores.presentasi : '-'}</td>
-                      <td className="p-1 border border-slate-900 font-mono font-black bg-purple-100/50">{row.naPsikomotor !== null ? row.naPsikomotor : '-'}</td>
-                      <td className="p-1 border border-slate-900 font-bold">{row.predikat}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <table className="w-full text-[10px] border border-slate-900 border-collapse print:border-black">
-              <thead>
-                <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-900 text-center">
-                  <th className="p-1 border border-slate-900 w-8">No</th>
-                  <th className="p-1 border border-slate-900 w-24">NISN / NIS</th>
-                  <th className="p-1 border border-slate-900 text-left min-w-[120px]">Nama Siswa</th>
-                  <th className="p-1 border border-slate-900 w-8">L/P</th>
-                  <th className="p-1 border border-slate-900 w-16">Rerata Tugas ({weights.Tugas}%)</th>
-                  <th className="p-1 border border-slate-900 w-14">Formatif ({weights.Harian}%)</th>
-                  <th className="p-1 border border-slate-900 w-14">Sumatif ({weights.Sumatif}%)</th>
-                  <th className="p-1 border border-slate-900 w-14">STS ({weights.STS}%)</th>
-                  <th className="p-1 border border-slate-900 w-14">SAS ({weights.SAS}%)</th>
-                  <th className="p-1 border border-slate-900 w-14 bg-slate-200 font-extrabold">NA</th>
-                  <th className="p-1 border border-slate-900 w-10">Pred.</th>
-                  <th className="p-1 border border-slate-900 text-center w-20">Ketercapaian</th>
-                </tr>
-              </thead>
-              <tbody>
-                {studentEvaluations.map((row) => (
-                  <tr key={row.student.id} className="border-b border-slate-900">
-                    <td className="p-1 border border-slate-900 text-center font-mono">{row.no}</td>
-                    <td className="p-1 border border-slate-900 text-center font-mono">{row.student.nisnNis || '-'}</td>
-                    <td className="p-1 border border-slate-900 font-medium">{row.student.name}</td>
-                    <td className="p-1 border border-slate-900 text-center">{row.student.gender}</td>
-                    <td className="p-1 border border-slate-900 text-center font-mono font-semibold">
-                      {row.rataRataTugas !== null
-                        ? row.rataRataTugas.toFixed(1)
-                        : row.typeAverages.Tugas !== null
-                        ? Math.round(row.typeAverages.Tugas)
-                        : '-'}
-                    </td>
-                    <td className="p-1 border border-slate-900 text-center font-mono">
-                      {row.typeAverages.Harian !== null ? Math.round(row.typeAverages.Harian) : '-'}
-                    </td>
-                    <td className="p-1 border border-slate-900 text-center font-mono">
-                      {row.typeAverages.Sumatif !== null ? Math.round(row.typeAverages.Sumatif) : '-'}
-                    </td>
-                    <td className="p-1 border border-slate-900 text-center font-mono">
-                      {row.typeAverages.STS !== null ? Math.round(row.typeAverages.STS) : '-'}
-                    </td>
-                    <td className="p-1 border border-slate-900 text-center font-mono">
-                      {row.typeAverages.SAS !== null ? Math.round(row.typeAverages.SAS) : '-'}
-                    </td>
-                    <td className="p-1 border border-slate-900 text-center font-mono font-bold bg-slate-100">
-                      {row.finalScore !== null ? row.finalScore.toFixed(1) : '-'}
-                    </td>
-                    <td className="p-1 border border-slate-900 text-center font-bold">{row.predikat}</td>
-                    <td className="p-1 border border-slate-900 text-center text-[9px] font-semibold">
-                      {row.finalScore !== null ? (row.isPassing ? 'Tuntas' : 'Belum Tuntas') : '-'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </PrintDocumentModal>
     </div>
   );
 };

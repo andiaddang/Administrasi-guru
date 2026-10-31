@@ -23,7 +23,6 @@ import {
   ArrowDownRight,
   CheckCircle2,
   AlertCircle,
-  Printer,
   ChevronRight,
   RotateCcw,
 } from 'lucide-react';
@@ -553,14 +552,6 @@ export const GradeTrendAnalytics: React.FC<GradeTrendAnalyticsProps> = ({
           </div>
 
           <div className="flex items-center gap-2 self-start md:self-auto">
-            <button
-              onClick={() => window.print()}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-semibold backdrop-blur-xs transition-colors cursor-pointer border border-white/15"
-              title="Cetak Laporan Tren Visualisasi"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>Cetak Analisis</span>
-            </button>
             {onNavigateToLedger && selectedClassId !== 'all' && (
               <button
                 onClick={() => onNavigateToLedger(selectedClassId)}

@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Copy,
-  Printer,
   Save,
   Download,
   Trash2,
@@ -27,6 +26,7 @@ import {
 } from 'lucide-react';
 import { ClassRoom, Student, SchoolProfile, User, GradeType } from '../types';
 import { generateSubjectExamPackage } from '../services/smartQuestionService';
+import { DocumentExportService } from '../services/documentExportService';
 
 interface AIAssistantProps {
   classes: ClassRoom[];
@@ -251,6 +251,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   const [pageChunk, setPageChunk] = useState<'all' | '1-10' | '11-20' | '21-30'>('all');
 
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [isExportingExamPdf, setIsExportingExamPdf] = useState<boolean>(false);
+  const [isExportingExamDocx, setIsExportingExamDocx] = useState<boolean>(false);
   const [generatedPackage, setGeneratedPackage] = useState<QuestionPackage | null>(null);
   const [savedExams, setSavedExams] = useState<QuestionPackage[]>(() => {
     try {
@@ -549,9 +551,48 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     showToast('Seluruh butir soal dan kunci berhasil disalin ke clipboard!');
   };
 
-  // Print Exam Sheet
-  const handlePrintExam = () => {
-    window.print();
+  // Unduh Naskah Soal Lengkap ke Perangkat sebagai PDF
+  const handleDownloadExamPdf = async (pkgToDownload?: QuestionPackage) => {
+    const targetPkg = pkgToDownload || generatedPackage;
+    if (!targetPkg) return;
+    setIsExportingExamPdf(true);
+    try {
+      const blob = await DocumentExportService.generateExamPdfBlob(targetPkg, school, currentUser);
+      const cleanSubj = (targetPkg.subject || 'Asesmen').replace(/[^a-zA-Z0-9]/g, '_');
+      const dateStr = new Date().toISOString().slice(0, 10);
+      DocumentExportService.downloadBlob(
+        blob,
+        `Naskah_Soal_${cleanSubj}_${targetPkg.questions.length}_Nomor_${dateStr}.pdf`
+      );
+      showToast('Naskah soal format PDF berhasil diunduh ke perangkat Anda!');
+    } catch (e: any) {
+      console.error('PDF export error:', e);
+      showToast(e.message || 'Gagal mengunduh berkas PDF');
+    } finally {
+      setIsExportingExamPdf(false);
+    }
+  };
+
+  // Unduh Naskah Soal Lengkap ke Perangkat sebagai Word (.docx)
+  const handleDownloadExamDocx = async (pkgToDownload?: QuestionPackage) => {
+    const targetPkg = pkgToDownload || generatedPackage;
+    if (!targetPkg) return;
+    setIsExportingExamDocx(true);
+    try {
+      const blob = await DocumentExportService.generateExamDocxBlob(targetPkg, school, currentUser);
+      const cleanSubj = (targetPkg.subject || 'Asesmen').replace(/[^a-zA-Z0-9]/g, '_');
+      const dateStr = new Date().toISOString().slice(0, 10);
+      DocumentExportService.downloadBlob(
+        blob,
+        `Naskah_Soal_${cleanSubj}_${targetPkg.questions.length}_Nomor_${dateStr}.docx`
+      );
+      showToast('Naskah soal format Word (.docx) berhasil diunduh ke perangkat Anda!');
+    } catch (e: any) {
+      console.error('Docx export error:', e);
+      showToast(e.message || 'Gagal mengunduh berkas Word (.docx)');
+    } finally {
+      setIsExportingExamDocx(false);
+    }
   };
 
   // Handle Image Upload for Examiner
@@ -1059,17 +1100,43 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                   {savedExams.map((exam) => (
                     <div
                       key={exam.id}
-                      onClick={() => setGeneratedPackage(exam)}
-                      className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 bg-slate-50/50 dark:bg-slate-800/50 transition-colors cursor-pointer text-xs space-y-1"
+                      className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 bg-slate-50/50 dark:bg-slate-800/50 transition-colors text-xs space-y-1.5"
                     >
-                      <div className="font-bold text-slate-900 dark:text-white truncate">
+                      <div
+                        onClick={() => setGeneratedPackage(exam)}
+                        className="font-bold text-slate-900 dark:text-white truncate cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400"
+                        title="Klik untuk pratinjau paket soal ini"
+                      >
                         {exam.title}
                       </div>
                       <div className="flex items-center justify-between text-[11px] text-slate-500">
                         <span>
                           {exam.subject} · {exam.questions.length} butir
                         </span>
-                        <span className="font-mono">{exam.createdAt.slice(0, 10)}</span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownloadExamPdf(exam);
+                            }}
+                            className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 cursor-pointer transition-colors"
+                            title="Unduh PDF naskah soal ini ke perangkat"
+                          >
+                            PDF
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownloadExamDocx(exam);
+                            }}
+                            className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 cursor-pointer transition-colors"
+                            title="Unduh Word (.docx) naskah soal ini ke perangkat"
+                          >
+                            DOCX
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1106,22 +1173,32 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
                     <button
                       type="button"
-                      onClick={handleDownloadExamTxt}
-                      className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                      title="Unduh paket soal dalam format .txt (siap diolah di Microsoft Word / dicetak)"
+                      disabled={isExportingExamPdf}
+                      onClick={() => handleDownloadExamPdf()}
+                      className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-1.5 cursor-pointer shadow-2xs disabled:opacity-50"
+                      title="Unduh berkas soal lengkap beserta kunci jawaban & kop surat resmi format PDF ke perangkat"
                     >
-                      <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                      <span>Unduh .txt</span>
+                      {isExportingExamPdf ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-rose-600" />
+                      ) : (
+                        <FileText className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                      )}
+                      <span>Unduh PDF</span>
                     </button>
 
                     <button
                       type="button"
-                      onClick={handlePrintExam}
-                      className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                      title="Cetak lembar soal"
+                      disabled={isExportingExamDocx}
+                      onClick={() => handleDownloadExamDocx()}
+                      className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 border border-blue-200 dark:border-blue-900/60 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/40 flex items-center gap-1.5 cursor-pointer shadow-2xs disabled:opacity-50"
+                      title="Unduh berkas soal format Word (.docx) siap diedit di Microsoft Word ke perangkat"
                     >
-                      <Printer className="w-3.5 h-3.5 text-indigo-500" />
-                      <span>Cetak</span>
+                      {isExportingExamDocx ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                      ) : (
+                        <Download className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                      )}
+                      <span>Unduh Word (.docx)</span>
                     </button>
 
                     <button

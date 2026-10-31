@@ -1034,4 +1034,673 @@ export const DocumentExportService = {
       folderUrl,
     };
   },
+
+  /**
+   * Generate Word DOCX Blob for Question Package / Rumusan Soal (Asesmen)
+   */
+  async generateExamDocxBlob(
+    pkg: {
+      title: string;
+      subject: string;
+      topic: string;
+      gradeLevel: string;
+      totalQuestions: number;
+      questionType: string;
+      instructions: string;
+      questions: Array<{
+        number: number;
+        type: string;
+        stimulus?: string;
+        questionText: string;
+        options?: string[];
+        answerKey?: string;
+        explanation?: string;
+        scoreWeight?: number;
+      }>;
+    },
+    school: SchoolProfile,
+    currentUser: User | null
+  ): Promise<Blob> {
+    const docChildren: any[] = [];
+
+    // 1. KOP SURAT
+    docChildren.push(
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [
+          new TextRun({
+            text: school.kopHeader1 || 'PEMERINTAH PROVINSI SULAWESI SELATAN',
+            bold: true,
+            size: 22,
+            font: 'Times New Roman',
+          }),
+        ],
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [
+          new TextRun({
+            text: school.kopHeader2 || 'DINAS PENDIDIKAN',
+            bold: true,
+            size: 22,
+            font: 'Times New Roman',
+          }),
+        ],
+      })
+    );
+
+    if (school.kopHeader3) {
+      docChildren.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new TextRun({
+              text: school.kopHeader3,
+              bold: true,
+              size: 22,
+              font: 'Times New Roman',
+            }),
+          ],
+        })
+      );
+    }
+
+    docChildren.push(
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 40 },
+        children: [
+          new TextRun({
+            text: school.kopHeader4 || school.name || 'UPT SMA NEGERI 1 GOWA',
+            bold: true,
+            size: 26,
+            font: 'Times New Roman',
+          }),
+        ],
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [
+          new TextRun({
+            text: `${school.kopSubheader || school.address} | ${school.kopContact || `Telp: ${school.phone}`}`,
+            size: 18,
+            font: 'Arial',
+          }),
+        ],
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 160 },
+        children: [
+          new TextRun({
+            text: '═══════════════════════════════════════════════════════════════════════',
+            bold: true,
+            size: 16,
+          }),
+        ],
+      })
+    );
+
+    // 2. TITLE
+    docChildren.push(
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 80, after: 40 },
+        children: [
+          new TextRun({
+            text: 'NASKAH ASESMEN PEMBELAJARAN (SOAL UJIAN)',
+            bold: true,
+            underline: {},
+            size: 26,
+            font: 'Times New Roman',
+          }),
+        ],
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 140 },
+        children: [
+          new TextRun({
+            text: `MATA PELAJARAN: ${pkg.subject.toUpperCase()}`,
+            bold: true,
+            size: 22,
+            font: 'Arial',
+          }),
+        ],
+      })
+    );
+
+    // 3. METADATA TABLE
+    const metaRowsData = [
+      ['Mata Pelajaran', pkg.subject, 'Kelas / Jenjang', pkg.gradeLevel],
+      ['Materi Pokok / CP', pkg.topic, 'Tahun Ajaran', `${school.academicYear} (Semester ${school.semester})`],
+      ['Bentuk Soal', pkg.questionType || 'Pilihan Ganda & Uraian', 'Alokasi Waktu', '90 Menit'],
+      ['Guru Pengampu', currentUser?.name || 'Guru Mata Pelajaran', 'Jumlah Butir', `${pkg.questions.length} Butir Soal`],
+    ];
+
+    const metaTableRows = metaRowsData.map(
+      ([l1, v1, l2, v2]) =>
+        new TableRow({
+          children: [
+            new TableCell({
+              width: { size: 2200, type: WidthType.DXA },
+              borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+              children: [new Paragraph({ children: [new TextRun({ text: l1, bold: true, size: 19, font: 'Arial' })] })],
+            }),
+            new TableCell({
+              width: { size: 300, type: WidthType.DXA },
+              borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+              children: [new Paragraph({ children: [new TextRun({ text: ':', size: 19 })] })],
+            }),
+            new TableCell({
+              width: { size: 3500, type: WidthType.DXA },
+              borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+              children: [new Paragraph({ children: [new TextRun({ text: v1, size: 19, font: 'Arial' })] })],
+            }),
+            new TableCell({
+              width: { size: 2200, type: WidthType.DXA },
+              borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+              children: [new Paragraph({ children: [new TextRun({ text: l2, bold: true, size: 19, font: 'Arial' })] })],
+            }),
+            new TableCell({
+              width: { size: 300, type: WidthType.DXA },
+              borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+              children: [new Paragraph({ children: [new TextRun({ text: ':', size: 19 })] })],
+            }),
+            new TableCell({
+              width: { size: 3500, type: WidthType.DXA },
+              borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+              children: [new Paragraph({ children: [new TextRun({ text: v2, size: 19, font: 'Arial' })] })],
+            }),
+          ],
+        })
+    );
+
+    docChildren.push(
+      new Table({
+        rows: metaTableRows,
+        width: { size: 100, type: WidthType.PERCENTAGE },
+      }),
+      new Paragraph({
+        spacing: { before: 120, after: 160 },
+        children: [
+          new TextRun({
+            text: `PETUNJUK UMUM: ${pkg.instructions || 'Kerjakanlah soal dengan teliti dan jujur pada lembar jawaban yang telah disediakan.'}`,
+            italics: true,
+            size: 18,
+            font: 'Arial',
+          }),
+        ],
+      }),
+      new Paragraph({
+        spacing: { after: 200 },
+        children: [
+          new TextRun({
+            text: '═══════════════════════════════════════════════════════════════════════',
+            size: 14,
+          }),
+        ],
+      })
+    );
+
+    // 4. QUESTIONS
+    pkg.questions.forEach((q) => {
+      if (q.stimulus) {
+        docChildren.push(
+          new Paragraph({
+            spacing: { before: 80, after: 40 },
+            children: [
+              new TextRun({
+                text: `[Stimulus / Bahan Bacaan]: ${q.stimulus}`,
+                italics: true,
+                bold: true,
+                size: 19,
+                font: 'Arial',
+              }),
+            ],
+          })
+        );
+      }
+
+      docChildren.push(
+        new Paragraph({
+          spacing: { before: 60, after: 40 },
+          children: [
+            new TextRun({
+              text: `${q.number}. `,
+              bold: true,
+              size: 21,
+              font: 'Arial',
+            }),
+            new TextRun({
+              text: q.questionText,
+              size: 20,
+              font: 'Arial',
+            }),
+          ],
+        })
+      );
+
+      if (q.options && q.options.length > 0) {
+        q.options.forEach((opt) => {
+          docChildren.push(
+            new Paragraph({
+              indent: { left: 450 },
+              spacing: { after: 30 },
+              children: [
+                new TextRun({
+                  text: opt,
+                  size: 20,
+                  font: 'Arial',
+                }),
+              ],
+            })
+          );
+        });
+      }
+
+      docChildren.push(new Paragraph({ spacing: { after: 120 }, children: [] }));
+    });
+
+    // 5. PAGE BREAK FOR ANSWER KEY & EXPLANATIONS
+    docChildren.push(
+      new Paragraph({
+        pageBreakBefore: true,
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 100, after: 60 },
+        children: [
+          new TextRun({
+            text: 'KUNCI JAWABAN & PEMBAHASAN RESMI',
+            bold: true,
+            size: 24,
+            underline: {},
+            font: 'Times New Roman',
+          }),
+        ],
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 180 },
+        children: [
+          new TextRun({
+            text: `Pegangan Guru / Asesor · ${pkg.subject} (${pkg.topic})`,
+            italics: true,
+            size: 20,
+            font: 'Arial',
+          }),
+        ],
+      })
+    );
+
+    const answerTableRows = [
+      new TableRow({
+        tableHeader: true,
+        children: [
+          new TableCell({ shading: { fill: 'E2E8F0' }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'No', bold: true, size: 19 })] })] }),
+          new TableCell({ shading: { fill: 'E2E8F0' }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Kunci', bold: true, size: 19 })] })] }),
+          new TableCell({ shading: { fill: 'E2E8F0' }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Bobot', bold: true, size: 19 })] })] }),
+          new TableCell({ shading: { fill: 'E2E8F0' }, children: [new Paragraph({ alignment: AlignmentType.LEFT, children: [new TextRun({ text: 'Pembahasan / Rubrik Penilaian', bold: true, size: 19 })] })] }),
+        ],
+      }),
+      ...pkg.questions.map(
+        (q) =>
+          new TableRow({
+            children: [
+              new TableCell({ width: { size: 600, type: WidthType.DXA }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(q.number), size: 19 })] })] }),
+              new TableCell({ width: { size: 1000, type: WidthType.DXA }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: q.answerKey || '-', bold: true, size: 19 })] })] }),
+              new TableCell({ width: { size: 800, type: WidthType.DXA }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(q.scoreWeight || 1), size: 19 })] })] }),
+              new TableCell({ width: { size: 7600, type: WidthType.DXA }, children: [new Paragraph({ alignment: AlignmentType.LEFT, children: [new TextRun({ text: q.explanation || 'Sesuai dengan capaian pembelajaran.', size: 18 })] })] }),
+            ],
+          })
+      ),
+    ];
+
+    docChildren.push(
+      new Table({
+        rows: answerTableRows,
+        width: { size: 100, type: WidthType.PERCENTAGE },
+      })
+    );
+
+    // Signatures
+    const todayFormatted = new Intl.DateTimeFormat('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(new Date());
+
+    const signTable = new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              width: { size: 50, type: WidthType.PERCENTAGE },
+              borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+              children: [
+                new Paragraph({ children: [new TextRun({ text: 'Mengetahui,', size: 20 })] }),
+                new Paragraph({ children: [new TextRun({ text: `Kepala ${school.name || 'UPT SMA Negeri 1 Gowa'}`, bold: true, size: 20 })] }),
+                new Paragraph({ spacing: { after: 1000 }, children: [] }),
+                new Paragraph({ children: [new TextRun({ text: school.headmaster || 'Drs. H. Arsyad, M.Pd.', bold: true, underline: {}, size: 20 })] }),
+                new Paragraph({ children: [new TextRun({ text: `NIP. ${school.headmasterNip || '19680512 199412 1 002'}`, size: 19 })] }),
+              ],
+            }),
+            new TableCell({
+              width: { size: 50, type: WidthType.PERCENTAGE },
+              borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+              children: [
+                new Paragraph({ children: [new TextRun({ text: `Sungguminasa, ${todayFormatted}`, size: 20 })] }),
+                new Paragraph({ children: [new TextRun({ text: 'Guru Pengampu Mata Pelajaran,', bold: true, size: 20 })] }),
+                new Paragraph({ spacing: { after: 1000 }, children: [] }),
+                new Paragraph({ children: [new TextRun({ text: currentUser?.name || 'Guru Mata Pelajaran', bold: true, underline: {}, size: 20 })] }),
+                new Paragraph({ children: [new TextRun({ text: `NIP. ${currentUser?.nip || '19880815 201403 1 004'}`, size: 19 })] }),
+              ],
+            }),
+          ],
+        }),
+      ],
+    });
+
+    docChildren.push(new Paragraph({ spacing: { before: 300 }, children: [] }), signTable);
+
+    const doc = new Document({
+      sections: [
+        {
+          properties: {
+            page: {
+              margin: {
+                top: 1417, // ~25mm
+                bottom: 1417,
+                left: 1417,
+                right: 1417,
+              },
+            },
+          },
+          children: docChildren,
+        },
+      ],
+    });
+
+    return await Packer.toBlob(doc);
+  },
+
+  /**
+   * Generate PDF Blob for Question Package / Rumusan Soal (Asesmen)
+   */
+  async generateExamPdfBlob(
+    pkg: {
+      title: string;
+      subject: string;
+      topic: string;
+      gradeLevel: string;
+      totalQuestions: number;
+      questionType: string;
+      instructions: string;
+      questions: Array<{
+        number: number;
+        type: string;
+        stimulus?: string;
+        questionText: string;
+        options?: string[];
+        answerKey?: string;
+        explanation?: string;
+        scoreWeight?: number;
+      }>;
+    },
+    school: SchoolProfile,
+    currentUser: User | null
+  ): Promise<Blob> {
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+    });
+
+    const pageWidth = 210;
+    const marginX = 20;
+    const contentWidth = 170;
+    let currentY = 18;
+
+    const checkPageBreak = (neededHeight: number) => {
+      if (currentY + neededHeight > 275) {
+        pdf.addPage('a4', 'portrait');
+        currentY = 20;
+        // Running Header on subsequent pages
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8);
+        pdf.setTextColor(100, 116, 139);
+        pdf.text(
+          `Asesmen Pembelajaran: ${pkg.subject} · ${school.name || 'SMAN 1 Gowa'}`,
+          marginX,
+          13
+        );
+        pdf.setDrawColor(226, 232, 240);
+        pdf.setLineWidth(0.3);
+        pdf.line(marginX, 15, marginX + contentWidth, 15);
+      }
+    };
+
+    // --- KOP SURAT (Page 1) ---
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(10);
+    pdf.setTextColor(15, 23, 42);
+    pdf.text(school.kopHeader1 || 'PEMERINTAH PROVINSI SULAWESI SELATAN', pageWidth / 2, currentY, { align: 'center' });
+    currentY += 4.5;
+    pdf.text(school.kopHeader2 || 'DINAS PENDIDIKAN', pageWidth / 2, currentY, { align: 'center' });
+    currentY += 4.5;
+    if (school.kopHeader3) {
+      pdf.text(school.kopHeader3, pageWidth / 2, currentY, { align: 'center' });
+      currentY += 4.5;
+    }
+    pdf.setFontSize(13);
+    pdf.text(school.kopHeader4 || school.name || 'UPT SMA NEGERI 1 GOWA', pageWidth / 2, currentY, { align: 'center' });
+    currentY += 4.5;
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8);
+    pdf.setTextColor(51, 65, 85);
+    pdf.text(school.kopSubheader || school.address, pageWidth / 2, currentY, { align: 'center' });
+    currentY += 3.5;
+    pdf.text(school.kopContact || `Telp: ${school.phone} · Website: ${school.website}`, pageWidth / 2, currentY, { align: 'center' });
+    currentY += 3.5;
+
+    // Double Line Separator
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setLineWidth(0.8);
+    pdf.line(marginX, currentY, marginX + contentWidth, currentY);
+    currentY += 1.2;
+    pdf.setLineWidth(0.3);
+    pdf.line(marginX, currentY, marginX + contentWidth, currentY);
+    currentY += 6;
+
+    // Title
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.setTextColor(2, 6, 23);
+    pdf.text('NASKAH ASESMEN PEMBELAJARAN', pageWidth / 2, currentY, { align: 'center' });
+    currentY += 5;
+    pdf.setFontSize(10);
+    pdf.text(`MATA PELAJARAN: ${pkg.subject.toUpperCase()}`, pageWidth / 2, currentY, { align: 'center' });
+    currentY += 6;
+
+    // Metadata Card Box
+    pdf.setFillColor(248, 250, 252);
+    pdf.setDrawColor(203, 213, 225);
+    pdf.roundedRect(marginX, currentY, contentWidth, 21, 2, 2, 'FD');
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8.5);
+    pdf.setTextColor(15, 23, 42);
+    pdf.text(`Topik / Materi: ${pkg.topic}`, marginX + 4, currentY + 6);
+    pdf.text(`Kelas / Fase: ${pkg.gradeLevel}`, marginX + 100, currentY + 6);
+    pdf.text(`Tahun Pelajaran: ${school.academicYear} (Semester ${school.semester})`, marginX + 4, currentY + 12);
+    pdf.text(`Jumlah Soal: ${pkg.questions.length} Butir`, marginX + 100, currentY + 12);
+    pdf.text(`Guru Pengampu: ${currentUser?.name || '-'}`, marginX + 4, currentY + 18);
+    pdf.text(`Waktu Pengerjaan: 90 Menit`, marginX + 100, currentY + 18);
+    currentY += 26;
+
+    // Petunjuk Pengerjaan
+    pdf.setFont('helvetica', 'italic');
+    pdf.setFontSize(8);
+    pdf.setTextColor(71, 85, 105);
+    const instLines = pdf.splitTextToSize(
+      `Petunjuk: ${pkg.instructions || 'Bacalah soal dengan cermat dan pilih jawaban yang paling tepat.'}`,
+      contentWidth
+    );
+    pdf.text(instLines, marginX, currentY);
+    currentY += instLines.length * 3.8 + 2;
+    pdf.setDrawColor(226, 232, 240);
+    pdf.setLineWidth(0.3);
+    pdf.line(marginX, currentY, marginX + contentWidth, currentY);
+    currentY += 5;
+
+    // Questions Loop
+    pkg.questions.forEach((q) => {
+      // Stimulus / Kasus
+      if (q.stimulus) {
+        const stimLines = pdf.splitTextToSize(`[Bahan Bacaan/Stimulus]: ${q.stimulus}`, contentWidth - 8);
+        const boxHeight = stimLines.length * 3.6 + 5;
+        checkPageBreak(boxHeight + 10);
+
+        pdf.setFillColor(241, 245, 249);
+        pdf.setDrawColor(203, 213, 225);
+        pdf.roundedRect(marginX, currentY, contentWidth, boxHeight, 1.5, 1.5, 'FD');
+        pdf.setFont('helvetica', 'italic');
+        pdf.setFontSize(8);
+        pdf.setTextColor(30, 41, 59);
+        pdf.text(stimLines, marginX + 4, currentY + 4);
+        currentY += boxHeight + 3;
+      }
+
+      // Question Number & Text
+      const qNum = `${q.number}. `;
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(9);
+      pdf.setTextColor(15, 23, 42);
+      const numWidth = pdf.getTextWidth(qNum);
+      const qLines = pdf.splitTextToSize(q.questionText, contentWidth - numWidth);
+
+      checkPageBreak(qLines.length * 4.2 + 10);
+      pdf.text(qNum, marginX, currentY);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(qLines, marginX + numWidth, currentY);
+      currentY += qLines.length * 4.2 + 2;
+
+      // Options
+      if (q.options && q.options.length > 0) {
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8.5);
+        pdf.setTextColor(30, 41, 59);
+
+        q.options.forEach((opt) => {
+          const optLines = pdf.splitTextToSize(opt, contentWidth - 10);
+          checkPageBreak(optLines.length * 3.8 + 2);
+          pdf.text(optLines, marginX + 8, currentY);
+          currentY += optLines.length * 3.8 + 1.5;
+        });
+      }
+
+      currentY += 3.5;
+    });
+
+    // --- KUNCI JAWABAN & PEMBAHASAN ON SEPARATE PAGE ---
+    pdf.addPage('a4', 'portrait');
+    currentY = 20;
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.setTextColor(15, 23, 42);
+    pdf.text('KUNCI JAWABAN & PEMBAHASAN RESMI', pageWidth / 2, currentY, { align: 'center' });
+    currentY += 5;
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9);
+    pdf.setTextColor(71, 85, 105);
+    pdf.text(`Pegangan Guru / Asesor · ${pkg.subject} (${pkg.topic})`, pageWidth / 2, currentY, { align: 'center' });
+    currentY += 7;
+
+    pdf.setDrawColor(15, 23, 42);
+    pdf.setLineWidth(0.4);
+    pdf.line(marginX, currentY, marginX + contentWidth, currentY);
+    currentY += 5;
+
+    // Table Header
+    pdf.setFillColor(241, 245, 249);
+    pdf.rect(marginX, currentY, contentWidth, 7, 'F');
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(8.5);
+    pdf.setTextColor(15, 23, 42);
+    pdf.text('No', marginX + 3, currentY + 4.8);
+    pdf.text('Kunci', marginX + 14, currentY + 4.8);
+    pdf.text('Bobot', marginX + 30, currentY + 4.8);
+    pdf.text('Pembahasan / Rubrik Capaian', marginX + 46, currentY + 4.8);
+    currentY += 8;
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8);
+
+    pkg.questions.forEach((q) => {
+      const expLines = pdf.splitTextToSize(q.explanation || 'Jawaban sesuai capaian indikator.', contentWidth - 48);
+      const rowH = Math.max(7, expLines.length * 3.8 + 2);
+      checkPageBreak(rowH + 5);
+
+      pdf.setDrawColor(226, 232, 240);
+      pdf.setLineWidth(0.2);
+      pdf.line(marginX, currentY - 1, marginX + contentWidth, currentY - 1);
+
+      pdf.text(String(q.number), marginX + 3, currentY + 3.5);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(q.answerKey || '-', marginX + 15, currentY + 3.5);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(String(q.scoreWeight || 1), marginX + 33, currentY + 3.5);
+      pdf.text(expLines, marginX + 46, currentY + 3.5);
+
+      currentY += rowH;
+    });
+
+    // Signature Block at End
+    checkPageBreak(45);
+    currentY += 8;
+    const todayFormatted = new Intl.DateTimeFormat('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(new Date());
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8.5);
+    pdf.setTextColor(15, 23, 42);
+
+    // Left sign (Kepala Sekolah)
+    pdf.text('Mengetahui,', marginX + 5, currentY);
+    pdf.text(`Kepala ${school.name || 'UPT SMAN 1 Gowa'}`, marginX + 5, currentY + 4.5);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(school.headmaster || 'Drs. H. Arsyad, M.Pd.', marginX + 5, currentY + 22);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`NIP. ${school.headmasterNip || '19680512 199412 1 002'}`, marginX + 5, currentY + 26);
+
+    // Right sign (Guru)
+    pdf.text(`Sungguminasa, ${todayFormatted}`, marginX + 110, currentY);
+    pdf.text('Guru Mata Pelajaran,', marginX + 110, currentY + 4.5);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(currentUser?.name || 'Andi Ismail, S.Pd.', marginX + 110, currentY + 22);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`NIP. ${currentUser?.nip || '19880815 201403 1 004'}`, marginX + 110, currentY + 26);
+
+    // Stamp Page Numbers on all pages
+    const totalPages = pdf.getNumberOfPages();
+    for (let p = 1; p <= totalPages; p++) {
+      pdf.setPage(p);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7.5);
+      pdf.setTextColor(148, 163, 184);
+      pdf.text(
+        `Dokumen Asesmen Resmi SMAN 1 Gowa · Halaman ${p} dari ${totalPages}`,
+        marginX + contentWidth,
+        290,
+        { align: 'right' }
+      );
+    }
+
+    return pdf.output('blob');
+  },
 };
