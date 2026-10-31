@@ -69,6 +69,7 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
   // Export process state
   const [isExportingDrive, setIsExportingDrive] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [pageCount, setPageCount] = useState<number>(1);
   const [toastMsg, setToastMsg] = useState<{
     text: string;
     type: 'success' | 'error';
@@ -96,13 +97,31 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
     }, 4500);
   };
 
-  // Reset viewport state when opening modal
+  // Reset viewport state when opening modal and compute page count
   useEffect(() => {
     if (isOpen) {
       setZoom(100);
       setPan({ x: 0, y: 0 });
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    const updatePageCount = () => {
+      if (documentCardRef.current) {
+        const cardEl = documentCardRef.current;
+        const dims = getPaperDimensionsInMm(pageSettings);
+        const margins = getMarginsInMm(pageSettings);
+        const printableHeightMm = dims.height - (margins.top + margins.bottom);
+        const pxPerMm = 3.7795;
+        const printableHeightPx = printableHeightMm * pxPerMm;
+        const contentHeight = cardEl.scrollHeight - (margins.top + margins.bottom) * pxPerMm;
+        const pages = Math.max(1, Math.ceil(contentHeight / printableHeightPx));
+        setPageCount(pages);
+      }
+    };
+    const timer = setTimeout(updatePageCount, 150);
+    return () => clearTimeout(timer);
+  }, [isOpen, pageSettings, tableRows, children]);
 
   if (!isOpen) return null;
 
@@ -369,12 +388,17 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
                 <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
                   Pratinjau & Pengaturan Cetak Dokumen
                 </h3>
-                <span className="hidden sm:inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
-                  {pageSettings.paperSize} · {pageSettings.orientation === 'portrait' ? 'Potret' : 'Lanskap'}
+                <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
+                  {pageCount > 1 ? `${pageCount} Halaman` : '1 Halaman'} · {pageSettings.paperSize} ({pageSettings.orientation === 'portrait' ? 'Potret' : 'Lanskap'})
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                {title} · Format Ekspor Aktif: <strong className="text-slate-700 dark:text-slate-200">{exportFormat.toUpperCase()}</strong>
+                {title} · Format Ekspor: <strong className="text-slate-700 dark:text-slate-200">{exportFormat.toUpperCase()}</strong>
+                {pageCount > 1 && (
+                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold ml-1.5">
+                    · (Otomatis {pageCount} lembar cetak/PDF)
+                  </span>
+                )}
               </p>
             </div>
 
@@ -901,7 +925,9 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
               {/* Page Numbering & System Footer */}
               <div className="mt-6 pt-2 border-t border-slate-200 text-[9px] text-slate-500 flex justify-between items-center print:border-slate-400">
                 <span>Dokumen Resmi · Dicetak melalui Sistem Administrasi Guru SMAN 1 Gowa</span>
-                <span className="font-mono font-medium">Halaman 1</span>
+                <span className="font-mono font-medium">
+                  {pageCount > 1 ? `Halaman 1 dari ${pageCount}` : 'Halaman 1'}
+                </span>
               </div>
             </div>
           </div>

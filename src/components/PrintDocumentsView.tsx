@@ -84,6 +84,7 @@ export const PrintDocumentsView: React.FC<PrintDocumentsViewProps> = ({
   // Export process state
   const [isExportingDrive, setIsExportingDrive] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [pageCount, setPageCount] = useState<number>(1);
   const [toastMsg, setToastMsg] = useState<{
     text: string;
     type: 'success' | 'error';
@@ -442,6 +443,25 @@ export const PrintDocumentsView: React.FC<PrintDocumentsViewProps> = ({
     }
   }, [docType, selectedClassId, selectedMonth, students, attendances, grades, journals, schedules, classes, school, currentUser, currentClassObj, monthLabel]);
 
+  // Dynamic Page Count Measurement (Recalculates when rows or settings change)
+  React.useEffect(() => {
+    const updatePageCount = () => {
+      if (documentCardRef.current) {
+        const cardEl = documentCardRef.current;
+        const dims = getPaperDimensionsInMm(pageSettings);
+        const margins = getMarginsInMm(pageSettings);
+        const printableHeightMm = dims.height - (margins.top + margins.bottom);
+        const pxPerMm = 3.7795;
+        const printableHeightPx = printableHeightMm * pxPerMm;
+        const contentHeight = cardEl.scrollHeight - (margins.top + margins.bottom) * pxPerMm;
+        const pages = Math.max(1, Math.ceil(contentHeight / printableHeightPx));
+        setPageCount(pages);
+      }
+    };
+    const timer = setTimeout(updatePageCount, 150);
+    return () => clearTimeout(timer);
+  }, [pageSettings, docType, selectedClassId, selectedMonth, currentDocData]);
+
   // Clean filename generator
   const getCleanFilename = (ext: 'pdf' | 'docx') => {
     const cleanDoc = docType.toUpperCase();
@@ -582,7 +602,7 @@ export const PrintDocumentsView: React.FC<PrintDocumentsViewProps> = ({
       )}
 
       {/* Main Header Card */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs">
+      <div className="no-print bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
@@ -707,17 +727,29 @@ export const PrintDocumentsView: React.FC<PrintDocumentsViewProps> = ({
             )}
           </div>
 
-          <div className="text-[11px] text-slate-500 flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Pratinjau otomatis diperbarui saat pengaturan diubah</span>
+          <div className="text-[11px] text-slate-500 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300">
+              <Layers className="w-3.5 h-3.5" />
+              <span>{pageCount > 1 ? `${pageCount} Halaman` : '1 Halaman'} ({pageSettings.paperSize} · {pageSettings.orientation === 'portrait' ? 'Potret' : 'Lanskap'})</span>
+            </span>
+            {pageCount > 1 ? (
+              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                · Area cetak melebihi 1 lembar: sistem otomatis menambah menjadi {pageCount} halaman saat cetak / ekspor PDF
+              </span>
+            ) : (
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Pratinjau otomatis diperbarui</span>
+              </span>
+            )}
           </div>
         </div>
       </div>
 
       {/* Workspace Preview Frame with Toolbar */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs flex flex-col">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs flex flex-col print:border-none print:shadow-none print:bg-white print:p-0 print:m-0">
         {/* Settings Bar: Kertas, Orientasi, Margin, Format Ekspor & Zoom */}
-        <div className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="no-print bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
           {/* Left: Page Settings */}
           <div className="flex flex-wrap items-center gap-2">
             {/* Paper Size */}
@@ -1001,7 +1033,7 @@ export const PrintDocumentsView: React.FC<PrintDocumentsViewProps> = ({
             cursor: zoom > 100 ? (isDragging ? 'grabbing' : 'grab') : 'default',
             touchAction: 'none',
           }}
-          className="h-[750px] overflow-auto p-6 sm:p-10 flex items-start justify-center bg-slate-200/90 dark:bg-slate-950/90 relative select-text"
+          className="h-[750px] overflow-auto p-6 sm:p-10 flex items-start justify-center bg-slate-200/90 dark:bg-slate-950/90 relative select-text print:h-auto print:max-h-none print:overflow-visible print:bg-white print:p-0 print:m-0 print:block"
         >
           {/* Paper Sheet Root */}
           <div
@@ -1015,7 +1047,7 @@ export const PrintDocumentsView: React.FC<PrintDocumentsViewProps> = ({
               transformOrigin: 'top center',
               transition: isDragging ? 'none' : 'transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1)',
             }}
-            className="printable-document-root bg-white rounded-lg shadow-2xl border border-slate-300 text-slate-900 text-[10.5pt] box-border relative flex flex-col justify-between"
+            className="printable-document-root bg-white rounded-lg shadow-2xl border border-slate-300 text-slate-900 text-[10.5pt] box-border relative flex flex-col justify-between print:shadow-none print:border-none print:rounded-none print:m-0 print:p-0 print:w-full print:max-w-none"
           >
             <div>
               {/* KOP SURAT RESMI DINAS */}
@@ -1219,7 +1251,9 @@ export const PrintDocumentsView: React.FC<PrintDocumentsViewProps> = ({
               {/* Page Numbering & System Footer */}
               <div className="mt-6 pt-2 border-t border-slate-200 text-[9px] text-slate-500 flex justify-between items-center">
                 <span>Dokumen Resmi · Dicetak melalui Sistem Administrasi Guru SMAN 1 Gowa</span>
-                <span className="font-mono font-medium">Halaman 1</span>
+                <span className="font-mono font-medium">
+                  {pageCount > 1 ? `Halaman 1 dari ${pageCount}` : 'Halaman 1'}
+                </span>
               </div>
             </div>
           </div>

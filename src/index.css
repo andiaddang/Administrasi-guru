@@ -32,33 +32,76 @@
 
 @media print {
   @page {
-    size: A4 portrait;
-    margin: 15mm 15mm 15mm 15mm;
+    size: auto;
+    margin: 12mm;
   }
   
-  body {
+  html, body {
     background-color: #ffffff !important;
+    background: #ffffff !important;
     color: #000000 !important;
     font-size: 11pt;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
-  .no-print {
+  /* Exclude all application UI, headers, sidebars, modal backdrops, floating buttons */
+  header, nav, aside, footer, .no-print, button, input, select, textarea {
     display: none !important;
   }
 
-  .print-only {
-    display: block !important;
+  /* Remove any application background wrappers, gray viewport panels, or card borders */
+  body, main, #root, #root > div, div:not(.printable-document-root):not(.printable-document-root *) {
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    border-color: transparent !important;
   }
 
-  .print-page {
-    box-shadow: none !important;
-    border: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
+  /* Strict paper-only document container */
+  .printable-document-root {
+    display: block !important;
     width: 100% !important;
     max-width: 100% !important;
+    min-height: auto !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    transform: none !important;
+    transform-origin: 0 0 !important;
+  }
+
+  /* Automatic page breaks for multi-page tables */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tfoot {
+    display: table-footer-group !important;
+  }
+
+  .break-inside-avoid {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 }
 
