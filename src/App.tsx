@@ -28,7 +28,7 @@ import { ShareModal } from './components/ShareModal';
 import { ThemeModal } from './components/ThemeModal';
 import { EditProfileModal } from './components/EditProfileModal';
 import { ConfirmDeleteModal } from './components/ConfirmDeleteModal';
-import { GoogleWorkspaceView } from './components/GoogleWorkspaceView';
+import { PrintDocumentsView } from './components/PrintDocumentsView';
 
 export default function App() {
   // Application Data States (Pure Offline-First Local Storage)
@@ -85,7 +85,7 @@ export default function App() {
           'grades',
           'ai-assistant',
           'journals',
-          'google-workspace',
+          'print-documents',
           'settings',
         ].includes(tabParam)
       ) {
@@ -633,8 +633,8 @@ export default function App() {
             />
           )}
 
-          {activeTab === 'google-workspace' && (
-            <GoogleWorkspaceView
+          {activeTab === 'print-documents' && (
+            <PrintDocumentsView
               school={school}
               currentUser={currentUser}
               classes={classes}
@@ -643,8 +643,6 @@ export default function App() {
               grades={grades}
               journals={journals}
               schedules={schedules}
-              onImportStudents={handleBatchImportStudents}
-              onRestoreAllData={handleRestoreFromDriveBackup}
             />
           )}
 

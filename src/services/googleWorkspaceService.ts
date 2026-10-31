@@ -147,12 +147,12 @@ export const GoogleWorkspaceService = {
   },
 
   /**
-   * Upload file to Google Drive using multipart upload
+   * Upload file to Google Drive using multipart upload (supports text, JSON, PDF, and DOCX binary)
    */
   async uploadFileToDrive(
     accessToken: string,
     fileName: string,
-    content: string,
+    content: string | Blob,
     mimeType: string = 'application/json',
     parentFolderId?: string
   ): Promise<DriveFileItem> {
@@ -168,14 +168,25 @@ export const GoogleWorkspaceService = {
     const delimiter = `\r\n--${boundary}\r\n`;
     const closeDelimiter = `\r\n--${boundary}--`;
 
-    const multipartRequestBody =
-      delimiter +
-      'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
-      JSON.stringify(metadata) +
-      delimiter +
-      `Content-Type: ${mimeType}; charset=UTF-8\r\n\r\n` +
-      content +
-      closeDelimiter;
+    const metadataPart = new Blob(
+      [
+        delimiter,
+        'Content-Type: application/json; charset=UTF-8\r\n\r\n',
+        JSON.stringify(metadata),
+        delimiter,
+        `Content-Type: ${mimeType}\r\n\r\n`,
+      ],
+      { type: 'text/plain; charset=UTF-8' }
+    );
+
+    const contentPart =
+      typeof content === 'string'
+        ? new Blob([content], { type: `${mimeType}; charset=UTF-8` })
+        : content;
+
+    const closePart = new Blob([closeDelimiter], { type: 'text/plain; charset=UTF-8' });
+
+    const multipartRequestBody = new Blob([metadataPart, contentPart, closePart]);
 
     const res = await fetch(
       'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,modifiedTime,size,webViewLink',

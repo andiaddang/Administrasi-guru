@@ -18,6 +18,7 @@ import {
   ArrowRight,
   TrendingUp,
   Percent,
+  Printer,
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -405,6 +406,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
         >
           <BookOpenCheck className="w-3.5 h-3.5" />
           Buat Jurnal Baru
+        </button>
+        <button
+          onClick={() => onNavigateTab('print-documents')}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/60 rounded-lg transition-colors cursor-pointer"
+        >
+          <Printer className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+          Cetak Dokumen Resmi
         </button>
       </div>
 

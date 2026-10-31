@@ -13,7 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
-  FileSpreadsheet,
+  Printer,
 } from 'lucide-react';
 
 interface TopMenuBarProps {
@@ -40,7 +40,7 @@ export const TopMenuBar: React.FC<TopMenuBarProps> = ({
     { id: 'grades', label: 'Manajemen Nilai', icon: GraduationCap },
     { id: 'ai-assistant', label: 'Asisten Guru AI', icon: Sparkles },
     { id: 'journals', label: 'Jurnal Harian Guru', icon: BookOpenCheck },
-    { id: 'google-workspace', label: 'Google Drive & Sheets', icon: FileSpreadsheet },
+    { id: 'print-documents', label: 'Cetak Dokumen', icon: Printer },
     { id: 'settings', label: 'Profil & Kop Surat', icon: Building },
   ];
 

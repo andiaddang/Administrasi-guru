@@ -27,6 +27,7 @@ import {
   Info,
   GripVertical,
   ArrowUpDown,
+  Printer,
 } from 'lucide-react';
 
 interface StudentManagementProps {
@@ -987,12 +988,12 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({
           {onNavigateTab && (
             <button
               type="button"
-              onClick={() => onNavigateTab('google-workspace')}
+              onClick={() => onNavigateTab('print-documents')}
               className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-xs font-semibold rounded-lg transition-colors cursor-pointer border border-emerald-200 dark:border-emerald-800"
-              title="Buka Google Sheets & Drive untuk ekspor atau impor data siswa"
+              title="Buka Cetak & Ekspor Dokumen Resmi"
             >
-              <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>Google Sheets</span>
+              <Printer className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>Cetak Dokumen</span>
             </button>
           )}
 

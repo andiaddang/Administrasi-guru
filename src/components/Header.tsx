@@ -45,6 +45,8 @@ export const Header: React.FC<HeaderProps> = ({
         return 'Penilaian Siswa';
       case 'journals':
         return 'Jurnal Harian';
+      case 'print-documents':
+        return 'Cetak Dokumen';
       case 'settings':
         return 'Profil & Kop Surat';
       default:
