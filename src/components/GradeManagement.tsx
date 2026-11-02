@@ -185,12 +185,68 @@ export const GRADE_TYPE_SHORT: Record<GradeType, string> = {
   SAS: 'SAS (20%)',
 };
 
-const DEFAULT_WEIGHTS: Record<GradeType, number> = {
-  Tugas: 25,
+export const DEFAULT_WEIGHTS: Record<GradeType, number> = {
+  Tugas: 20,
   Harian: 20,
   Sumatif: 20,
   STS: 20,
   SAS: 20,
+};
+
+export const STORAGE_WEIGHTS_KEY = 'sman1_gowa_assessment_weights_v3';
+
+export const getStoredWeights = (): Record<GradeType, number> => {
+  try {
+    const raw = localStorage.getItem(STORAGE_WEIGHTS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (
+        parsed &&
+        typeof parsed.Tugas === 'number' &&
+        typeof parsed.Harian === 'number' &&
+        typeof parsed.Sumatif === 'number' &&
+        typeof parsed.STS === 'number' &&
+        typeof parsed.SAS === 'number'
+      ) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.error('Error loading weights from storage', e);
+  }
+  return DEFAULT_WEIGHTS;
+};
+
+export const getGradeTypeLabel = (type: GradeType, w: Record<GradeType, number>): string => {
+  const pct = w[type] ?? 20;
+  switch (type) {
+    case 'Tugas':
+      return `TUGAS (${pct}%)`;
+    case 'Harian':
+      return `FORMATIF / ULANGAN (${pct}%)`;
+    case 'Sumatif':
+      return `SUMATIF TP (${pct}%)`;
+    case 'STS':
+      return `SUMATIF TENGAH SEMESTER / STS (${pct}%)`;
+    case 'SAS':
+      return `SUMATIF AKHIR SEMESTER SAS (${pct}%)`;
+  }
+};
+
+export const getGradeTypeShort = (type: GradeType, w: Record<GradeType, number>): string => {
+  const pct = w[type] ?? 20;
+  switch (type) {
+    case 'Tugas':
+      return `TUGAS (${pct}%)`;
+    case 'Harian':
+      return `FORMATIF (${pct}%)`;
+    case 'Sumatif':
+      return `SUMATIF TP (${pct}%)`;
+    case 'STS':
+      return `STS (${pct}%)`;
+    case 'SAS':
+      return `SAS (${pct}%)`;
+  }
 };
 
 /**
@@ -751,8 +807,22 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
   const [selectedSubject] = useState<string>(defaultSubject);
 
   // 2. BOBOT KOMPONEN PENILAIAN (HARUS 100%)
-  const [weights, setWeights] = useState<Record<GradeType, number>>(DEFAULT_WEIGHTS);
+  const [weights, setWeights] = useState<Record<GradeType, number>>(getStoredWeights);
   const [isWeightSettingsOpen, setIsWeightSettingsOpen] = useState<boolean>(false);
+
+  const handleUpdateWeight = (type: GradeType, val: number) => {
+    const clamped = Math.min(100, Math.max(0, val));
+    setWeights((prev) => {
+      const next = { ...prev, [type]: clamped };
+      try {
+        localStorage.setItem(STORAGE_WEIGHTS_KEY, JSON.stringify(next));
+      } catch (e) {
+        console.error('Error saving weights', e);
+      }
+      return next;
+    });
+    setIsDirty(true);
+  };
 
   // 3. STRUKTUR SUB-KOLOM PENILAIAN PER KELAS
   const [classColumnsMap, setClassColumnsMap] = useState<Record<string, AssessmentColumn[]>>(getStoredColumnsByClass);
@@ -875,7 +945,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
     );
   }, [weights]);
 
-  const isWeightValid = totalWeight === 100 || totalWeight === 105;
+  const isWeightValid = totalWeight === 100;
 
   // PERHITUNGAN NILAI AKHIR OTOMATIS & OBJEKTIF:
   // "Hitung komponen yang kosong, Jumlahkan langsung semua komponen dengan bobot nilai tugas yang ditetapkan untuk mendapatkan nilai hasil akhir"
@@ -1436,27 +1506,22 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
 
   // Preset Bobot Cepat
   const applyPresetWeights = (preset: 'standard' | 'praktikum' | 'teori') => {
+    let next: Record<GradeType, number>;
     if (preset === 'standard') {
-      setWeights(DEFAULT_WEIGHTS);
+      next = { Tugas: 20, Harian: 20, Sumatif: 20, STS: 20, SAS: 20 };
     } else if (preset === 'praktikum') {
-      setWeights({
-        Tugas: 35,
-        Harian: 15,
-        Sumatif: 25,
-        STS: 10,
-        SAS: 15,
-      });
-    } else if (preset === 'teori') {
-      setWeights({
-        Tugas: 15,
-        Harian: 20,
-        Sumatif: 30,
-        STS: 15,
-        SAS: 20,
-      });
+      next = { Tugas: 35, Harian: 15, Sumatif: 25, STS: 10, SAS: 15 };
+    } else {
+      next = { Tugas: 15, Harian: 20, Sumatif: 30, STS: 15, SAS: 20 };
+    }
+    setWeights(next);
+    try {
+      localStorage.setItem(STORAGE_WEIGHTS_KEY, JSON.stringify(next));
+    } catch (e) {
+      console.error('Error saving weights', e);
     }
     setIsDirty(true);
-    showToast('Bobot penilaian berhasil diatur.');
+    showToast(`Bobot komponen penilaian diatur ke preset ${preset} (Total 100%). Nilai komponen pada tabel otomatis disesuaikan!`);
   };
 
   const getTypeBadge = (type: GradeType) => {
@@ -1659,10 +1724,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                 max="100"
                 step="5"
                 value={weights.Tugas}
-                onChange={(e) => {
-                  setWeights((w) => ({ ...w, Tugas: Number(e.target.value) }));
-                  setIsDirty(true);
-                }}
+                onChange={(e) => handleUpdateWeight('Tugas', Number(e.target.value))}
                 className="w-full accent-sky-600 cursor-pointer"
               />
               <div className="flex items-center justify-between text-[11px] text-sky-600 dark:text-sky-400 font-medium">
@@ -1672,10 +1734,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                   min="0"
                   max="100"
                   value={weights.Tugas}
-                  onChange={(e) => {
-                    setWeights((w) => ({ ...w, Tugas: Math.min(100, Math.max(0, Number(e.target.value))) }));
-                    setIsDirty(true);
-                  }}
+                  onChange={(e) => handleUpdateWeight('Tugas', Number(e.target.value))}
                   className="w-14 text-center font-bold bg-white dark:bg-slate-900 border border-sky-300 dark:border-sky-800 rounded px-1 py-0.5"
                 />
               </div>
@@ -1693,10 +1752,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                 max="100"
                 step="5"
                 value={weights.Harian}
-                onChange={(e) => {
-                  setWeights((w) => ({ ...w, Harian: Number(e.target.value) }));
-                  setIsDirty(true);
-                }}
+                onChange={(e) => handleUpdateWeight('Harian', Number(e.target.value))}
                 className="w-full accent-emerald-600 cursor-pointer"
               />
               <div className="flex items-center justify-between text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
@@ -1706,10 +1762,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                   min="0"
                   max="100"
                   value={weights.Harian}
-                  onChange={(e) => {
-                    setWeights((w) => ({ ...w, Harian: Math.min(100, Math.max(0, Number(e.target.value))) }));
-                    setIsDirty(true);
-                  }}
+                  onChange={(e) => handleUpdateWeight('Harian', Number(e.target.value))}
                   className="w-14 text-center font-bold bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 rounded px-1 py-0.5"
                 />
               </div>
@@ -1727,10 +1780,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                 max="100"
                 step="5"
                 value={weights.Sumatif}
-                onChange={(e) => {
-                  setWeights((w) => ({ ...w, Sumatif: Number(e.target.value) }));
-                  setIsDirty(true);
-                }}
+                onChange={(e) => handleUpdateWeight('Sumatif', Number(e.target.value))}
                 className="w-full accent-purple-600 cursor-pointer"
               />
               <div className="flex items-center justify-between text-[11px] text-purple-600 dark:text-purple-400 font-medium">
@@ -1740,10 +1790,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                   min="0"
                   max="100"
                   value={weights.Sumatif}
-                  onChange={(e) => {
-                    setWeights((w) => ({ ...w, Sumatif: Math.min(100, Math.max(0, Number(e.target.value))) }));
-                    setIsDirty(true);
-                  }}
+                  onChange={(e) => handleUpdateWeight('Sumatif', Number(e.target.value))}
                   className="w-14 text-center font-bold bg-white dark:bg-slate-900 border border-purple-300 dark:border-purple-800 rounded px-1 py-0.5"
                 />
               </div>
@@ -1761,10 +1808,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                 max="100"
                 step="5"
                 value={weights.STS}
-                onChange={(e) => {
-                  setWeights((w) => ({ ...w, STS: Number(e.target.value) }));
-                  setIsDirty(true);
-                }}
+                onChange={(e) => handleUpdateWeight('STS', Number(e.target.value))}
                 className="w-full accent-amber-600 cursor-pointer"
               />
               <div className="flex items-center justify-between text-[11px] text-amber-600 dark:text-amber-400 font-medium">
@@ -1774,10 +1818,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                   min="0"
                   max="100"
                   value={weights.STS}
-                  onChange={(e) => {
-                    setWeights((w) => ({ ...w, STS: Math.min(100, Math.max(0, Number(e.target.value))) }));
-                    setIsDirty(true);
-                  }}
+                  onChange={(e) => handleUpdateWeight('STS', Number(e.target.value))}
                   className="w-14 text-center font-bold bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-800 rounded px-1 py-0.5"
                 />
               </div>
@@ -1795,10 +1836,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                 max="100"
                 step="5"
                 value={weights.SAS}
-                onChange={(e) => {
-                  setWeights((w) => ({ ...w, SAS: Number(e.target.value) }));
-                  setIsDirty(true);
-                }}
+                onChange={(e) => handleUpdateWeight('SAS', Number(e.target.value))}
                 className="w-full accent-rose-600 cursor-pointer"
               />
               <div className="flex items-center justify-between text-[11px] text-rose-600 dark:text-rose-400 font-medium">
@@ -1808,10 +1846,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                   min="0"
                   max="100"
                   value={weights.SAS}
-                  onChange={(e) => {
-                    setWeights((w) => ({ ...w, SAS: Math.min(100, Math.max(0, Number(e.target.value))) }));
-                    setIsDirty(true);
-                  }}
+                  onChange={(e) => handleUpdateWeight('SAS', Number(e.target.value))}
                   className="w-14 text-center font-bold bg-white dark:bg-slate-900 border border-rose-300 dark:border-rose-800 rounded px-1 py-0.5"
                 />
               </div>
@@ -2457,15 +2492,20 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                   JENIS KELAMIN
                 </th>
 
-                {/* TUGAS (25%) */}
+                {/* TUGAS (Bobot %) */}
                 {showTugasSection && (
                   <th
                     colSpan={Math.max(1, tugasCols.length)}
                     className="py-2 px-2.5 bg-sky-100/95 dark:bg-sky-950/90 border-b border-x border-sky-300 dark:border-sky-800 text-sky-950 dark:text-sky-100 text-center"
                   >
-                    <span className="font-extrabold text-xs text-sky-950 dark:text-sky-100 uppercase tracking-tight block">
-                      TUGAS (25%)
-                    </span>
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className="font-extrabold text-xs text-sky-950 dark:text-sky-100 uppercase tracking-tight block">
+                        TUGAS
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-sky-600 text-white shadow-2xs">
+                        {weights.Tugas}%
+                      </span>
+                    </div>
                   </th>
                 )}
 
@@ -2479,58 +2519,78 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                       <div className="font-extrabold text-xs text-sky-950 dark:text-sky-50 leading-tight uppercase tracking-tight">
                         RATA-RATA TUGAS
                       </div>
-                      <div className="text-[10px] text-sky-900 dark:text-sky-200 font-medium">
-                        (Bobot: 25%)
+                      <div className="text-[10px] text-sky-900 dark:text-sky-200 font-bold bg-sky-300/60 dark:bg-sky-800/60 px-1.5 py-0.5 rounded inline-block">
+                        Bobot: {weights.Tugas}%
                       </div>
                     </div>
                   </th>
                 )}
 
-                {/* FORMATIF / ULANGAN (20%) */}
+                {/* FORMATIF / ULANGAN (Bobot %) */}
                 {showFormatifSection && (
                   <th
                     colSpan={Math.max(1, formatifCols.length)}
                     className="py-2 px-2.5 bg-emerald-100/95 dark:bg-emerald-950/90 border-b border-x border-emerald-300 dark:border-emerald-800 text-emerald-950 dark:text-emerald-100 text-center"
                   >
-                    <span className="font-extrabold text-xs text-emerald-950 dark:text-emerald-100 uppercase tracking-tight block">
-                      FORMATIF / ULANGAN (20%)
-                    </span>
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className="font-extrabold text-xs text-emerald-950 dark:text-emerald-100 uppercase tracking-tight block">
+                        FORMATIF / ULANGAN
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-600 text-white shadow-2xs">
+                        {weights.Harian}%
+                      </span>
+                    </div>
                   </th>
                 )}
 
-                {/* SUMATIF TP (LINGKUP MATERI (20%) */}
+                {/* SUMATIF TP (LINGKUP MATERI) (Bobot %) */}
                 {showSumatifSection && (
                   <th
                     colSpan={Math.max(1, sumatifCols.length)}
                     className="py-2 px-2.5 bg-purple-100/95 dark:bg-purple-950/90 border-b border-x border-purple-300 dark:border-purple-800 text-purple-950 dark:text-purple-100 text-center"
                   >
-                    <span className="font-extrabold text-xs text-purple-950 dark:text-purple-100 uppercase tracking-tight block">
-                      SUMATIF TP (LINGKUP MATERI (20%)
-                    </span>
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className="font-extrabold text-xs text-purple-950 dark:text-purple-100 uppercase tracking-tight block">
+                        SUMATIF TP
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-purple-600 text-white shadow-2xs">
+                        {weights.Sumatif}%
+                      </span>
+                    </div>
                   </th>
                 )}
 
-                {/* SUMATIF TENGAH SEMESTER / STS (20%) */}
+                {/* SUMATIF TENGAH SEMESTER / STS (Bobot %) */}
                 {showSTSSection && (
                   <th
                     colSpan={Math.max(1, stsCols.length)}
                     className="py-2 px-2.5 bg-amber-100/95 dark:bg-amber-950/90 border-b border-x border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-100 text-center"
                   >
-                    <span className="font-extrabold text-xs text-amber-950 dark:text-amber-100 uppercase tracking-tight block text-center">
-                      SUMATIF TENGAH SEMESTER / STS (20%)
-                    </span>
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className="font-extrabold text-xs text-amber-950 dark:text-amber-100 uppercase tracking-tight block text-center">
+                        STS
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-600 text-white shadow-2xs">
+                        {weights.STS}%
+                      </span>
+                    </div>
                   </th>
                 )}
 
-                {/* SUMATIF AKHIR SEMESTER SAS (20%) */}
+                {/* SUMATIF AKHIR SEMESTER SAS (Bobot %) */}
                 {showSASSection && (
                   <th
                     colSpan={Math.max(1, sasCols.length)}
                     className="py-2 px-2.5 bg-rose-100/95 dark:bg-rose-950/90 border-b border-x border-rose-300 dark:border-rose-800 text-rose-950 dark:text-rose-100 text-center"
                   >
-                    <span className="font-extrabold text-xs text-rose-950 dark:text-rose-100 uppercase tracking-tight block text-center">
-                      SUMATIF AKHIR SEMESTER SAS (20%)
-                    </span>
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className="font-extrabold text-xs text-rose-950 dark:text-rose-100 uppercase tracking-tight block text-center">
+                        SAS
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white shadow-2xs">
+                        {weights.SAS}%
+                      </span>
+                    </div>
                   </th>
                 )}
 
@@ -2591,7 +2651,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                   className="py-2 px-2 font-bold text-center text-indigo-700 dark:text-indigo-300 w-24 min-w-[85px] max-w-[105px] bg-indigo-50/80 dark:bg-indigo-950/50 border-b border-indigo-200 dark:border-indigo-900"
                 >
                   <div className="leading-tight font-extrabold text-xs">Nilai Akhir</div>
-                  <div className="text-[9px] text-indigo-500 font-normal">Bobot 100%</div>
+                  <div className="text-[9px] text-indigo-500 font-bold bg-indigo-100/70 dark:bg-indigo-900/60 rounded px-1.5 py-0.5 inline-block mt-0.5">
+                    Bobot {totalWeight}%
+                  </div>
                 </th>
 
                 {/* Predikat & Ketercapaian */}
@@ -2632,9 +2694,14 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                             </div>
                           </div>
                           <div className="flex items-center justify-between pt-1 border-t border-slate-200/80 dark:border-slate-700/80 text-[10px] text-slate-500 dark:text-slate-400">
-                            <span className="truncate" title={`Tanggal: ${col.date || '-'}`}>
-                              {col.date || '-'}
-                            </span>
+                            <div className="flex items-center gap-1.5 truncate">
+                              <span className="truncate" title={`Tanggal: ${col.date || '-'}`}>
+                                {col.date || '-'}
+                              </span>
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-sky-100 dark:bg-sky-950/80 text-sky-800 dark:text-sky-300 border border-sky-300 dark:border-sky-800">
+                                Bobot {weights[col.type]}%
+                              </span>
+                            </div>
                             <div className="flex items-center gap-0.5 shrink-0">
                               <button
                                 type="button"
@@ -2682,9 +2749,14 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                             </div>
                           </div>
                           <div className="flex items-center justify-between pt-1 border-t border-slate-200/80 dark:border-slate-700/80 text-[10px] text-slate-500 dark:text-slate-400">
-                            <span className="truncate" title={`Tanggal: ${col.date || '-'}`}>
-                              {col.date || '-'}
-                            </span>
+                            <div className="flex items-center gap-1.5 truncate">
+                              <span className="truncate" title={`Tanggal: ${col.date || '-'}`}>
+                                {col.date || '-'}
+                              </span>
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                                Bobot {weights[col.type]}%
+                              </span>
+                            </div>
                             <div className="flex items-center gap-0.5 shrink-0">
                               <button
                                 type="button"
@@ -2732,9 +2804,14 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                             </div>
                           </div>
                           <div className="flex items-center justify-between pt-1 border-t border-slate-200/80 dark:border-slate-700/80 text-[10px] text-slate-500 dark:text-slate-400">
-                            <span className="truncate" title={`Tanggal: ${col.date || '-'}`}>
-                              {col.date || '-'}
-                            </span>
+                            <div className="flex items-center gap-1.5 truncate">
+                              <span className="truncate" title={`Tanggal: ${col.date || '-'}`}>
+                                {col.date || '-'}
+                              </span>
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-purple-100 dark:bg-purple-950/80 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-800">
+                                Bobot {weights[col.type]}%
+                              </span>
+                            </div>
                             <div className="flex items-center gap-0.5 shrink-0">
                               <button
                                 type="button"
@@ -2782,9 +2859,14 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                             </div>
                           </div>
                           <div className="flex items-center justify-between pt-1 border-t border-slate-200/80 dark:border-slate-700/80 text-[10px] text-slate-500 dark:text-slate-400">
-                            <span className="truncate" title={`Tanggal: ${col.date || '-'}`}>
-                              {col.date || '-'}
-                            </span>
+                            <div className="flex items-center gap-1.5 truncate">
+                              <span className="truncate" title={`Tanggal: ${col.date || '-'}`}>
+                                {col.date || '-'}
+                              </span>
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                                Bobot {weights[col.type]}%
+                              </span>
+                            </div>
                             <div className="flex items-center gap-0.5 shrink-0">
                               <button
                                 type="button"
@@ -2824,9 +2906,14 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                             </div>
                           </div>
                           <div className="flex items-center justify-between pt-1 border-t border-slate-200/80 dark:border-slate-700/80 text-[10px] text-slate-500 dark:text-slate-400">
-                            <span className="truncate" title={`Tanggal: ${col.date || '-'}`}>
-                              {col.date || '-'}
-                            </span>
+                            <div className="flex items-center gap-1.5 truncate">
+                              <span className="truncate" title={`Tanggal: ${col.date || '-'}`}>
+                                {col.date || '-'}
+                              </span>
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800">
+                                Bobot {weights[col.type]}%
+                              </span>
+                            </div>
                             <div className="flex items-center gap-0.5 shrink-0">
                               <button
                                 type="button"
@@ -2995,7 +3082,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                                   </span>
                                 </div>
                                 <div className="text-[10px] text-sky-800 dark:text-sky-300 font-sans font-semibold">
-                                  {evalItem.submittedTugasCount}/{tugasCols.length} tugas kumpul
+                                  {evalItem.submittedTugasCount}/{tugasCols.length} tugas · +{(((evalItem.rataRataTugas || 0) * weights.Tugas) / (totalWeight || 100)).toFixed(1)} pt
                                 </div>
                               </div>
                             ) : (
@@ -3274,11 +3361,18 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                           {evalItem.finalScore !== null ? (
                             <div className="space-y-0.5">
                               <span
-                                className={`text-sm font-extrabold ${
+                                className={`text-sm font-extrabold cursor-help ${
                                   evalItem.isPassing
                                     ? 'text-indigo-700 dark:text-indigo-300'
                                     : 'text-rose-600 dark:text-rose-400'
                                 }`}
+                                title={`Rincian Kontribusi Bobot Komponen:
+• Tugas (${weights.Tugas}%): ${(evalItem.rataRataTugas ?? 0).toFixed(1)} → +${(((evalItem.rataRataTugas ?? 0) * weights.Tugas) / (totalWeight || 100)).toFixed(1)} poin
+• Formatif (${weights.Harian}%): ${(evalItem.typeAverages.Harian).toFixed(1)} → +${((evalItem.typeAverages.Harian * weights.Harian) / (totalWeight || 100)).toFixed(1)} poin
+• Sumatif TP (${weights.Sumatif}%): ${(evalItem.typeAverages.Sumatif).toFixed(1)} → +${((evalItem.typeAverages.Sumatif * weights.Sumatif) / (totalWeight || 100)).toFixed(1)} poin
+• STS (${weights.STS}%): ${(evalItem.typeAverages.STS).toFixed(1)} → +${((evalItem.typeAverages.STS * weights.STS) / (totalWeight || 100)).toFixed(1)} poin
+• SAS (${weights.SAS}%): ${(evalItem.typeAverages.SAS).toFixed(1)} → +${((evalItem.typeAverages.SAS * weights.SAS) / (totalWeight || 100)).toFixed(1)} poin
+Total Nilai Akhir = ${evalItem.finalScore.toFixed(1)} (Total Bobot ${totalWeight}%)`}
                               >
                                 {evalItem.finalScore.toFixed(1)}
                               </span>
@@ -3360,7 +3454,17 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                     <td className="py-2 px-1 text-center font-mono font-black text-sky-900 dark:text-sky-200 bg-sky-100 dark:bg-sky-950/60">
                       {(() => {
                         const list = studentEvaluations.map((e) => e.rataRataTugas).filter((v): v is number => v !== null);
-                        return list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
+                        const avg = list.length > 0 ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : '-';
+                        return (
+                          <div>
+                            <div>{avg}</div>
+                            {avg !== '-' && (
+                              <div className="text-[9px] font-sans text-sky-700 dark:text-sky-300 font-bold">
+                                Bobot {weights.Tugas}%
+                              </div>
+                            )}
+                          </div>
+                        );
                       })()}
                     </td>
                   )}
@@ -3494,9 +3598,17 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                       const validScores = studentEvaluations
                         .map((e) => e.finalScore)
                         .filter((v): v is number => v !== null);
-                      return validScores.length > 0
+                      const avg = validScores.length > 0
                         ? (validScores.reduce((a, b) => a + b, 0) / validScores.length).toFixed(1)
                         : '-';
+                      return (
+                        <div>
+                          <div>{avg}</div>
+                          <div className="text-[9px] font-sans text-indigo-600 dark:text-indigo-400 font-bold">
+                            Total {totalWeight}%
+                          </div>
+                        </div>
+                      );
                     })()}
                   </td>
 
@@ -3577,9 +3689,9 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                   }}
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-100 font-bold focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                 >
-                  <option value="Tugas">TUGAS (25%)</option>
-                  <option value="Harian">FORMATIF / ULANGAN (20%)</option>
-                  <option value="Sumatif">SUMATIF TP (LINGKUP MATERI (20%)</option>
+                  <option value="Tugas">TUGAS ({weights.Tugas}%)</option>
+                  <option value="Harian">FORMATIF / ULANGAN ({weights.Harian}%)</option>
+                  <option value="Sumatif">SUMATIF TP ({weights.Sumatif}%)</option>
                 </select>
                 <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5 leading-relaxed">
                   *Catatan: Kolom STS dan SAS merupakan komponen tetap dan tidak dapat ditambah, namun deskripsi dan tanggalnya dapat diedit bebas.
@@ -3651,7 +3763,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                   </h3>
                   <p className="text-[11px] text-slate-500">
                     <span className="font-semibold text-indigo-600 dark:text-indigo-400">
-                      [{GRADE_TYPE_LABELS[columnToEdit.type]}]
+                      [{getGradeTypeLabel(columnToEdit.type, weights)}]
                     </span>{' '}
                     — Kelas {currentClass?.name}
                   </p>
