@@ -27,6 +27,8 @@ import {
   Edit,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   AlertTriangle,
   CalendarDays,
   ArrowRight,
@@ -495,54 +497,62 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
         <div className="space-y-4">
           {/* KALENDER PRESENSI KELAS INTERAKTIF DENGAN TANDA SELESAI */}
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs transition-all">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 mb-3.5 border-b border-slate-100 dark:border-slate-800">
+            <div
+              className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                showCalendar ? 'pb-3.5 mb-3.5 border-b border-slate-100 dark:border-slate-800' : ''
+              }`}
+            >
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
                   <CalendarDays className="w-4 h-4" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                      Kalender Presensi Kelas {selectedClassObj?.name}
+                      Kalender Presensi
                     </h2>
-                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
-                      {calendarDaysData.monthName}
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700">
+                      Kelas {selectedClassObj?.name || '-'}
+                    </span>
+                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                      • {calendarDaysData.days.filter((d) => d.hasRecorded).length} hari terisi
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    Tanggal berlatar hijau (<span className="text-emerald-600 dark:text-emerald-400 font-semibold">✓ Selesai</span>) menandakan presensi sudah selesai diinput. Klik tanggal mana saja untuk membuka, mengedit, atau menghapus presensi.
+                    Klik tanggal pada kalender untuk membuka, mengedit, atau menghapus data presensi.
                   </p>
                 </div>
               </div>
 
-              {/* Month navigation and toggle */}
+              {/* Sederhana & Kompak: Navigasi Bulan, Hari Ini, dan Toggle */}
               <div className="flex items-center gap-1.5 self-start sm:self-auto flex-wrap">
-                <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 border border-slate-200 dark:border-slate-700">
+                <div className="inline-flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 border border-slate-200/80 dark:border-slate-700">
                   <button
                     type="button"
                     onClick={handlePrevMonth}
                     title="Bulan Sebelumnya"
-                    className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+                    className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
                   >
-                    <ChevronLeft className="w-4 h-4" />
+                    <ChevronLeft className="w-3.5 h-3.5" />
                   </button>
-                  <span className="px-2.5 text-xs font-semibold text-slate-800 dark:text-slate-200 min-w-[110px] text-center">
+                  <span className="px-2 text-xs font-semibold text-slate-800 dark:text-slate-200 min-w-[95px] text-center select-none">
                     {calendarDaysData.monthName}
                   </span>
                   <button
                     type="button"
                     onClick={handleNextMonth}
                     title="Bulan Berikutnya"
-                    className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+                    className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
                   >
-                    <ChevronRight className="w-4 h-4" />
+                    <ChevronRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
                 <button
                   type="button"
                   onClick={handleGoToToday}
-                  className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+                  className="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-colors cursor-pointer"
+                  title="Lompat ke hari ini"
                 >
                   Hari Ini
                 </button>
@@ -550,9 +560,15 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowCalendar(!showCalendar)}
-                  className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-colors cursor-pointer"
+                  title={showCalendar ? 'Sembunyikan kalender' : 'Buka kalender'}
                 >
-                  {showCalendar ? 'Sembunyikan' : 'Buka Kalender'}
+                  <span>{showCalendar ? 'Tutup' : 'Buka'}</span>
+                  {showCalendar ? (
+                    <ChevronUp className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                  )}
                 </button>
               </div>
             </div>
@@ -659,35 +675,30 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                   })}
                 </div>
 
-                {/* Calendar Legend and Quick Metrics */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 text-[11px] text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center gap-3 flex-wrap">
+                {/* Simplified Calendar Legend and Quick Link */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2.5 text-[11px] text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-3.5 flex-wrap">
                     <span className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
-                      <strong className="text-emerald-700 dark:text-emerald-400">Hijau (✓ Selesai):</strong> Sudah Diabsen
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                      <span className="text-emerald-700 dark:text-emerald-400 font-semibold">✓ Selesai</span>
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-slate-600 inline-block" />
-                      <strong>Abu-abu:</strong> Belum Diabsen
+                      <span className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600 inline-block" />
+                      <span>Belum Absen</span>
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 inline-block" />
-                      <strong className="text-indigo-600 dark:text-indigo-400">Ungu:</strong> Tanggal Terpilih
+                      <span className="w-2 h-2 rounded-full bg-indigo-600 inline-block" />
+                      <span className="text-indigo-600 dark:text-indigo-400 font-medium">Dipilih</span>
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">
-                      Hari Selesai Diabsen: {calendarDaysData.days.filter((d) => d.hasRecorded).length} dari {calendarDaysData.days.length} hari
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setActiveSubTab('rekap')}
-                      className="text-indigo-600 dark:text-indigo-400 hover:underline font-semibold flex items-center gap-1 cursor-pointer"
-                    >
-                      Buka Rekap Bulanan <ArrowRight className="w-3 h-3" />
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSubTab('rekap')}
+                    className="text-indigo-600 dark:text-indigo-400 hover:underline font-semibold flex items-center gap-1 cursor-pointer self-start sm:self-auto text-xs"
+                  >
+                    Buka Rekap Bulanan <ArrowRight className="w-3 h-3" />
+                  </button>
                 </div>
               </div>
             )}
