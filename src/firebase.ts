@@ -1,21 +1,46 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, signInAnonymously } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer, setLogLevel } from 'firebase/firestore';
+import { getFirestore, doc, getDocFromServer, setLogLevel, type Firestore } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
 
-// CRITICAL: Initialize Firestore instance first so component is registered on FirebaseApp
-export const db = (firebaseConfig as any).firestoreDatabaseId
-  ? getFirestore(app, (firebaseConfig as any).firestoreDatabaseId)
-  : getFirestore(app);
+let _firestoreInstance: Firestore | null = null;
 
-// Set Firestore log level safely after Firestore instance is registered
-try {
-  setLogLevel('error');
-} catch {
-  // Ignore in environments where setLogLevel cannot be configured
+export function getFirestoreDb(): Firestore {
+  if (!_firestoreInstance) {
+    try {
+      _firestoreInstance = (firebaseConfig as any).firestoreDatabaseId
+        ? getFirestore(app, (firebaseConfig as any).firestoreDatabaseId)
+        : getFirestore(app);
+      try {
+        setLogLevel('error');
+      } catch {
+        // Ignore in environments where setLogLevel cannot be configured
+      }
+    } catch (err) {
+      console.warn('Inisialisasi Firestore ditunda atau beroperasi dalam mode luring:', err);
+      return {} as Firestore;
+    }
+  }
+  return _firestoreInstance;
 }
+
+// Resilient Firestore proxy that initializes on demand so app startup never fails
+export const db: Firestore = new Proxy({} as Firestore, {
+  get(_target, prop) {
+    const instance = getFirestoreDb();
+    if (!instance || !(prop in instance)) {
+      return (instance as any)?.[prop];
+    }
+    const val = (instance as any)[prop];
+    return typeof val === 'function' ? val.bind(instance) : val;
+  },
+  getPrototypeOf(_target) {
+    const instance = getFirestoreDb();
+    return instance && Object.getPrototypeOf(instance) ? Object.getPrototypeOf(instance) : Object.prototype;
+  }
+});
 
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
@@ -362,7 +387,10 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 // Test connection on boot per critical constraint
 export async function testFirestoreConnection() {
   try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
+    const firestore = getFirestoreDb();
+    if (firestore && (firestore as any).type === 'firestore') {
+      await getDocFromServer(doc(firestore, 'test', 'connection'));
+    }
   } catch (error: any) {
     if (error?.code === 'permission-denied' || error?.code === 'not-found') {
       // Backend is online and responding

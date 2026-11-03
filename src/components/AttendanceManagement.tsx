@@ -23,6 +23,15 @@ import {
   Filter,
   X,
   PieChart,
+  Trash2,
+  Edit,
+  ChevronLeft,
+  ChevronRight,
+  AlertTriangle,
+  CalendarDays,
+  ArrowRight,
+  Eye,
+  RotateCcw,
 } from 'lucide-react';
 
 interface AttendanceManagementProps {
@@ -54,16 +63,122 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
     Record<string, { status: AttendanceStatus; notes: string }>
   >({});
   const [saveSuccessMsg, setSaveSuccessMsg] = useState(false);
+  const [deleteSuccessMsg, setDeleteSuccessMsg] = useState<string | null>(null);
 
-  // Rekap month filter
+  // Rekap month filter & Calendar active month (Synced bidirectionally)
   const [rekapMonth, setRekapMonth] = useState<string>(
-    new Date().toISOString().slice(0, 7) // '2026-10'
+    new Date().toISOString().slice(0, 7) // 'YYYY-MM'
   );
+  const [calendarMonth, setCalendarMonth] = useState<string>(
+    new Date().toISOString().slice(0, 7)
+  );
+
+  // Toggle calendar visibility
+  const [showCalendar, setShowCalendar] = useState<boolean>(true);
+
+  // Date to delete confirmation modal state
+  const [dateToDeleteConfirm, setDateToDeleteConfirm] = useState<string | null>(null);
 
   // Current class students
   const classStudents = useMemo(() => {
     return students.filter((s) => s.classId === selectedClassId);
   }, [students, selectedClassId]);
+
+  // Synchronized date change handler
+  const handleDateChange = (newDate: string) => {
+    setSelectedDate(newDate);
+    const month = newDate.slice(0, 7);
+    if (month) {
+      setRekapMonth(month);
+      setCalendarMonth(month);
+    }
+  };
+
+  // Synchronized month change handler
+  const handleMonthChange = (newMonth: string) => {
+    setRekapMonth(newMonth);
+    setCalendarMonth(newMonth);
+    // Sync selectedDate to this month
+    if (!selectedDate.startsWith(newMonth)) {
+      const today = new Date().toISOString().slice(0, 10);
+      if (today.startsWith(newMonth)) {
+        setSelectedDate(today);
+      } else {
+        setSelectedDate(`${newMonth}-01`);
+      }
+    }
+  };
+
+  // Select date directly from calendar cell
+  const handleSelectCalendarDate = (dateStr: string) => {
+    setSelectedDate(dateStr);
+    const m = dateStr.slice(0, 7);
+    setRekapMonth(m);
+    setCalendarMonth(m);
+  };
+
+  // Calendar month navigation
+  const handlePrevMonth = () => {
+    const [y, m] = calendarMonth.split('-').map(Number);
+    const prevDate = new Date(y, m - 2, 1);
+    const newMonthStr = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+    setCalendarMonth(newMonthStr);
+    setRekapMonth(newMonthStr);
+  };
+
+  const handleNextMonth = () => {
+    const [y, m] = calendarMonth.split('-').map(Number);
+    const nextDate = new Date(y, m, 1);
+    const newMonthStr = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`;
+    setCalendarMonth(newMonthStr);
+    setRekapMonth(newMonthStr);
+  };
+
+  const handleGoToToday = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const todayMonth = today.slice(0, 7);
+    setCalendarMonth(todayMonth);
+    setRekapMonth(todayMonth);
+    setSelectedDate(today);
+  };
+
+  // Helper formatting Indonesian full date
+  const formatIndonesianDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    try {
+      const [y, m, d] = dateStr.split('-').map(Number);
+      return new Intl.DateTimeFormat('id-ID', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      }).format(new Date(y, m - 1, d));
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Check if attendance is already saved for selected date & class
+  const isDateSaved = useMemo(() => {
+    return attendances.some(
+      (a) => a.classId === selectedClassId && a.date === selectedDate
+    );
+  }, [attendances, selectedClassId, selectedDate]);
+
+  // Statistics for saved date
+  const savedDateStats = useMemo(() => {
+    if (!isDateSaved) return null;
+    const records = attendances.filter(
+      (a) => a.classId === selectedClassId && a.date === selectedDate
+    );
+    const hadir = records.filter((r) => r.status === 'HADIR').length;
+    const izin = records.filter((r) => r.status === 'IZIN').length;
+    const sakit = records.filter((r) => r.status === 'SAKIT').length;
+    const alpa = records.filter((r) => r.status === 'ALPA').length;
+    const total = records.length;
+    const pct = total > 0 ? Math.round((hadir / total) * 100) : 0;
+    return { total, hadir, izin, sakit, alpa, pct };
+  }, [attendances, selectedClassId, selectedDate, isDateSaved]);
 
   // Load existing records for selected class & date into dailyForm
   React.useEffect(() => {
@@ -138,6 +253,103 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
     setSaveSuccessMsg(true);
     setTimeout(() => setSaveSuccessMsg(false), 3000);
   };
+
+  // Delete attendance records for a specific date
+  const handleDeleteDateAttendance = (dateToDelete: string) => {
+    const remaining = attendances.filter(
+      (a) => !(a.classId === selectedClassId && a.date === dateToDelete)
+    );
+    onSaveAttendances(remaining);
+
+    // If the deleted date is the currently selected date, reset dailyForm to default
+    if (dateToDelete === selectedDate) {
+      const resetMap: Record<string, { status: AttendanceStatus; notes: string }> = {};
+      classStudents.forEach((student) => {
+        resetMap[student.id] = { status: 'HADIR', notes: '' };
+      });
+      setDailyForm(resetMap);
+    }
+
+    setDeleteSuccessMsg(`Data presensi tanggal ${dateToDelete} berhasil dihapus.`);
+    setTimeout(() => setDeleteSuccessMsg(null), 3500);
+    setDateToDeleteConfirm(null);
+  };
+
+  // Calendar Days calculation for the active calendar month
+  const calendarDaysData = useMemo(() => {
+    const [year, month] = calendarMonth.split('-').map(Number);
+    if (!year || !month) return { days: [], paddingStart: 0, monthName: '' };
+
+    const daysInMonth = new Date(year, month, 0).getDate();
+    // Monday as start of week: 0 = Mon, 6 = Sun
+    const firstDayJs = new Date(year, month - 1, 1).getDay();
+    const paddingStart = (firstDayJs + 6) % 7;
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    const days = [];
+    for (let dayNum = 1; dayNum <= daysInMonth; dayNum++) {
+      const dayStr = String(dayNum).padStart(2, '0');
+      const dateStr = `${year}-${String(month).padStart(2, '0')}-${dayStr}`;
+
+      const records = attendances.filter(
+        (a) => a.classId === selectedClassId && a.date === dateStr
+      );
+      const hasRecorded = records.length > 0;
+      const hadir = records.filter((r) => r.status === 'HADIR').length;
+      const izin = records.filter((r) => r.status === 'IZIN').length;
+      const sakit = records.filter((r) => r.status === 'SAKIT').length;
+      const alpa = records.filter((r) => r.status === 'ALPA').length;
+      const total = records.length;
+      const pct = total > 0 ? Math.round((hadir / total) * 100) : 0;
+
+      days.push({
+        dayNum,
+        dateStr,
+        isToday: dateStr === todayStr,
+        isSelected: dateStr === selectedDate,
+        hasRecorded,
+        hadir,
+        izin,
+        sakit,
+        alpa,
+        total,
+        pct,
+      });
+    }
+
+    const monthName = new Intl.DateTimeFormat('id-ID', {
+      month: 'long',
+      year: 'numeric',
+    }).format(new Date(year, month - 1, 1));
+
+    return { days, paddingStart, monthName };
+  }, [calendarMonth, attendances, selectedClassId, selectedDate]);
+
+  // List of recorded dates in this month for Rekap Bulanan overview
+  const recordedDatesInMonth = useMemo(() => {
+    const monthRecords = attendances.filter(
+      (a) => a.classId === selectedClassId && a.date.startsWith(rekapMonth)
+    );
+    const dateMap = new Map<string, AttendanceRecord[]>();
+    monthRecords.forEach((r) => {
+      const list = dateMap.get(r.date) || [];
+      list.push(r);
+      dateMap.set(r.date, list);
+    });
+
+    return Array.from(dateMap.entries())
+      .map(([date, recs]) => {
+        const hadir = recs.filter((r) => r.status === 'HADIR').length;
+        const izin = recs.filter((r) => r.status === 'IZIN').length;
+        const sakit = recs.filter((r) => r.status === 'SAKIT').length;
+        const alpa = recs.filter((r) => r.status === 'ALPA').length;
+        const total = recs.length;
+        const pct = total > 0 ? Math.round((hadir / total) * 100) : 0;
+        return { date, hadir, izin, sakit, alpa, total, pct };
+      })
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [attendances, selectedClassId, rekapMonth]);
 
   // Filter for daily table: 'ALL' or a specific status
   const [dailyStatusFilter, setDailyStatusFilter] = useState<'ALL' | AttendanceStatus>('ALL');
@@ -281,6 +493,206 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
       {activeSubTab === 'input' ? (
         /* TAB 1: INPUT PRESENSI HARIAN */
         <div className="space-y-4">
+          {/* KALENDER PRESENSI KELAS INTERAKTIF DENGAN TANDA SELESAI */}
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs transition-all">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 mb-3.5 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                  <CalendarDays className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                      Kalender Presensi Kelas {selectedClassObj?.name}
+                    </h2>
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+                      {calendarDaysData.monthName}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Tanggal berlatar hijau (<span className="text-emerald-600 dark:text-emerald-400 font-semibold">✓ Selesai</span>) menandakan presensi sudah selesai diinput. Klik tanggal mana saja untuk membuka, mengedit, atau menghapus presensi.
+                  </p>
+                </div>
+              </div>
+
+              {/* Month navigation and toggle */}
+              <div className="flex items-center gap-1.5 self-start sm:self-auto flex-wrap">
+                <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 border border-slate-200 dark:border-slate-700">
+                  <button
+                    type="button"
+                    onClick={handlePrevMonth}
+                    title="Bulan Sebelumnya"
+                    className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="px-2.5 text-xs font-semibold text-slate-800 dark:text-slate-200 min-w-[110px] text-center">
+                    {calendarDaysData.monthName}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleNextMonth}
+                    title="Bulan Berikutnya"
+                    className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleGoToToday}
+                  className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+                >
+                  Hari Ini
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowCalendar(!showCalendar)}
+                  className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition-colors cursor-pointer"
+                >
+                  {showCalendar ? 'Sembunyikan' : 'Buka Kalender'}
+                </button>
+              </div>
+            </div>
+
+            {/* Calendar Grid View */}
+            {showCalendar && (
+              <div className="space-y-3">
+                {/* Day of Week Headers */}
+                <div className="grid grid-cols-7 gap-1.5 text-center text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  <div className="py-1">Sen</div>
+                  <div className="py-1">Sel</div>
+                  <div className="py-1">Rab</div>
+                  <div className="py-1">Kam</div>
+                  <div className="py-1">Jum</div>
+                  <div className="py-1 text-amber-600 dark:text-amber-400">Sab</div>
+                  <div className="py-1 text-rose-600 dark:text-rose-400">Min</div>
+                </div>
+
+                {/* Day Grid */}
+                <div className="grid grid-cols-7 gap-1.5">
+                  {/* Padding before 1st */}
+                  {Array.from({ length: calendarDaysData.paddingStart }).map((_, i) => (
+                    <div
+                      key={`pad-${i}`}
+                      className="min-h-[64px] rounded-lg bg-slate-50/40 dark:bg-slate-800/20 border border-dashed border-slate-200/60 dark:border-slate-800/40 opacity-40"
+                    />
+                  ))}
+
+                  {/* Day Cells */}
+                  {calendarDaysData.days.map((day) => {
+                    const isSelected = day.isSelected;
+                    const hasRecorded = day.hasRecorded;
+
+                    return (
+                      <button
+                        key={day.dateStr}
+                        type="button"
+                        onClick={() => handleSelectCalendarDate(day.dateStr)}
+                        className={`min-h-[72px] sm:min-h-[76px] p-2 rounded-xl border text-left flex flex-col justify-between transition-all cursor-pointer relative group ${
+                          isSelected
+                            ? 'ring-2 ring-indigo-600 dark:ring-indigo-500 border-indigo-500 bg-indigo-50/70 dark:bg-indigo-950/50 shadow-xs'
+                            : hasRecorded
+                            ? 'border-emerald-300 dark:border-emerald-800/80 bg-emerald-50/60 dark:bg-emerald-950/25 hover:bg-emerald-100/70 dark:hover:bg-emerald-950/50'
+                            : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                        }`}
+                      >
+                        {/* Day header */}
+                        <div className="flex items-center justify-between w-full">
+                          <span
+                            className={`text-xs font-bold ${
+                              isSelected
+                                ? 'text-indigo-700 dark:text-indigo-300'
+                                : hasRecorded
+                                ? 'text-emerald-800 dark:text-emerald-300'
+                                : 'text-slate-700 dark:text-slate-300'
+                            }`}
+                          >
+                            {day.dayNum}
+                          </span>
+
+                          <div className="flex items-center gap-1">
+                            {day.isToday && (
+                              <span className="text-[9px] font-bold px-1 py-0.2 rounded bg-indigo-600 text-white leading-tight">
+                                Hari Ini
+                              </span>
+                            )}
+                            {hasRecorded && (
+                              <span className="w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-emerald-200 dark:ring-emerald-800" title="Selesai Diabsen" />
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Status Label & Breakdown */}
+                        <div className="mt-1">
+                          {hasRecorded ? (
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-1">
+                                <span className="inline-flex items-center gap-0.5 text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-100/80 dark:bg-emerald-900/60 px-1 py-0.2 rounded">
+                                  ✓ Selesai
+                                </span>
+                                <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-200">
+                                  {day.pct}%
+                                </span>
+                              </div>
+                              <div className="text-[9px] text-slate-500 dark:text-slate-400 font-mono truncate">
+                                H:{day.hadir} {day.izin > 0 ? `I:${day.izin}` : ''} {day.sakit > 0 ? `S:${day.sakit}` : ''} {day.alpa > 0 ? `A:${day.alpa}` : ''}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                              Belum absen
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Selected Indicator */}
+                        {isSelected && (
+                          <div className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-indigo-600 rounded-full flex items-center justify-center text-white text-[8px] font-black shadow-xs">
+                            ●
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Calendar Legend and Quick Metrics */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 text-[11px] text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
+                      <strong className="text-emerald-700 dark:text-emerald-400">Hijau (✓ Selesai):</strong> Sudah Diabsen
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-slate-600 inline-block" />
+                      <strong>Abu-abu:</strong> Belum Diabsen
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 inline-block" />
+                      <strong className="text-indigo-600 dark:text-indigo-400">Ungu:</strong> Tanggal Terpilih
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">
+                      Hari Selesai Diabsen: {calendarDaysData.days.filter((d) => d.hasRecorded).length} dari {calendarDaysData.days.length} hari
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setActiveSubTab('rekap')}
+                      className="text-indigo-600 dark:text-indigo-400 hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+                    >
+                      Buka Rekap Bulanan <ArrowRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Controls Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
             <div className="flex flex-wrap items-center gap-3">
@@ -306,13 +718,31 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                 <input
                   type="date"
                   value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
+                  onChange={(e) => handleDateChange(e.target.value)}
                   className="px-3 py-1.5 text-xs font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer font-mono"
                 />
               </div>
+
+              {/* Status Badge for Date */}
+              {isDateSaved ? (
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-2xs">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    Selesai Absen ({savedDateStats?.hadir}/{savedDateStats?.total} Hadir)
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-md bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                    <Edit className="w-3 h-3" /> Mode Edit
+                  </span>
+                </div>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                  <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  Belum Diabsen
+                </span>
+              )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
                 onClick={handleSetAllHadir}
@@ -322,13 +752,26 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                 Set Semua Hadir
               </button>
 
+              {/* Delete attendance for this date */}
+              {isDateSaved && (
+                <button
+                  type="button"
+                  onClick={() => setDateToDeleteConfirm(selectedDate)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-700 dark:text-rose-300 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800 rounded-lg transition-colors cursor-pointer"
+                  title="Hapus data presensi tanggal ini"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Hapus Presensi
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={handleSaveDaily}
                 className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm transition-colors cursor-pointer"
               >
                 <Save className="w-3.5 h-3.5" />
-                Simpan Presensi
+                {isDateSaved ? 'Perbarui Presensi' : 'Simpan Presensi'}
               </button>
             </div>
           </div>
@@ -336,7 +779,14 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
           {saveSuccessMsg && (
             <div className="p-3 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-lg text-xs flex items-center gap-2 animate-in fade-in">
               <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Data presensi tanggal {selectedDate} berhasil disimpan ke LocalStorage!</span>
+              <span>Data presensi tanggal {selectedDate} berhasil disimpan dan otomatis tersinkronisasi ke Rekap Bulanan!</span>
+            </div>
+          )}
+
+          {deleteSuccessMsg && (
+            <div className="p-3 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 rounded-lg text-xs flex items-center gap-2 animate-in fade-in">
+              <CheckCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{deleteSuccessMsg}</span>
             </div>
           )}
 
@@ -768,17 +1218,105 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                 </select>
               </div>
 
-              {/* Select Month */}
+              {/* Select Month (Synchronized with Calendar & Input Harian) */}
               <div className="flex items-center gap-2">
                 <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Bulan:</label>
                 <input
                   type="month"
                   value={rekapMonth}
-                  onChange={(e) => setRekapMonth(e.target.value)}
+                  onChange={(e) => handleMonthChange(e.target.value)}
                   className="px-3 py-1.5 text-xs font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer font-mono"
                 />
               </div>
             </div>
+
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('input')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-lg transition-colors cursor-pointer self-start sm:self-auto"
+            >
+              <CalendarDays className="w-3.5 h-3.5" />
+              Buka Kalender Input Harian
+            </button>
+          </div>
+
+          {/* Riwayat Hari Presensi Terdata Bulan Ini */}
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-3 border-b border-slate-100 dark:border-slate-800 gap-2">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <h3 className="text-xs font-bold text-slate-900 dark:text-white">
+                  Daftar Hari Efektif Presensi Terdata ({recordedDatesInMonth.length} Hari di Bulan {monthLabel})
+                </h3>
+              </div>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                Data presensi pada tanggal di bawah dapat langsung diedit atau dihapus
+              </span>
+            </div>
+
+            {recordedDatesInMonth.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
+                {recordedDatesInMonth.map((item) => (
+                  <div
+                    key={item.date}
+                    className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 transition-all flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-900 dark:text-white">
+                          {formatIndonesianDate(item.date)}
+                        </span>
+                        <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/80 px-1.5 py-0.5 rounded">
+                          {item.pct}% Hadir
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-2 flex-wrap font-mono">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-semibold">H: {item.hadir}</span>
+                        <span className="text-sky-600 dark:text-sky-400">I: {item.izin}</span>
+                        <span className="text-amber-600 dark:text-amber-400">S: {item.sakit}</span>
+                        <span className="text-rose-600 dark:text-rose-400 font-semibold">A: {item.alpa}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-1.5 mt-3 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedDate(item.date);
+                          setActiveSubTab('input');
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 rounded-md transition-colors cursor-pointer"
+                        title="Buka dan edit data presensi tanggal ini"
+                      >
+                        <Edit className="w-3 h-3" /> Edit Presensi
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setDateToDeleteConfirm(item.date)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 rounded-md transition-colors cursor-pointer"
+                        title="Hapus data presensi tanggal ini"
+                      >
+                        <Trash2 className="w-3 h-3" /> Hapus
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6 text-slate-400 text-xs bg-slate-50/50 dark:bg-slate-800/20 rounded-lg border border-dashed border-slate-200 dark:border-slate-800">
+                Belum ada data presensi yang diinput pada bulan {monthLabel} untuk kelas {rekapClassObj?.name}.
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveSubTab('input')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors cursor-pointer"
+                  >
+                    Mulai Input Presensi di Kalender Harian
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Rekap Table */}
@@ -851,6 +1389,55 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL KONFIRMASI HAPUS PRESENSI TANGGAL TERTENTU */}
+      {dateToDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  Hapus Data Presensi?
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Apakah Anda yakin ingin menghapus seluruh rekaman presensi untuk{' '}
+                  <strong className="text-slate-800 dark:text-slate-200">
+                    Kelas {selectedClassObj?.name}
+                  </strong>{' '}
+                  pada tanggal{' '}
+                  <strong className="text-slate-800 dark:text-slate-200">
+                    {formatIndonesianDate(dateToDeleteConfirm)}
+                  </strong>?
+                </p>
+                <div className="mt-2.5 p-2.5 bg-rose-50/60 dark:bg-rose-950/30 rounded-lg border border-rose-200/80 dark:border-rose-900/40 text-[11px] text-rose-700 dark:text-rose-300">
+                  Data presensi pada tanggal ini akan dihapus secara permanen dari penyimpanan dan kalkulasi rekap bulanan akan otomatis terupdate.
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setDateToDeleteConfirm(null)}
+                className="px-4 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteDateAttendance(dateToDeleteConfirm)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors shadow-sm cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+                Ya, Hapus Presensi
+              </button>
             </div>
           </div>
         </div>

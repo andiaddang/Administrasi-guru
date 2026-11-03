@@ -16,5 +16,8 @@ export default defineConfig(() => {
       hmr: false,
       watch: null,
     },
+    optimizeDeps: {
+      include: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+    },
   };
 });
