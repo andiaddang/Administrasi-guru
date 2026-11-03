@@ -1,21 +1,21 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, signInAnonymously } from 'firebase/auth';
-import { initializeFirestore, doc, getDocFromServer, setLogLevel } from 'firebase/firestore';
+import { getFirestore, doc, getDocFromServer, setLogLevel } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
 
-// Set Firestore log level to error to avoid noisy connection status logs in sandboxed preview
-setLogLevel('error');
+// CRITICAL: Initialize Firestore instance first so component is registered on FirebaseApp
+export const db = (firebaseConfig as any).firestoreDatabaseId
+  ? getFirestore(app, (firebaseConfig as any).firestoreDatabaseId)
+  : getFirestore(app);
 
-// CRITICAL: initializeFirestore with experimentalForceLongPolling to avoid WebSocket disconnects in iframe previews
-export const db = initializeFirestore(
-  app,
-  {
-    experimentalForceLongPolling: true,
-  },
-  (firebaseConfig as any).firestoreDatabaseId
-);
+// Set Firestore log level safely after Firestore instance is registered
+try {
+  setLogLevel('error');
+} catch {
+  // Ignore in environments where setLogLevel cannot be configured
+}
 
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();

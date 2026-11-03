@@ -9,7 +9,10 @@ import { generateSubjectExamPackage } from './src/services/smartQuestionService.
 dotenv.config();
 
 const app = express();
-const port = parseInt(process.env.PORT || '3000', 10);
+// Dev server must always run on port 3000; in production use assigned PORT
+const port = process.env.NODE_ENV === 'production' && process.env.PORT
+  ? parseInt(process.env.PORT, 10)
+  : 3000;
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -509,9 +512,7 @@ Berikan respons dalam format JSON valid persis seperti berikut:
 // Setup Vite middleware in dev or static serving in production
 async function startServer() {
   const distPath = path.resolve(process.cwd(), 'dist');
-  const isProduction =
-    process.env.NODE_ENV === 'production' ||
-    (fs.existsSync(distPath) && process.env.NODE_ENV !== 'development');
+  const isProduction = process.env.NODE_ENV === 'production';
 
   if (isProduction && fs.existsSync(distPath)) {
     app.use(express.static(distPath));
