@@ -9,10 +9,21 @@ import { generateSubjectExamPackage } from './src/services/smartQuestionService.
 dotenv.config();
 
 const app = express();
-// Dev server must always run on port 3000; in production use assigned PORT
-const port = process.env.NODE_ENV === 'production' && process.env.PORT
-  ? parseInt(process.env.PORT, 10)
-  : 3000;
+
+// Parse port & host from CLI flags or env vars; default to port 3000
+let port = 3000;
+const portArgIdx = process.argv.indexOf('--port');
+if (portArgIdx !== -1 && process.argv[portArgIdx + 1]) {
+  port = parseInt(process.argv[portArgIdx + 1], 10);
+} else if (process.env.PORT) {
+  port = parseInt(process.env.PORT, 10);
+}
+
+let host = '0.0.0.0';
+const hostArgIdx = process.argv.indexOf('--host');
+if (hostArgIdx !== -1 && process.argv[hostArgIdx + 1]) {
+  host = process.argv[hostArgIdx + 1];
+}
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -514,6 +525,10 @@ async function startServer() {
   const distPath = path.resolve(process.cwd(), 'dist');
   const isProduction = process.env.NODE_ENV === 'production';
 
+  app.listen(port, host, () => {
+    console.log(`Server running at http://${host}:${port}`);
+  });
+
   if (isProduction && fs.existsSync(distPath)) {
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
@@ -530,10 +545,6 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   }
-
-  app.listen(port, '0.0.0.0', () => {
-    console.log(`Server running at http://0.0.0.0:${port}`);
-  });
 }
 
 startServer();
