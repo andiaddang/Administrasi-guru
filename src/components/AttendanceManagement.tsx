@@ -31,9 +31,13 @@ import {
   ChevronUp,
   AlertTriangle,
   CalendarDays,
+  CalendarRange,
   ArrowRight,
   Eye,
   RotateCcw,
+  Table,
+  History,
+  Search,
 } from 'lucide-react';
 
 interface AttendanceManagementProps {
@@ -77,6 +81,13 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
 
   // Toggle calendar visibility
   const [showCalendar, setShowCalendar] = useState<boolean>(true);
+
+  // Rekap options: filter by 'all' (semua riwayat) or 'month' (bulan terpilih)
+  const [rekapFilterMode, setRekapFilterMode] = useState<'all' | 'month'>('all');
+  // Rekap view: 'matrix' (semua absensi per tanggal), 'history' (riwayat sesi), 'summary' (ringkasan akumulasi)
+  const [rekapViewMode, setRekapViewMode] = useState<'matrix' | 'history' | 'summary'>('matrix');
+  // Rekap student search query
+  const [rekapSearchQuery, setRekapSearchQuery] = useState<string>('');
 
   // Date to delete confirmation modal state
   const [dateToDeleteConfirm, setDateToDeleteConfirm] = useState<string | null>(null);
@@ -328,13 +339,13 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
     return { days, paddingStart, monthName };
   }, [calendarMonth, attendances, selectedClassId, selectedDate]);
 
-  // List of recorded dates in this month for Rekap Bulanan overview
-  const recordedDatesInMonth = useMemo(() => {
-    const monthRecords = attendances.filter(
-      (a) => a.classId === selectedClassId && a.date.startsWith(rekapMonth)
+  // All recorded attendance dates for selected class (across all history)
+  const allRecordedDatesForClass = useMemo(() => {
+    const classRecords = attendances.filter(
+      (a) => a.classId === selectedClassId
     );
     const dateMap = new Map<string, AttendanceRecord[]>();
-    monthRecords.forEach((r) => {
+    classRecords.forEach((r) => {
       const list = dateMap.get(r.date) || [];
       list.push(r);
       dateMap.set(r.date, list);
@@ -348,10 +359,37 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
         const alpa = recs.filter((r) => r.status === 'ALPA').length;
         const total = recs.length;
         const pct = total > 0 ? Math.round((hadir / total) * 100) : 0;
-        return { date, hadir, izin, sakit, alpa, total, pct };
+        const absentees = recs
+          .filter((r) => r.status !== 'HADIR')
+          .map((r) => {
+            const student = students.find((s) => s.id === r.studentId);
+            return {
+              name: student?.name || 'Siswa',
+              status: r.status,
+              notes: r.notes || '',
+            };
+          });
+        return { date, hadir, izin, sakit, alpa, total, pct, absentees, records: recs };
       })
+      .sort((a, b) => b.date.localeCompare(a.date)); // Newest first for history
+  }, [attendances, selectedClassId, students]);
+
+  // Active recorded dates in chronological order based on rekapFilterMode ('all' vs 'month')
+  const activeRecordedDates = useMemo(() => {
+    if (rekapFilterMode === 'all') {
+      return [...allRecordedDatesForClass].sort((a, b) => a.date.localeCompare(b.date));
+    }
+    return allRecordedDatesForClass
+      .filter((d) => d.date.startsWith(rekapMonth))
       .sort((a, b) => a.date.localeCompare(b.date));
-  }, [attendances, selectedClassId, rekapMonth]);
+  }, [allRecordedDatesForClass, rekapFilterMode, rekapMonth]);
+
+  // List of recorded dates in this month for Rekap Bulanan overview
+  const recordedDatesInMonth = useMemo(() => {
+    return allRecordedDatesForClass
+      .filter((d) => d.date.startsWith(rekapMonth))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [allRecordedDatesForClass, rekapMonth]);
 
   // Filter for daily table: 'ALL' or a specific status
   const [dailyStatusFilter, setDailyStatusFilter] = useState<'ALL' | AttendanceStatus>('ALL');
@@ -413,14 +451,17 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
     return students.filter((s) => s.classId === selectedClassId);
   }, [students, selectedClassId]);
 
+  // REKAP DATA & MATRIX CALCULATION (Uses unified selectedClassId & filter mode)
   const rekapData = useMemo(() => {
-    // Filter attendances for selected class and month
-    const monthRecords = attendances.filter(
-      (a) => a.classId === selectedClassId && a.date.startsWith(rekapMonth)
+    // Filter attendances for selected class based on filter mode ('all' vs 'month')
+    const relevantRecords = attendances.filter(
+      (a) =>
+        a.classId === selectedClassId &&
+        (rekapFilterMode === 'all' || a.date.startsWith(rekapMonth))
     );
 
     return rekapStudents.map((student, idx) => {
-      const records = monthRecords.filter((r) => r.studentId === student.id);
+      const records = relevantRecords.filter((r) => r.studentId === student.id);
       const hadir = records.filter((r) => r.status === 'HADIR').length;
       const izin = records.filter((r) => r.status === 'IZIN').length;
       const sakit = records.filter((r) => r.status === 'SAKIT').length;
@@ -428,12 +469,19 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
       const totalDays = records.length;
       const percentage = totalDays > 0 ? Math.round((hadir / totalDays) * 100) : 100;
 
+      // Map date -> status & notes for matrix view
+      const dateStatusMap: Record<string, { status: AttendanceStatus; notes?: string }> = {};
+      records.forEach((r) => {
+        dateStatusMap[r.date] = { status: r.status, notes: r.notes };
+      });
+
       return {
         no: idx + 1,
         id: student.id,
         nisnNis: student.nisnNis || student.nisn || student.nis || '-',
         name: student.name,
         gender: student.gender,
+        dateStatusMap,
         hadir,
         izin,
         sakit,
@@ -442,7 +490,70 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
         percentage,
       };
     });
-  }, [rekapStudents, attendances, selectedClassId, rekapMonth]);
+  }, [rekapStudents, attendances, selectedClassId, rekapFilterMode, rekapMonth]);
+
+  // Filtered rekap data by search query
+  const filteredRekapData = useMemo(() => {
+    if (!rekapSearchQuery.trim()) return rekapData;
+    const q = rekapSearchQuery.toLowerCase();
+    return rekapData.filter(
+      (row) =>
+        row.name.toLowerCase().includes(q) ||
+        row.nisnNis.toLowerCase().includes(q)
+    );
+  }, [rekapData, rekapSearchQuery]);
+
+  // Overall class statistics in active rekap scope
+  const rekapOverallStats = useMemo(() => {
+    const totalSessions = activeRecordedDates.length;
+    const totalStudents = rekapStudents.length;
+    let totalHadir = 0;
+    let totalIzin = 0;
+    let totalSakit = 0;
+    let totalAlpa = 0;
+
+    rekapData.forEach((row) => {
+      totalHadir += row.hadir;
+      totalIzin += row.izin;
+      totalSakit += row.sakit;
+      totalAlpa += row.alpa;
+    });
+
+    const grandTotal = totalHadir + totalIzin + totalSakit + totalAlpa;
+    const avgAttendance = grandTotal > 0 ? Math.round((totalHadir / grandTotal) * 100) : 100;
+
+    return {
+      totalSessions,
+      totalStudents,
+      avgAttendance,
+      totalHadir,
+      totalIzin,
+      totalSakit,
+      totalAlpa,
+    };
+  }, [activeRecordedDates, rekapStudents, rekapData]);
+
+  // Helper formatting short date header for matrix table
+  const formatMatrixDateHeader = (dateStr: string) => {
+    try {
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const dateObj = new Date(y, m - 1, d);
+      const dayName = new Intl.DateTimeFormat('id-ID', { weekday: 'short' }).format(dateObj);
+      return {
+        dayName,
+        dayNum: d,
+        shortDate: `${d}/${m}`,
+        fullDate: formatIndonesianDate(dateStr),
+      };
+    } catch {
+      return {
+        dayName: '',
+        dayNum: dateStr,
+        shortDate: dateStr,
+        fullDate: dateStr,
+      };
+    }
+  };
 
   const selectedClassObj = classes.find((c) => c.id === selectedClassId);
   const rekapClassObj = selectedClassObj;
@@ -1208,18 +1319,18 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
           </div>
         </div>
       ) : (
-        /* TAB 2: REKAP BULANAN PRESENSI */
+        /* TAB 2: REKAP BULANAN PRESENSI & SEMUA RIWAYAT */
         <div className="space-y-4">
-          {/* Controls Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+          {/* Controls & Filter Bar */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
             <div className="flex flex-wrap items-center gap-3">
-              {/* Select Class (Synced with Input Harian) */}
+              {/* Select Class */}
               <div className="flex items-center gap-2">
                 <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Kelas:</label>
                 <select
                   value={selectedClassId}
                   onChange={(e) => setSelectedClassId(e.target.value)}
-                  className="px-3 py-1.5 text-xs font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                  className="px-3 py-1.5 text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                 >
                   {classes.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -1229,95 +1340,608 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                 </select>
               </div>
 
-              {/* Select Month (Synchronized with Calendar & Input Harian) */}
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Bulan:</label>
-                <input
-                  type="month"
-                  value={rekapMonth}
-                  onChange={(e) => handleMonthChange(e.target.value)}
-                  className="px-3 py-1.5 text-xs font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer font-mono"
-                />
+              {/* Periode Filter: Semua Riwayat vs Pilih Bulan */}
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setRekapFilterMode('all')}
+                  className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                    rekapFilterMode === 'all'
+                      ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  Semua Riwayat ({allRecordedDatesForClass.length} Hari)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRekapFilterMode('month')}
+                  className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                    rekapFilterMode === 'month'
+                      ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  Pilih Bulan
+                </button>
               </div>
+
+              {/* Month Picker (if rekapFilterMode is 'month') */}
+              {rekapFilterMode === 'month' && (
+                <div className="flex items-center gap-1.5 animate-in fade-in">
+                  <input
+                    type="month"
+                    value={rekapMonth}
+                    onChange={(e) => handleMonthChange(e.target.value)}
+                    className="px-2.5 py-1 text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer font-mono"
+                  />
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    ({recordedDatesInMonth.length} hari terdata)
+                  </span>
+                </div>
+              )}
             </div>
 
-            <button
-              type="button"
-              onClick={() => setActiveSubTab('input')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-lg transition-colors cursor-pointer self-start sm:self-auto"
-            >
-              <CalendarDays className="w-3.5 h-3.5" />
-              Buka Kalender Input Harian
-            </button>
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Search student */}
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={rekapSearchQuery}
+                  onChange={(e) => setRekapSearchQuery(e.target.value)}
+                  placeholder="Cari siswa / NISN..."
+                  className="pl-8 pr-2.5 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-44 sm:w-48"
+                />
+                {rekapSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setRekapSearchQuery('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveSubTab('input')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-lg transition-colors cursor-pointer"
+              >
+                <CalendarDays className="w-3.5 h-3.5" />
+                Buka Input Harian
+              </button>
+            </div>
           </div>
 
-          {/* Riwayat Hari Presensi Terdata Bulan Ini */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-3 border-b border-slate-100 dark:border-slate-800 gap-2">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <h3 className="text-xs font-bold text-slate-900 dark:text-white">
-                  Daftar Hari Efektif Presensi Terdata ({recordedDatesInMonth.length} Hari di Bulan {monthLabel})
-                </h3>
+          {/* Ringkasan Statistik Singkat Rekap */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+            <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+              <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Total Sesi Presensi</span>
+              <div className="text-lg font-bold text-slate-900 dark:text-white mt-0.5">
+                {rekapOverallStats.totalSessions} <span className="text-xs font-normal text-slate-500">Hari</span>
               </div>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                Data presensi pada tanggal di bawah dapat langsung diedit atau dihapus
-              </span>
+              <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                {rekapFilterMode === 'all' ? 'Seluruh riwayat kelas' : `Bulan ${monthLabel}`}
+              </div>
             </div>
 
-            {recordedDatesInMonth.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
-                {recordedDatesInMonth.map((item) => (
-                  <div
-                    key={item.date}
-                    className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 transition-all flex flex-col justify-between"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-900 dark:text-white">
-                          {formatIndonesianDate(item.date)}
-                        </span>
-                        <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/80 px-1.5 py-0.5 rounded">
-                          {item.pct}% Hadir
-                        </span>
-                      </div>
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-2 flex-wrap font-mono">
-                        <span className="text-emerald-600 dark:text-emerald-400 font-semibold">H: {item.hadir}</span>
-                        <span className="text-sky-600 dark:text-sky-400">I: {item.izin}</span>
-                        <span className="text-amber-600 dark:text-amber-400">S: {item.sakit}</span>
-                        <span className="text-rose-600 dark:text-rose-400 font-semibold">A: {item.alpa}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-end gap-1.5 mt-3 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedDate(item.date);
-                          setActiveSubTab('input');
-                        }}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 rounded-md transition-colors cursor-pointer"
-                        title="Buka dan edit data presensi tanggal ini"
-                      >
-                        <Edit className="w-3 h-3" /> Edit Presensi
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setDateToDeleteConfirm(item.date)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 rounded-md transition-colors cursor-pointer"
-                        title="Hapus data presensi tanggal ini"
-                      >
-                        <Trash2 className="w-3 h-3" /> Hapus
-                      </button>
-                    </div>
-                  </div>
-                ))}
+            <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+              <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Rata-rata Kehadiran</span>
+              <div className={`text-lg font-bold mt-0.5 ${
+                rekapOverallStats.avgAttendance >= 90
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : rekapOverallStats.avgAttendance >= 75
+                  ? 'text-amber-600 dark:text-amber-400'
+                  : 'text-rose-600 dark:text-rose-400'
+              }`}>
+                {rekapOverallStats.avgAttendance}%
               </div>
-            ) : (
-              <div className="text-center py-6 text-slate-400 text-xs bg-slate-50/50 dark:bg-slate-800/20 rounded-lg border border-dashed border-slate-200 dark:border-slate-800">
-                Belum ada data presensi yang diinput pada bulan {monthLabel} untuk kelas {rekapClassObj?.name}.
-                <div className="mt-2">
+              <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                {rekapStudents.length} total siswa
+              </div>
+            </div>
+
+            <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+              <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">Total Hadir</span>
+              <div className="text-lg font-bold text-emerald-700 dark:text-emerald-300 mt-0.5">
+                {rekapOverallStats.totalHadir}
+              </div>
+              <div className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 truncate mt-0.5">
+                Akumulasi kehadiran
+              </div>
+            </div>
+
+            <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+              <span className="text-[11px] font-semibold text-sky-700 dark:text-sky-400">Izin & Sakit</span>
+              <div className="text-lg font-bold text-slate-900 dark:text-white mt-0.5">
+                {rekapOverallStats.totalIzin + rekapOverallStats.totalSakit}
+              </div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                Izin: {rekapOverallStats.totalIzin} • Sakit: {rekapOverallStats.totalSakit}
+              </div>
+            </div>
+
+            <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+              <span className="text-[11px] font-semibold text-rose-700 dark:text-rose-400">Total Alpa</span>
+              <div className="text-lg font-bold text-rose-600 dark:text-rose-400 mt-0.5">
+                {rekapOverallStats.totalAlpa}
+              </div>
+              <div className="text-[10px] text-rose-600/80 dark:text-rose-400/80 truncate mt-0.5">
+                Tanpa keterangan
+              </div>
+            </div>
+          </div>
+
+          {/* Sub-view Navigation Bar (Matriks Harian Lengkap / Riwayat Sesi / Ringkasan) */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+            <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setRekapViewMode('matrix')}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                  rekapViewMode === 'matrix'
+                    ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Table className="w-3.5 h-3.5" />
+                <span>Matriks Presensi Lengkap</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setRekapViewMode('history')}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                  rekapViewMode === 'history'
+                    ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <History className="w-3.5 h-3.5" />
+                <span>Riwayat Sesi Presensi ({activeRecordedDates.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setRekapViewMode('summary')}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                  rekapViewMode === 'summary'
+                    ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>Ringkasan Akumulasi</span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 px-1">
+              <span className="font-semibold text-slate-700 dark:text-slate-300">
+                {selectedClassObj?.name}
+              </span>
+              <span>•</span>
+              <span>{activeRecordedDates.length} Hari Terdata</span>
+              {rekapSearchQuery && (
+                <span className="text-indigo-600 dark:text-indigo-400 font-semibold">
+                  (Filter: "{rekapSearchQuery}")
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* TAMPILAN 1: MATRIKS PRESENSI HARIAN LENGKAP */}
+          {rekapViewMode === 'matrix' && (
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
+              <div className="p-3.5 sm:p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                    Matriks Presensi Harian Siswa · {selectedClassObj?.name}
+                  </span>
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                    {rekapFilterMode === 'all' ? 'Semua Riwayat' : `Bulan ${monthLabel}`}
+                  </span>
+                </div>
+
+                {/* Legend badges */}
+                <div className="flex items-center gap-2 flex-wrap text-[11px]">
+                  <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 dark:text-emerald-300">
+                    <span className="w-4 h-4 rounded bg-emerald-100 dark:bg-emerald-950/80 flex items-center justify-center font-mono text-[10px]">H</span>
+                    Hadir
+                  </span>
+                  <span className="inline-flex items-center gap-1 font-semibold text-sky-700 dark:text-sky-300">
+                    <span className="w-4 h-4 rounded bg-sky-100 dark:bg-sky-950/80 flex items-center justify-center font-mono text-[10px]">I</span>
+                    Izin
+                  </span>
+                  <span className="inline-flex items-center gap-1 font-semibold text-amber-700 dark:text-amber-300">
+                    <span className="w-4 h-4 rounded bg-amber-100 dark:bg-amber-950/80 flex items-center justify-center font-mono text-[10px]">S</span>
+                    Sakit
+                  </span>
+                  <span className="inline-flex items-center gap-1 font-semibold text-rose-700 dark:text-rose-300">
+                    <span className="w-4 h-4 rounded bg-rose-100 dark:bg-rose-950/80 flex items-center justify-center font-mono text-[10px]">A</span>
+                    Alpa
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-slate-400">
+                    <span className="w-4 h-4 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-mono text-[10px]">-</span>
+                    Belum Ada
+                  </span>
+                </div>
+              </div>
+
+              {activeRecordedDates.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-semibold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+                      <tr>
+                        <th className="p-3 w-10 text-center sticky left-0 z-20 bg-slate-50 dark:bg-slate-800 shadow-xs">
+                          No
+                        </th>
+                        <th className="p-3 w-28 sticky left-10 z-20 bg-slate-50 dark:bg-slate-800 shadow-xs">
+                          NISN / NIS
+                        </th>
+                        <th className="p-3 min-w-[170px] sticky left-38 z-20 bg-slate-50 dark:bg-slate-800 shadow-xs">
+                          Nama Lengkap
+                        </th>
+                        <th className="p-3 w-10 text-center">L/P</th>
+
+                        {/* Kolom setiap tanggal presensi */}
+                        {activeRecordedDates.map((d) => {
+                          const dateInfo = formatMatrixDateHeader(d.date);
+                          return (
+                            <th
+                              key={d.date}
+                              title={`${dateInfo.fullDate} (Klik untuk edit di Input Harian)`}
+                              onClick={() => {
+                                setSelectedDate(d.date);
+                                setActiveSubTab('input');
+                              }}
+                              className="p-2 text-center min-w-[44px] cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-950/60 transition-colors border-x border-slate-200/50 dark:border-slate-800/50"
+                            >
+                              <div className="text-[10px] font-normal text-slate-400 leading-tight">
+                                {dateInfo.dayName}
+                              </div>
+                              <div className="text-xs font-bold text-slate-800 dark:text-slate-200 font-mono">
+                                {dateInfo.shortDate}
+                              </div>
+                            </th>
+                          );
+                        })}
+
+                        {/* Summary columns */}
+                        <th className="p-2.5 text-center bg-emerald-50/50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 font-bold border-l border-slate-200 dark:border-slate-800">
+                          H
+                        </th>
+                        <th className="p-2.5 text-center bg-sky-50/50 dark:bg-sky-950/30 text-sky-800 dark:text-sky-300 font-bold">
+                          I
+                        </th>
+                        <th className="p-2.5 text-center bg-amber-50/50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 font-bold">
+                          S
+                        </th>
+                        <th className="p-2.5 text-center bg-rose-50/50 dark:bg-rose-950/30 text-rose-800 dark:text-rose-300 font-bold">
+                          A
+                        </th>
+                        <th className="p-2.5 text-center font-mono">Total</th>
+                        <th className="p-2.5 text-center font-bold">%</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-200">
+                      {filteredRekapData.length > 0 ? (
+                        filteredRekapData.map((row) => (
+                          <tr key={row.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors">
+                            <td className="p-3 text-center font-mono text-slate-500 dark:text-slate-400 sticky left-0 z-10 bg-white dark:bg-slate-900">
+                              {row.no}
+                            </td>
+                            <td className="p-3 font-mono text-slate-600 dark:text-slate-300 font-medium sticky left-10 z-10 bg-white dark:bg-slate-900">
+                              {row.nisnNis}
+                            </td>
+                            <td className="p-3 font-bold text-slate-900 dark:text-white sticky left-38 z-10 bg-white dark:bg-slate-900 truncate max-w-[200px]">
+                              {row.name}
+                            </td>
+                            <td className="p-3 text-center font-semibold text-slate-500 dark:text-slate-400">
+                              {row.gender}
+                            </td>
+
+                            {/* Cell status per date */}
+                            {activeRecordedDates.map((d) => {
+                              const cell = row.dateStatusMap[d.date];
+                              if (!cell) {
+                                return (
+                                  <td key={d.date} className="p-2 text-center text-slate-300 dark:text-slate-600 font-mono border-x border-slate-100 dark:border-slate-800/50">
+                                    -
+                                  </td>
+                                );
+                              }
+
+                              const st = cell.status;
+                              let badgeColor = 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+                              if (st === 'HADIR') badgeColor = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300';
+                              if (st === 'IZIN') badgeColor = 'bg-sky-100 text-sky-800 dark:bg-sky-950/70 dark:text-sky-300';
+                              if (st === 'SAKIT') badgeColor = 'bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300';
+                              if (st === 'ALPA') badgeColor = 'bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300';
+
+                              return (
+                                <td
+                                  key={d.date}
+                                  className="p-1.5 text-center border-x border-slate-100 dark:border-slate-800/50"
+                                >
+                                  <span
+                                    title={`${row.name}: ${st}${cell.notes ? ` (${cell.notes})` : ''}`}
+                                    className={`w-6 h-6 rounded-md font-extrabold text-[11px] inline-flex items-center justify-center font-mono relative cursor-help ${badgeColor}`}
+                                  >
+                                    {st.charAt(0)}
+                                    {cell.notes && (
+                                      <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-indigo-600 ring-1 ring-white dark:ring-slate-900" />
+                                    )}
+                                  </span>
+                                </td>
+                              );
+                            })}
+
+                            {/* Summary cells */}
+                            <td className="p-2.5 text-center font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50/20 dark:bg-emerald-950/20 border-l border-slate-200 dark:border-slate-800">
+                              {row.hadir}
+                            </td>
+                            <td className="p-2.5 text-center font-mono text-sky-600 dark:text-sky-400 bg-sky-50/20 dark:bg-sky-950/20">
+                              {row.izin}
+                            </td>
+                            <td className="p-2.5 text-center font-mono text-amber-600 dark:text-amber-400 bg-amber-50/20 dark:bg-amber-950/20">
+                              {row.sakit}
+                            </td>
+                            <td className="p-2.5 text-center font-mono font-bold text-rose-600 dark:text-rose-400 bg-rose-50/20 dark:bg-rose-950/20">
+                              {row.alpa}
+                            </td>
+                            <td className="p-2.5 text-center font-mono text-slate-500 dark:text-slate-400">
+                              {row.totalDays}
+                            </td>
+                            <td className="p-2.5 text-center">
+                              <span
+                                className={`font-mono font-bold text-xs ${
+                                  row.percentage < 60
+                                    ? 'text-rose-600 dark:text-rose-400'
+                                    : row.percentage < 80
+                                    ? 'text-amber-600 dark:text-amber-400'
+                                    : 'text-emerald-600 dark:text-emerald-400'
+                                }`}
+                              >
+                                {row.percentage}%
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={6 + activeRecordedDates.length} className="p-8 text-center text-slate-400">
+                            {rekapSearchQuery ? (
+                              <p>Tidak ditemukan siswa dengan kata kunci "{rekapSearchQuery}".</p>
+                            ) : (
+                              'Tidak ada siswa pada kelas ini.'
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+
+                    {/* Table Footer: Daily class summary per date */}
+                    {filteredRekapData.length > 0 && activeRecordedDates.length > 0 && (
+                      <tfoot className="bg-slate-50 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 font-bold border-t-2 border-slate-200 dark:border-slate-700">
+                        <tr>
+                          <td colSpan={4} className="p-3 text-right text-xs uppercase tracking-wider sticky left-0 bg-slate-50 dark:bg-slate-800">
+                            Kehadiran Harian:
+                          </td>
+
+                          {activeRecordedDates.map((d) => (
+                            <td
+                              key={`foot-${d.date}`}
+                              className="p-1.5 text-center border-x border-slate-200/50 dark:border-slate-700/50 text-[11px] font-mono"
+                            >
+                              <div className="text-emerald-700 dark:text-emerald-400 font-bold">
+                                {d.hadir}
+                              </div>
+                              <div className="text-[10px] text-slate-500 font-normal">
+                                {d.pct}%
+                              </div>
+                            </td>
+                          ))}
+
+                          <td className="p-2.5 text-center font-mono text-emerald-700 dark:text-emerald-400 border-l border-slate-200 dark:border-slate-800">
+                            {rekapOverallStats.totalHadir}
+                          </td>
+                          <td className="p-2.5 text-center font-mono text-sky-700 dark:text-sky-400">
+                            {rekapOverallStats.totalIzin}
+                          </td>
+                          <td className="p-2.5 text-center font-mono text-amber-700 dark:text-amber-400">
+                            {rekapOverallStats.totalSakit}
+                          </td>
+                          <td className="p-2.5 text-center font-mono text-rose-700 dark:text-rose-400">
+                            {rekapOverallStats.totalAlpa}
+                          </td>
+                          <td className="p-2.5 text-center font-mono text-slate-600 dark:text-slate-300">
+                            {activeRecordedDates.length * rekapStudents.length}
+                          </td>
+                          <td className="p-2.5 text-center font-mono text-emerald-700 dark:text-emerald-400">
+                            {rekapOverallStats.avgAttendance}%
+                          </td>
+                        </tr>
+                      </tfoot>
+                    )}
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-12 text-slate-400 text-xs space-y-2">
+                  <CalendarRange className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto" />
+                  <p className="font-medium text-slate-600 dark:text-slate-300">
+                    Belum ada data riwayat presensi {rekapFilterMode === 'all' ? 'untuk kelas ini' : `pada bulan ${monthLabel}`}.
+                  </p>
+                  <p className="text-[11px]">
+                    Lakukan absensi di tab Input Harian untuk memunculkan rekaman di tabel matriks.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSubTab('input')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors cursor-pointer mt-2"
+                  >
+                    Buka Kalender Input Harian
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAMPILAN 2: DAFTAR SEMUA RIWAYAT SESI PRESENSI */}
+          {rekapViewMode === 'history' && (
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 gap-2">
+                <div className="flex items-center gap-2">
+                  <History className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Semua Riwayat Sesi Presensi ({activeRecordedDates.length} Sesi Terdata)
+                  </h3>
+                </div>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Klik "Edit Presensi" untuk membuka dan memperbarui data siswa pada tanggal terkait
+                </span>
+              </div>
+
+              {activeRecordedDates.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {activeRecordedDates.map((item) => (
+                    <div
+                      key={item.date}
+                      className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 hover:bg-slate-100/80 dark:hover:bg-slate-800/70 transition-all flex flex-col justify-between"
+                    >
+                      <div>
+                        {/* Header tanggal & badge % */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <span className="text-xs font-bold text-slate-900 dark:text-white block">
+                              {formatIndonesianDate(item.date)}
+                            </span>
+                            <span className="text-[11px] font-mono text-slate-400">
+                              {item.date}
+                            </span>
+                          </div>
+                          <span
+                            className={`text-xs font-extrabold px-2 py-0.5 rounded-md ${
+                              item.pct >= 90
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
+                                : item.pct >= 75
+                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
+                                : 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300'
+                            }`}
+                          >
+                            {item.pct}% Hadir
+                          </span>
+                        </div>
+
+                        {/* Progress bar visual */}
+                        <div className="w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden flex mt-2.5">
+                          {item.hadir > 0 && (
+                            <div
+                              style={{ width: `${(item.hadir / item.total) * 100}%` }}
+                              className="bg-emerald-500"
+                            />
+                          )}
+                          {item.izin > 0 && (
+                            <div
+                              style={{ width: `${(item.izin / item.total) * 100}%` }}
+                              className="bg-sky-500"
+                            />
+                          )}
+                          {item.sakit > 0 && (
+                            <div
+                              style={{ width: `${(item.sakit / item.total) * 100}%` }}
+                              className="bg-amber-500"
+                            />
+                          )}
+                          {item.alpa > 0 && (
+                            <div
+                              style={{ width: `${(item.alpa / item.total) * 100}%` }}
+                              className="bg-rose-500"
+                            />
+                          )}
+                        </div>
+
+                        {/* Statistik H/I/S/A */}
+                        <div className="text-[11px] text-slate-600 dark:text-slate-300 mt-2 flex items-center gap-2.5 flex-wrap font-mono">
+                          <span className="text-emerald-700 dark:text-emerald-400 font-bold">
+                            Hadir: {item.hadir}
+                          </span>
+                          <span className="text-sky-600 dark:text-sky-400">
+                            Izin: {item.izin}
+                          </span>
+                          <span className="text-amber-600 dark:text-amber-400">
+                            Sakit: {item.sakit}
+                          </span>
+                          <span className="text-rose-600 dark:text-rose-400 font-bold">
+                            Alpa: {item.alpa}
+                          </span>
+                        </div>
+
+                        {/* Rincian Siswa Tidak Hadir */}
+                        {item.absentees.length > 0 ? (
+                          <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+                            <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
+                              Siswa Tidak Hadir ({item.absentees.length}):
+                            </span>
+                            <div className="flex flex-wrap gap-1">
+                              {item.absentees.slice(0, 4).map((ab, idx) => (
+                                <span
+                                  key={idx}
+                                  title={ab.notes ? `${ab.status}: ${ab.notes}` : ab.status}
+                                  className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                                    ab.status === 'IZIN'
+                                      ? 'bg-sky-100 text-sky-800 dark:bg-sky-950/70 dark:text-sky-300'
+                                      : ab.status === 'SAKIT'
+                                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300'
+                                      : 'bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300'
+                                  }`}
+                                >
+                                  {ab.name} ({ab.status.charAt(0)})
+                                </span>
+                              ))}
+                              {item.absentees.length > 4 && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                                  +{item.absentees.length - 4} lainnya
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3" /> Seluruh siswa hadir (Nihil Absen)
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Tombol Aksi */}
+                      <div className="flex items-center justify-end gap-1.5 mt-3 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedDate(item.date);
+                            setActiveSubTab('input');
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 rounded-md transition-colors cursor-pointer"
+                        >
+                          <Edit className="w-3 h-3" /> Edit Presensi
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setDateToDeleteConfirm(item.date)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 rounded-md transition-colors cursor-pointer"
+                          title="Hapus data presensi tanggal ini"
+                        >
+                          <Trash2 className="w-3 h-3" /> Hapus
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-10 text-slate-400 text-xs space-y-2 bg-slate-50/50 dark:bg-slate-800/20 rounded-lg border border-dashed border-slate-200 dark:border-slate-800">
+                  <p>Belum ada riwayat sesi presensi yang tersimpan.</p>
                   <button
                     type="button"
                     onClick={() => setActiveSubTab('input')}
@@ -1326,82 +1950,88 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                     Mulai Input Presensi di Kalender Harian
                   </button>
                 </div>
-              </div>
-            )}
-          </div>
-
-          {/* Rekap Table */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-2">
-              <span className="font-semibold text-slate-800 dark:text-slate-200">
-                Rekapitulasi Kehadiran Siswa · Bulan {monthLabel} · {rekapClassObj?.name}
-              </span>
-              <span className="text-slate-500 dark:text-slate-400">
-                Wali Kelas: {rekapClassObj?.homeroomTeacher}
-              </span>
+              )}
             </div>
+          )}
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-semibold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
-                  <tr>
-                    <th className="p-3 w-10 text-center">No</th>
-                    <th className="p-3">NISN / NIS</th>
-                    <th className="p-3">Nama Lengkap Siswa</th>
-                    <th className="p-3 text-center">L/P</th>
-                    <th className="p-3 text-center text-emerald-700 dark:text-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/40">Hadir</th>
-                    <th className="p-3 text-center text-sky-700 dark:text-sky-300 bg-sky-50/50 dark:bg-sky-950/40">Izin</th>
-                    <th className="p-3 text-center text-amber-700 dark:text-amber-300 bg-amber-50/50 dark:bg-amber-950/40">Sakit</th>
-                    <th className="p-3 text-center text-rose-700 dark:text-rose-300 bg-rose-50/50 dark:bg-rose-950/40">Alpa</th>
-                    <th className="p-3 text-center font-mono">Total Hari</th>
-                    <th className="p-3 text-center">% Kehadiran</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-200">
-                  {rekapData.length > 0 ? (
-                    rekapData.map((row) => (
-                      <tr key={row.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors">
-                        <td className="p-3 text-center font-mono text-slate-500 dark:text-slate-400">{row.no}</td>
-                        <td className="p-3 font-mono text-slate-600 dark:text-slate-300 font-medium">{row.nisnNis}</td>
-                        <td className="p-3 font-bold text-slate-900 dark:text-white">{row.name}</td>
-                        <td className="p-3 text-center font-semibold text-slate-500 dark:text-slate-400">{row.gender}</td>
-                        <td className="p-3 text-center font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50/30 dark:bg-emerald-950/30">
-                          {row.hadir}
-                        </td>
-                        <td className="p-3 text-center font-mono text-sky-600 dark:text-sky-400 bg-sky-50/30 dark:bg-sky-950/30">{row.izin}</td>
-                        <td className="p-3 text-center font-mono text-amber-600 dark:text-amber-400 bg-amber-50/30 dark:bg-amber-950/30">
-                          {row.sakit}
-                        </td>
-                        <td className="p-3 text-center font-mono font-bold text-rose-600 dark:text-rose-400 bg-rose-50/30 dark:bg-rose-950/30">
-                          {row.alpa}
-                        </td>
-                        <td className="p-3 text-center font-mono text-slate-500 dark:text-slate-400">{row.totalDays}</td>
-                        <td className="p-3 text-center">
-                          <span
-                            className={`font-mono font-bold text-xs ${
-                              row.percentage < 60
-                                ? 'text-rose-600 dark:text-rose-400'
-                                : row.percentage < 80
-                                ? 'text-amber-600 dark:text-amber-400'
-                                : 'text-emerald-600 dark:text-emerald-400'
-                            }`}
-                          >
-                            {row.percentage}%
-                          </span>
+          {/* TAMPILAN 3: RINGKASAN AKUMULASI SISWA */}
+          {rekapViewMode === 'summary' && (
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-2">
+                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                  Rekapitulasi Kehadiran Siswa · {selectedClassObj?.name} · {rekapFilterMode === 'all' ? 'Semua Riwayat' : `Bulan ${monthLabel}`}
+                </span>
+                <span className="text-slate-500 dark:text-slate-400">
+                  Wali Kelas: {selectedClassObj?.homeroomTeacher || '-'}
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-semibold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+                    <tr>
+                      <th className="p-3 w-10 text-center">No</th>
+                      <th className="p-3">NISN / NIS</th>
+                      <th className="p-3">Nama Lengkap Siswa</th>
+                      <th className="p-3 text-center">L/P</th>
+                      <th className="p-3 text-center text-emerald-700 dark:text-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/40">Hadir</th>
+                      <th className="p-3 text-center text-sky-700 dark:text-sky-300 bg-sky-50/50 dark:bg-sky-950/40">Izin</th>
+                      <th className="p-3 text-center text-amber-700 dark:text-amber-300 bg-amber-50/50 dark:bg-amber-950/40">Sakit</th>
+                      <th className="p-3 text-center text-rose-700 dark:text-rose-300 bg-rose-50/50 dark:bg-rose-950/40">Alpa</th>
+                      <th className="p-3 text-center font-mono">Total Hari</th>
+                      <th className="p-3 text-center">% Kehadiran</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-200">
+                    {filteredRekapData.length > 0 ? (
+                      filteredRekapData.map((row) => (
+                        <tr key={row.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors">
+                          <td className="p-3 text-center font-mono text-slate-500 dark:text-slate-400">{row.no}</td>
+                          <td className="p-3 font-mono text-slate-600 dark:text-slate-300 font-medium">{row.nisnNis}</td>
+                          <td className="p-3 font-bold text-slate-900 dark:text-white">{row.name}</td>
+                          <td className="p-3 text-center font-semibold text-slate-500 dark:text-slate-400">{row.gender}</td>
+                          <td className="p-3 text-center font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50/30 dark:bg-emerald-950/30">
+                            {row.hadir}
+                          </td>
+                          <td className="p-3 text-center font-mono text-sky-600 dark:text-sky-400 bg-sky-50/30 dark:bg-sky-950/30">{row.izin}</td>
+                          <td className="p-3 text-center font-mono text-amber-600 dark:text-amber-400 bg-amber-50/30 dark:bg-amber-950/30">
+                            {row.sakit}
+                          </td>
+                          <td className="p-3 text-center font-mono font-bold text-rose-600 dark:text-rose-400 bg-rose-50/30 dark:bg-rose-950/30">
+                            {row.alpa}
+                          </td>
+                          <td className="p-3 text-center font-mono text-slate-500 dark:text-slate-400">{row.totalDays}</td>
+                          <td className="p-3 text-center">
+                            <span
+                              className={`font-mono font-bold text-xs ${
+                                row.percentage < 60
+                                  ? 'text-rose-600 dark:text-rose-400'
+                                  : row.percentage < 80
+                                  ? 'text-amber-600 dark:text-amber-400'
+                                  : 'text-emerald-600 dark:text-emerald-400'
+                              }`}
+                            >
+                              {row.percentage}%
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={10} className="p-8 text-center text-slate-400">
+                          {rekapSearchQuery ? (
+                            <p>Tidak ditemukan siswa dengan kata kunci "{rekapSearchQuery}".</p>
+                          ) : (
+                            'Tidak ada siswa pada kelas ini.'
+                          )}
                         </td>
                       </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={10} className="p-8 text-center text-slate-400">
-                        Tidak ada siswa pada kelas ini.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
