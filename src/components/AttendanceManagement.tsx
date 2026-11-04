@@ -155,6 +155,26 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
     setSelectedDate(today);
   };
 
+  const handlePrevDay = () => {
+    const [y, m, d] = selectedDate.split('-').map(Number);
+    const cur = new Date(y, m - 1, d);
+    cur.setDate(cur.getDate() - 1);
+    const yStr = cur.getFullYear();
+    const mStr = String(cur.getMonth() + 1).padStart(2, '0');
+    const dStr = String(cur.getDate()).padStart(2, '0');
+    handleDateChange(`${yStr}-${mStr}-${dStr}`);
+  };
+
+  const handleNextDay = () => {
+    const [y, m, d] = selectedDate.split('-').map(Number);
+    const cur = new Date(y, m - 1, d);
+    cur.setDate(cur.getDate() + 1);
+    const yStr = cur.getFullYear();
+    const mStr = String(cur.getMonth() + 1).padStart(2, '0');
+    const dStr = String(cur.getDate()).padStart(2, '0');
+    handleDateChange(`${yStr}-${mStr}-${dStr}`);
+  };
+
   // Helper formatting Indonesian full date
   const formatIndonesianDate = (dateStr: string) => {
     if (!dateStr) return '';
@@ -578,28 +598,48 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
           </p>
         </div>
 
-        {/* Sub tabs */}
-        <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg self-start sm:self-auto border border-slate-200 dark:border-slate-700">
-          <button
-            onClick={() => setActiveSubTab('input')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
-              activeSubTab === 'input'
-                ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            Input Harian
-          </button>
-          <button
-            onClick={() => setActiveSubTab('rekap')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
-              activeSubTab === 'rekap'
-                ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            Rekap Bulanan
-          </button>
+        {/* Selector Kelas & Sub Tabs Terpadu */}
+        <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
+          {/* Pilih Kelas Terpadu */}
+          <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs">
+            <Users className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 shrink-0" />
+            <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Kelas:</label>
+            <select
+              value={selectedClassId}
+              onChange={(e) => setSelectedClassId(e.target.value)}
+              className="text-xs font-bold bg-transparent text-indigo-700 dark:text-indigo-400 focus:outline-none cursor-pointer pr-1"
+            >
+              {classes.map((c) => (
+                <option key={c.id} value={c.id} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sub tabs */}
+          <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs">
+            <button
+              onClick={() => setActiveSubTab('input')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                activeSubTab === 'input'
+                  ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Input Harian
+            </button>
+            <button
+              onClick={() => setActiveSubTab('rekap')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                activeSubTab === 'rekap'
+                  ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Rekap Bulanan
+            </button>
+          </div>
         </div>
       </div>
 
@@ -786,76 +826,70 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                   })}
                 </div>
 
-                {/* Simplified Calendar Legend and Quick Link */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2.5 text-[11px] text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center gap-3.5 flex-wrap">
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-                      <span className="text-emerald-700 dark:text-emerald-400 font-semibold">✓ Selesai</span>
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600 inline-block" />
-                      <span>Belum Absen</span>
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-indigo-600 inline-block" />
-                      <span className="text-indigo-600 dark:text-indigo-400 font-medium">Dipilih</span>
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveSubTab('rekap')}
-                    className="text-indigo-600 dark:text-indigo-400 hover:underline font-semibold flex items-center gap-1 cursor-pointer self-start sm:self-auto text-xs"
-                  >
-                    Buka Rekap Bulanan <ArrowRight className="w-3 h-3" />
-                  </button>
+                {/* Simplified Calendar Legend */}
+                <div className="flex items-center gap-3.5 flex-wrap pt-2.5 text-[11px] text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                    <span className="text-emerald-700 dark:text-emerald-400 font-semibold">✓ Selesai Diabsen</span>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600 inline-block" />
+                    <span>Belum Absen</span>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-indigo-600 inline-block" />
+                    <span className="text-indigo-600 dark:text-indigo-400 font-medium">Tanggal Terpilih</span>
+                  </span>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Controls Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Select Class */}
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Kelas:</label>
-                <select
-                  value={selectedClassId}
-                  onChange={(e) => setSelectedClassId(e.target.value)}
-                  className="px-3 py-1.5 text-xs font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+          {/* Unified Daily Action Toolbar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+            <div className="flex flex-wrap items-center gap-2.5">
+              {/* Tanggal Picker with Day Stepper */}
+              <div className="flex items-center bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-0.5 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={handlePrevDay}
+                  title="Hari Sebelumnya"
+                  className="p-1.5 text-slate-500 hover:text-slate-800 dark:hover:text-white rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
                 >
-                  {classes.map((c) => (
-                    <option key={c.id} value={c.id} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Select Date */}
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Tanggal:</label>
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
                 <input
                   type="date"
                   value={selectedDate}
                   onChange={(e) => handleDateChange(e.target.value)}
-                  className="px-3 py-1.5 text-xs font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer font-mono"
+                  className="px-2 py-1 text-xs font-semibold bg-transparent text-slate-800 dark:text-slate-100 focus:outline-none cursor-pointer font-mono"
                 />
+                <button
+                  type="button"
+                  onClick={handleNextDay}
+                  title="Hari Berikutnya"
+                  className="p-1.5 text-slate-500 hover:text-slate-800 dark:hover:text-white rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
 
-              {/* Status Badge for Date */}
+              {selectedDate !== new Date().toISOString().slice(0, 10) && (
+                <button
+                  type="button"
+                  onClick={handleGoToToday}
+                  className="px-2.5 py-1 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800 rounded-lg transition-colors cursor-pointer"
+                >
+                  Hari Ini
+                </button>
+              )}
+
+              {/* Status Badge */}
               {isDateSaved ? (
-                <div className="flex items-center gap-1.5">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-2xs">
-                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    Selesai Absen ({savedDateStats?.hadir}/{savedDateStats?.total} Hadir)
-                  </span>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-md bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-                    <Edit className="w-3 h-3" /> Mode Edit
-                  </span>
-                </div>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-2xs">
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  Selesai Absen ({savedDateStats?.hadir}/{savedDateStats?.total})
+                </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
                   <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
@@ -864,17 +898,17 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
               )}
             </div>
 
+            {/* Consolidated Actions Group */}
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
                 onClick={handleSetAllHadir}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-lg transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200/80 dark:border-emerald-900/50 rounded-lg transition-colors cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                Set Semua Hadir
+                Semua Hadir
               </button>
 
-              {/* Delete attendance for this date */}
               {isDateSaved && (
                 <button
                   type="button"
@@ -883,7 +917,7 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                   title="Hapus data presensi tanggal ini"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  Hapus Presensi
+                  Hapus
                 </button>
               )}
 
@@ -1306,41 +1340,65 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
               </table>
             </div>
 
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex justify-end">
-              <button
-                type="button"
-                onClick={handleSaveDaily}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm transition-colors cursor-pointer"
-              >
-                <Save className="w-4 h-4" />
-                Simpan Presensi Kelas {selectedClassObj?.name}
-              </button>
+            {/* Clean Table Footer Summary */}
+            <div className="px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+              <span>Menampilkan {displayedDailyStudents.length} dari {classStudents.length} siswa</span>
+              <span className="font-semibold text-slate-700 dark:text-slate-300">
+                {dailyRecap.hadir} Hadir • {dailyRecap.izin} Izin • {dailyRecap.sakit} Sakit • {dailyRecap.alpa} Alpa
+              </span>
             </div>
           </div>
         </div>
       ) : (
         /* TAB 2: REKAP BULANAN PRESENSI & SEMUA RIWAYAT */
         <div className="space-y-4">
-          {/* Controls & Filter Bar */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Select Class */}
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Kelas:</label>
-                <select
-                  value={selectedClassId}
-                  onChange={(e) => setSelectedClassId(e.target.value)}
-                  className="px-3 py-1.5 text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-                >
-                  {classes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          {/* Unified Rekap Control Bar (Satuan Pengaturan Tampilan & Filter) */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+            {/* Navigasi Sub-Tampilan Terpadu */}
+            <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setRekapViewMode('matrix')}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                  rekapViewMode === 'matrix'
+                    ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Table className="w-3.5 h-3.5" />
+                <span>Matriks Lengkap</span>
+              </button>
 
-              {/* Periode Filter: Semua Riwayat vs Pilih Bulan */}
+              <button
+                type="button"
+                onClick={() => setRekapViewMode('history')}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                  rekapViewMode === 'history'
+                    ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <History className="w-3.5 h-3.5" />
+                <span>Riwayat Sesi ({activeRecordedDates.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setRekapViewMode('summary')}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                  rekapViewMode === 'summary'
+                    ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>Ringkasan</span>
+              </button>
+            </div>
+
+            {/* Filter Periode & Pencarian Siswa */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              {/* Periode: Semua Riwayat vs Pilih Bulan */}
               <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
                 <button
                   type="button"
@@ -1366,32 +1424,27 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                 </button>
               </div>
 
-              {/* Month Picker (if rekapFilterMode is 'month') */}
+              {/* Month Picker (jika rekapFilterMode === 'month') */}
               {rekapFilterMode === 'month' && (
-                <div className="flex items-center gap-1.5 animate-in fade-in">
+                <div className="flex items-center gap-1 animate-in fade-in">
                   <input
                     type="month"
                     value={rekapMonth}
                     onChange={(e) => handleMonthChange(e.target.value)}
-                    className="px-2.5 py-1 text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer font-mono"
+                    className="px-2 py-1 text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer font-mono"
                   />
-                  <span className="text-xs text-slate-500 dark:text-slate-400">
-                    ({recordedDatesInMonth.length} hari terdata)
-                  </span>
                 </div>
               )}
-            </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* Search student */}
+              {/* Input Pencarian Siswa */}
               <div className="relative">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
                   value={rekapSearchQuery}
                   onChange={(e) => setRekapSearchQuery(e.target.value)}
-                  placeholder="Cari siswa / NISN..."
-                  className="pl-8 pr-2.5 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-44 sm:w-48"
+                  placeholder="Cari nama / NISN..."
+                  className="pl-8 pr-7 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-36 sm:w-44"
                 />
                 {rekapSearchQuery && (
                   <button
@@ -1403,15 +1456,6 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                   </button>
                 )}
               </div>
-
-              <button
-                type="button"
-                onClick={() => setActiveSubTab('input')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-lg transition-colors cursor-pointer"
-              >
-                <CalendarDays className="w-3.5 h-3.5" />
-                Buka Input Harian
-              </button>
             </div>
           </div>
 
@@ -1471,63 +1515,6 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
               <div className="text-[10px] text-rose-600/80 dark:text-rose-400/80 truncate mt-0.5">
                 Tanpa keterangan
               </div>
-            </div>
-          </div>
-
-          {/* Sub-view Navigation Bar (Matriks Harian Lengkap / Riwayat Sesi / Ringkasan) */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs">
-            <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 flex-wrap">
-              <button
-                type="button"
-                onClick={() => setRekapViewMode('matrix')}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
-                  rekapViewMode === 'matrix'
-                    ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <Table className="w-3.5 h-3.5" />
-                <span>Matriks Presensi Lengkap</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setRekapViewMode('history')}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
-                  rekapViewMode === 'history'
-                    ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <History className="w-3.5 h-3.5" />
-                <span>Riwayat Sesi Presensi ({activeRecordedDates.length})</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setRekapViewMode('summary')}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
-                  rekapViewMode === 'summary'
-                    ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <FileText className="w-3.5 h-3.5" />
-                <span>Ringkasan Akumulasi</span>
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 px-1">
-              <span className="font-semibold text-slate-700 dark:text-slate-300">
-                {selectedClassObj?.name}
-              </span>
-              <span>•</span>
-              <span>{activeRecordedDates.length} Hari Terdata</span>
-              {rekapSearchQuery && (
-                <span className="text-indigo-600 dark:text-indigo-400 font-semibold">
-                  (Filter: "{rekapSearchQuery}")
-                </span>
-              )}
             </div>
           </div>
 
