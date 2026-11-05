@@ -1403,7 +1403,7 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                 }`}
               >
                 <History className="w-3.5 h-3.5" />
-                <span>Riwayat Sesi ({activeRecordedDates.length})</span>
+                <span>Tabel Riwayat Sesi ({activeRecordedDates.length})</span>
               </button>
             </div>
 
@@ -1675,166 +1675,254 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
             </div>
           )}
 
-          {/* TAMPILAN 2: DAFTAR SEMUA RIWAYAT SESI PRESENSI */}
+          {/* TAMPILAN 2: TABEL DRAFT SEMUA RIWAYAT SESI PRESENSI */}
           {rekapViewMode === 'history' && (
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 gap-2">
-                <div className="flex items-center gap-2">
-                  <History className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                    Semua Riwayat Sesi Presensi ({activeRecordedDates.length} Sesi Terdata)
-                  </h3>
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs space-y-0">
+              {/* Header Bar Tabel Draft */}
+              <div className="p-3.5 sm:p-4 bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                    <History className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                        Tabel Draft Riwayat Sesi Presensi
+                      </h3>
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                        Kelas {selectedClassObj?.name || '-'}
+                      </span>
+                      <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                        • {activeRecordedDates.length} Sesi Terdata
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      Daftar rekapan sesi presensi harian dalam format tabel draft terstruktur. Klik "Edit" untuk membuka dan memperbarui data di form harian.
+                    </p>
+                  </div>
                 </div>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Klik "Edit Presensi" untuk membuka dan memperbarui data siswa pada tanggal terkait
-                </span>
+
+                <div className="flex items-center gap-2 self-start sm:self-auto text-xs">
+                  <span className="text-slate-500 dark:text-slate-400">
+                    Wali Kelas: <strong className="text-slate-700 dark:text-slate-200">{selectedClassObj?.homeroomTeacher || '-'}</strong>
+                  </span>
+                </div>
               </div>
 
               {activeRecordedDates.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {activeRecordedDates.map((item) => (
-                    <div
-                      key={item.date}
-                      className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 hover:bg-slate-100/80 dark:hover:bg-slate-800/70 transition-all flex flex-col justify-between"
-                    >
-                      <div>
-                        {/* Header tanggal & badge % */}
-                        <div className="flex items-center justify-between gap-2">
-                          <div>
-                            <span className="text-xs font-bold text-slate-900 dark:text-white block">
-                              {formatIndonesianDate(item.date)}
-                            </span>
-                            <span className="text-[11px] font-mono text-slate-400">
-                              {item.date}
-                            </span>
-                          </div>
-                          <span
-                            className={`text-xs font-extrabold px-2 py-0.5 rounded-md ${
-                              item.pct >= 90
-                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
-                                : item.pct >= 75
-                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
-                                : 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300'
-                            }`}
-                          >
-                            {item.pct}% Hadir
-                          </span>
-                        </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-semibold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+                      <tr>
+                        <th className="p-3.5 w-12 text-center">No</th>
+                        <th className="p-3.5 min-w-[160px]">Tanggal & Hari</th>
+                        <th className="p-3.5 text-center min-w-[200px]">Rincian Kehadiran Siswa</th>
+                        <th className="p-3.5 text-center min-w-[120px]">% Kehadiran</th>
+                        <th className="p-3.5 min-w-[240px]">Keterangan / Siswa Tidak Hadir</th>
+                        <th className="p-3.5 text-center min-w-[110px]">Status Sesi</th>
+                        <th className="p-3.5 text-center min-w-[140px]">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-200">
+                      {[...activeRecordedDates]
+                        .sort((a, b) => b.date.localeCompare(a.date))
+                        .map((item, idx) => {
+                          const dateObj = new Date(item.date + 'T00:00:00');
+                          const dayName = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(dateObj);
+                          const fullDateFormatted = new Intl.DateTimeFormat('id-ID', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
+                          }).format(dateObj);
 
-                        {/* Progress bar visual */}
-                        <div className="w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden flex mt-2.5">
-                          {item.hadir > 0 && (
-                            <div
-                              style={{ width: `${(item.hadir / item.total) * 100}%` }}
-                              className="bg-emerald-500"
-                            />
-                          )}
-                          {item.izin > 0 && (
-                            <div
-                              style={{ width: `${(item.izin / item.total) * 100}%` }}
-                              className="bg-sky-500"
-                            />
-                          )}
-                          {item.sakit > 0 && (
-                            <div
-                              style={{ width: `${(item.sakit / item.total) * 100}%` }}
-                              className="bg-amber-500"
-                            />
-                          )}
-                          {item.alpa > 0 && (
-                            <div
-                              style={{ width: `${(item.alpa / item.total) * 100}%` }}
-                              className="bg-rose-500"
-                            />
-                          )}
-                        </div>
+                          return (
+                            <tr
+                              key={item.date}
+                              className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors"
+                            >
+                              {/* No */}
+                              <td className="p-3.5 text-center font-mono text-slate-400 font-medium">
+                                {idx + 1}
+                              </td>
 
-                        {/* Statistik H/I/S/A */}
-                        <div className="text-[11px] text-slate-600 dark:text-slate-300 mt-2 flex items-center gap-2.5 flex-wrap font-mono">
-                          <span className="text-emerald-700 dark:text-emerald-400 font-bold">
-                            Hadir: {item.hadir}
-                          </span>
-                          <span className="text-sky-600 dark:text-sky-400">
-                            Izin: {item.izin}
-                          </span>
-                          <span className="text-amber-600 dark:text-amber-400">
-                            Sakit: {item.sakit}
-                          </span>
-                          <span className="text-rose-600 dark:text-rose-400 font-bold">
-                            Alpa: {item.alpa}
-                          </span>
-                        </div>
+                              {/* Tanggal & Hari */}
+                              <td className="p-3.5">
+                                <div className="font-bold text-slate-900 dark:text-white">
+                                  {dayName}, {fullDateFormatted}
+                                </div>
+                                <div className="text-[11px] font-mono text-indigo-600 dark:text-indigo-400 mt-0.5">
+                                  {item.date}
+                                </div>
+                              </td>
 
-                        {/* Rincian Siswa Tidak Hadir */}
-                        {item.absentees.length > 0 ? (
-                          <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
-                            <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
-                              Siswa Tidak Hadir ({item.absentees.length}):
-                            </span>
-                            <div className="flex flex-wrap gap-1">
-                              {item.absentees.slice(0, 4).map((ab, idx) => (
-                                <span
-                                  key={idx}
-                                  title={ab.notes ? `${ab.status}: ${ab.notes}` : ab.status}
-                                  className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                                    ab.status === 'IZIN'
-                                      ? 'bg-sky-100 text-sky-800 dark:bg-sky-950/70 dark:text-sky-300'
-                                      : ab.status === 'SAKIT'
-                                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300'
-                                      : 'bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300'
-                                  }`}
-                                >
-                                  {ab.name} ({ab.status.charAt(0)})
+                              {/* Rincian Kehadiran Siswa */}
+                              <td className="p-3.5 text-center">
+                                <div className="inline-flex items-center gap-1.5 p-1 bg-slate-100/80 dark:bg-slate-800/80 rounded-lg border border-slate-200/80 dark:border-slate-700/80 font-mono text-[11px]">
+                                  <span
+                                    title={`Hadir: ${item.hadir} siswa`}
+                                    className="px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 font-bold"
+                                  >
+                                    H: {item.hadir}
+                                  </span>
+                                  <span
+                                    title={`Izin: ${item.izin} siswa`}
+                                    className="px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-950/80 text-sky-800 dark:text-sky-300 font-medium"
+                                  >
+                                    I: {item.izin}
+                                  </span>
+                                  <span
+                                    title={`Sakit: ${item.sakit} siswa`}
+                                    className="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 font-medium"
+                                  >
+                                    S: {item.sakit}
+                                  </span>
+                                  <span
+                                    title={`Alpa: ${item.alpa} siswa`}
+                                    className="px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300 font-bold"
+                                  >
+                                    A: {item.alpa}
+                                  </span>
+                                  <span className="text-[10px] text-slate-500 pl-0.5">
+                                    /{item.total}
+                                  </span>
+                                </div>
+                              </td>
+
+                              {/* % Kehadiran */}
+                              <td className="p-3.5 text-center">
+                                <div className="inline-flex flex-col items-center gap-1">
+                                  <span
+                                    className={`px-2 py-0.5 rounded-md font-mono font-bold text-xs ${
+                                      item.pct >= 90
+                                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
+                                        : item.pct >= 75
+                                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
+                                        : 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300'
+                                    }`}
+                                  >
+                                    {item.pct}%
+                                  </span>
+                                  <div className="w-16 h-1 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden flex">
+                                    <div
+                                      style={{ width: `${item.pct}%` }}
+                                      className={
+                                        item.pct >= 90
+                                          ? 'bg-emerald-500'
+                                          : item.pct >= 75
+                                          ? 'bg-amber-500'
+                                          : 'bg-rose-500'
+                                      }
+                                    />
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Keterangan / Siswa Tidak Hadir */}
+                              <td className="p-3.5">
+                                {item.absentees.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1">
+                                    {item.absentees.map((ab, abIdx) => (
+                                      <span
+                                        key={abIdx}
+                                        title={ab.notes ? `${ab.status}: ${ab.notes}` : ab.status}
+                                        className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border ${
+                                          ab.status === 'IZIN'
+                                            ? 'bg-sky-50 dark:bg-sky-950/50 text-sky-800 dark:text-sky-300 border-sky-200 dark:border-sky-800'
+                                            : ab.status === 'SAKIT'
+                                            ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                                            : 'bg-rose-50 dark:bg-rose-950/50 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+                                        }`}
+                                      >
+                                        <span className="font-bold">{ab.name}</span>
+                                        <span className="opacity-75 font-mono">({ab.status.charAt(0)})</span>
+                                        {ab.notes && <span className="italic text-[9px] text-slate-500">"{ab.notes}"</span>}
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                                    <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+                                    Nihil (Semua Siswa Hadir)
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Status Sesi */}
+                              <td className="p-3.5 text-center">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shadow-2xs">
+                                  <CheckCircle className="w-3 h-3 text-emerald-500" />
+                                  Terdata
                                 </span>
-                              ))}
-                              {item.absentees.length > 4 && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
-                                  +{item.absentees.length - 4} lainnya
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                            <CheckCircle className="w-3 h-3" /> Seluruh siswa hadir (Nihil Absen)
-                          </div>
-                        )}
-                      </div>
+                              </td>
 
-                      {/* Tombol Aksi */}
-                      <div className="flex items-center justify-end gap-1.5 mt-3 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedDate(item.date);
-                            setActiveSubTab('input');
-                          }}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 rounded-md transition-colors cursor-pointer"
-                        >
-                          <Edit className="w-3 h-3" /> Edit Presensi
-                        </button>
+                              {/* Aksi */}
+                              <td className="p-3.5 text-center">
+                                <div className="inline-flex items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedDate(item.date);
+                                      setActiveSubTab('input');
+                                    }}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800 rounded-md transition-colors cursor-pointer"
+                                    title="Edit data presensi pada tanggal ini di Input Harian"
+                                  >
+                                    <Edit className="w-3 h-3" />
+                                    <span>Edit</span>
+                                  </button>
 
-                        <button
-                          type="button"
-                          onClick={() => setDateToDeleteConfirm(item.date)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 rounded-md transition-colors cursor-pointer"
-                          title="Hapus data presensi tanggal ini"
-                        >
-                          <Trash2 className="w-3 h-3" /> Hapus
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                                  <button
+                                    type="button"
+                                    onClick={() => setDateToDeleteConfirm(item.date)}
+                                    className="inline-flex items-center gap-1 p-1 text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/60 border border-transparent hover:border-rose-200 dark:border-rose-800 rounded-md transition-colors cursor-pointer"
+                                    title="Hapus data presensi tanggal ini"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+
+                    {/* Table Footer Summary */}
+                    <tfoot className="bg-slate-50 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 font-semibold border-t-2 border-slate-200 dark:border-slate-700 text-xs">
+                      <tr>
+                        <td colSpan={2} className="p-3.5 font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wider">
+                          Total {activeRecordedDates.length} Sesi Terdata
+                        </td>
+                        <td className="p-3.5 text-center font-mono">
+                          <span className="text-emerald-700 dark:text-emerald-400 font-bold">H: {rekapOverallStats.totalHadir}</span> •{' '}
+                          <span className="text-sky-700 dark:text-sky-400">I: {rekapOverallStats.totalIzin}</span> •{' '}
+                          <span className="text-amber-700 dark:text-amber-400">S: {rekapOverallStats.totalSakit}</span> •{' '}
+                          <span className="text-rose-700 dark:text-rose-400 font-bold">A: {rekapOverallStats.totalAlpa}</span>
+                        </td>
+                        <td className="p-3.5 text-center font-mono font-bold text-emerald-700 dark:text-emerald-400">
+                          Rata-rata: {rekapOverallStats.avgAttendance}%
+                        </td>
+                        <td colSpan={3} className="p-3.5 text-right text-[11px] text-slate-500 dark:text-slate-400">
+                          Semua data tersinkronisasi otomatis dengan Matriks Rekap dan Form Harian
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 </div>
               ) : (
-                <div className="text-center py-10 text-slate-400 text-xs space-y-2 bg-slate-50/50 dark:bg-slate-800/20 rounded-lg border border-dashed border-slate-200 dark:border-slate-800">
-                  <p>Belum ada riwayat sesi presensi yang tersimpan.</p>
+                <div className="text-center py-12 text-slate-400 text-xs space-y-2">
+                  <History className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto" />
+                  <p className="font-medium text-slate-600 dark:text-slate-300">
+                    Belum ada riwayat sesi presensi yang tersimpan untuk kelas ini.
+                  </p>
+                  <p className="text-[11px]">
+                    Lakukan absensi di tab Input Harian untuk menambahkan rekaman sesi presensi baru.
+                  </p>
                   <button
                     type="button"
                     onClick={() => setActiveSubTab('input')}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors cursor-pointer mt-2"
                   >
-                    Mulai Input Presensi di Kalender Harian
+                    Mulai Input Presensi Harian
                   </button>
                 </div>
               )}
