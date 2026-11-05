@@ -80,7 +80,7 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
   );
 
   // Toggle calendar visibility
-  const [showCalendar, setShowCalendar] = useState<boolean>(true);
+  const [showCalendar, setShowCalendar] = useState<boolean>(false);
 
   // Rekap options: filter by 'all' (semua riwayat) or 'month' (bulan terpilih)
   const [rekapFilterMode, setRekapFilterMode] = useState<'all' | 'month'>('all');
@@ -617,8 +617,8 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
             </select>
           </div>
 
-          {/* Sub tabs */}
-          <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs">
+          {/* Sub tabs & Tombol Kalender Presensi */}
+          <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs flex-wrap">
             <button
               onClick={() => setActiveSubTab('input')}
               className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
@@ -639,6 +639,33 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
             >
               Rekap Bulanan
             </button>
+
+            {/* Kalender Presensi digabung setelah Rekap Bulanan */}
+            <button
+              type="button"
+              onClick={() => {
+                if (activeSubTab !== 'input') {
+                  setActiveSubTab('input');
+                  setShowCalendar(true);
+                } else {
+                  setShowCalendar(!showCalendar);
+                }
+              }}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                showCalendar && activeSubTab === 'input'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+              title={showCalendar && activeSubTab === 'input' ? 'Sembunyikan Kalender Presensi' : 'Tampilkan Kalender Presensi'}
+            >
+              <CalendarDays className="w-3.5 h-3.5" />
+              <span>Kalender Presensi</span>
+              {showCalendar && activeSubTab === 'input' ? (
+                <ChevronUp className="w-3.5 h-3.5 opacity-80" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5 opacity-80" />
+              )}
+            </button>
           </div>
         </div>
       </div>
@@ -647,85 +674,76 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
         /* TAB 1: INPUT PRESENSI HARIAN */
         <div className="space-y-4">
           {/* KALENDER PRESENSI KELAS INTERAKTIF DENGAN TANDA SELESAI */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs transition-all">
-            <div
-              className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                showCalendar ? 'pb-3.5 mb-3.5 border-b border-slate-100 dark:border-slate-800' : ''
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
-                  <CalendarDays className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                      Kalender Presensi
-                    </h2>
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700">
-                      Kelas {selectedClassObj?.name || '-'}
-                    </span>
-                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-                      • {calendarDaysData.days.filter((d) => d.hasRecorded).length} hari terisi
-                    </span>
+          {showCalendar && (
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs transition-all">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5 mb-3.5 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                    <CalendarDays className="w-4 h-4" />
                   </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    Klik tanggal pada kalender untuk membuka, mengedit, atau menghapus data presensi.
-                  </p>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                        Kalender Presensi
+                      </h2>
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700">
+                        Kelas {selectedClassObj?.name || '-'}
+                      </span>
+                      <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                        • {calendarDaysData.days.filter((d) => d.hasRecorded).length} hari terisi
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      Klik tanggal pada kalender untuk membuka, mengedit, atau menghapus data presensi.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Sederhana & Kompak: Navigasi Bulan, Hari Ini, dan Tombol Tutup */}
+                <div className="flex items-center gap-1.5 self-start sm:self-auto flex-wrap">
+                  <div className="inline-flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 border border-slate-200/80 dark:border-slate-700">
+                    <button
+                      type="button"
+                      onClick={handlePrevMonth}
+                      title="Bulan Sebelumnya"
+                      className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="px-2 text-xs font-semibold text-slate-800 dark:text-slate-200 min-w-[95px] text-center select-none">
+                      {calendarDaysData.monthName}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleNextMonth}
+                      title="Bulan Berikutnya"
+                      className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleGoToToday}
+                    className="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-colors cursor-pointer"
+                    title="Lompat ke hari ini"
+                  >
+                    Hari Ini
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowCalendar(false)}
+                    className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                    title="Tutup Kalender"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
 
-              {/* Sederhana & Kompak: Navigasi Bulan, Hari Ini, dan Toggle */}
-              <div className="flex items-center gap-1.5 self-start sm:self-auto flex-wrap">
-                <div className="inline-flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 border border-slate-200/80 dark:border-slate-700">
-                  <button
-                    type="button"
-                    onClick={handlePrevMonth}
-                    title="Bulan Sebelumnya"
-                    className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
-                  >
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                  </button>
-                  <span className="px-2 text-xs font-semibold text-slate-800 dark:text-slate-200 min-w-[95px] text-center select-none">
-                    {calendarDaysData.monthName}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleNextMonth}
-                    title="Bulan Berikutnya"
-                    className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
-                  >
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleGoToToday}
-                  className="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-colors cursor-pointer"
-                  title="Lompat ke hari ini"
-                >
-                  Hari Ini
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowCalendar(!showCalendar)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-colors cursor-pointer"
-                  title={showCalendar ? 'Sembunyikan kalender' : 'Buka kalender'}
-                >
-                  <span>{showCalendar ? 'Tutup' : 'Buka'}</span>
-                  {showCalendar ? (
-                    <ChevronUp className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-                  ) : (
-                    <ChevronDown className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Calendar Grid View */}
-            {showCalendar && (
+              {/* Calendar Grid View */}
               <div className="space-y-3">
                 {/* Day of Week Headers */}
                 <div className="grid grid-cols-7 gap-1.5 text-center text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -842,107 +860,6 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                   </span>
                 </div>
               </div>
-            )}
-          </div>
-
-          {/* Unified Daily Action Toolbar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs">
-            <div className="flex flex-wrap items-center gap-2.5">
-              {/* Tanggal Picker with Day Stepper */}
-              <div className="flex items-center bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-0.5 shadow-2xs">
-                <button
-                  type="button"
-                  onClick={handlePrevDay}
-                  title="Hari Sebelumnya"
-                  className="p-1.5 text-slate-500 hover:text-slate-800 dark:hover:text-white rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => handleDateChange(e.target.value)}
-                  className="px-2 py-1 text-xs font-semibold bg-transparent text-slate-800 dark:text-slate-100 focus:outline-none cursor-pointer font-mono"
-                />
-                <button
-                  type="button"
-                  onClick={handleNextDay}
-                  title="Hari Berikutnya"
-                  className="p-1.5 text-slate-500 hover:text-slate-800 dark:hover:text-white rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-
-              {selectedDate !== new Date().toISOString().slice(0, 10) && (
-                <button
-                  type="button"
-                  onClick={handleGoToToday}
-                  className="px-2.5 py-1 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800 rounded-lg transition-colors cursor-pointer"
-                >
-                  Hari Ini
-                </button>
-              )}
-
-              {/* Status Badge */}
-              {isDateSaved ? (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-2xs">
-                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  Selesai Absen ({savedDateStats?.hadir}/{savedDateStats?.total})
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                  <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                  Belum Diabsen
-                </span>
-              )}
-            </div>
-
-            {/* Consolidated Actions Group */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <button
-                type="button"
-                onClick={handleSetAllHadir}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200/80 dark:border-emerald-900/50 rounded-lg transition-colors cursor-pointer"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                Semua Hadir
-              </button>
-
-              {isDateSaved && (
-                <button
-                  type="button"
-                  onClick={() => setDateToDeleteConfirm(selectedDate)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-700 dark:text-rose-300 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800 rounded-lg transition-colors cursor-pointer"
-                  title="Hapus data presensi tanggal ini"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  Hapus
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={handleSaveDaily}
-                className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm transition-colors cursor-pointer"
-              >
-                <Save className="w-3.5 h-3.5" />
-                {isDateSaved ? 'Perbarui Presensi' : 'Simpan Presensi'}
-              </button>
-            </div>
-          </div>
-
-          {saveSuccessMsg && (
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-lg text-xs flex items-center gap-2 animate-in fade-in">
-              <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Data presensi tanggal {selectedDate} berhasil disimpan dan otomatis tersinkronisasi ke Rekap Bulanan!</span>
-            </div>
-          )}
-
-          {deleteSuccessMsg && (
-            <div className="p-3 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 rounded-lg text-xs flex items-center gap-2 animate-in fade-in">
-              <CheckCircle className="w-4 h-4 text-rose-600 shrink-0" />
-              <span>{deleteSuccessMsg}</span>
             </div>
           )}
 
@@ -1236,15 +1153,122 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
             )}
           </div>
 
+          {saveSuccessMsg && (
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-lg text-xs flex items-center gap-2 animate-in fade-in">
+              <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Data presensi tanggal {selectedDate} berhasil disimpan dan otomatis tersinkronisasi ke Rekap Bulanan!</span>
+            </div>
+          )}
+
+          {deleteSuccessMsg && (
+            <div className="p-3 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 rounded-lg text-xs flex items-center gap-2 animate-in fade-in">
+              <CheckCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{deleteSuccessMsg}</span>
+            </div>
+          )}
+
           {/* Student attendance list table */}
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
-              <span className="font-semibold text-slate-700 dark:text-slate-200">
-                Daftar Siswa Kelas {selectedClassObj?.name} ({displayedDailyStudents.length} {dailyStatusFilter !== 'ALL' ? `dari ${classStudents.length}` : ''} siswa)
-              </span>
-              <span className="text-slate-500 dark:text-slate-400">
-                Wali Kelas: {selectedClassObj?.homeroomTeacher}
-              </span>
+            {/* Bar Terpadu Tabel Presensi: Wali Kelas di Kiri, Tanggal Presensi, Status Info, Setting Semua Hadir & Simpan Presensi */}
+            <div className="p-3 sm:p-4 bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-3 text-xs">
+              {/* Sisi Kiri: Teks Wali Kelas, Tanggal Presensi, Status Sudah/Belum Absen & Jumlah Siswa */}
+              <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+                {/* Teks Wali Kelas Pindah ke Sebelah Kiri */}
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xs">
+                  <span className="text-slate-500 dark:text-slate-400 text-[11px] font-medium">Wali Kelas:</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-100">
+                    {selectedClassObj?.homeroomTeacher || '-'}
+                  </span>
+                </div>
+
+                <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
+
+                {/* Teks & Kontrol Tanggal Presensi */}
+                <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-0.5 shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={handlePrevDay}
+                    title="Hari Sebelumnya"
+                    className="p-1.5 text-slate-500 hover:text-slate-800 dark:hover:text-white rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </button>
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => handleDateChange(e.target.value)}
+                    className="px-2 py-0.5 text-xs font-semibold bg-transparent text-slate-800 dark:text-slate-100 focus:outline-none cursor-pointer font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleNextDay}
+                    title="Hari Berikutnya"
+                    className="p-1.5 text-slate-500 hover:text-slate-800 dark:hover:text-white rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {selectedDate !== new Date().toISOString().slice(0, 10) && (
+                  <button
+                    type="button"
+                    onClick={handleGoToToday}
+                    className="px-2.5 py-1 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800 rounded-lg transition-colors cursor-pointer"
+                  >
+                    Hari Ini
+                  </button>
+                )}
+
+                {/* Informasi Sudah Absen / Belum */}
+                {isDateSaved ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-2xs">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    Selesai Absen ({savedDateStats?.hadir}/{savedDateStats?.total})
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                    <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    Belum Diabsen
+                  </span>
+                )}
+
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                  • {displayedDailyStudents.length} siswa
+                </span>
+              </div>
+
+              {/* Sisi Kanan: Setting Semua Hadir, Hapus & Simpan Presensi */}
+              <div className="flex items-center gap-2 self-start lg:self-auto flex-wrap">
+                <button
+                  type="button"
+                  onClick={handleSetAllHadir}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-white dark:bg-slate-900 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-700 rounded-lg shadow-2xs transition-colors cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  Semua Hadir
+                </button>
+
+                {isDateSaved && (
+                  <button
+                    type="button"
+                    onClick={() => setDateToDeleteConfirm(selectedDate)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-rose-700 dark:text-rose-300 bg-white dark:bg-slate-900 hover:bg-rose-50 dark:hover:bg-rose-950/50 border border-rose-300 dark:border-rose-700 rounded-lg shadow-2xs transition-colors cursor-pointer"
+                    title="Hapus data presensi tanggal ini"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                    Hapus
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleSaveDaily}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm transition-colors cursor-pointer"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  {isDateSaved ? 'Perbarui Presensi' : 'Simpan Presensi'}
+                </button>
+              </div>
             </div>
 
             <div className="overflow-x-auto">
