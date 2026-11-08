@@ -67,8 +67,9 @@ export default function App() {
       }
       root.setAttribute('data-theme', theme.menuColor || 'navy');
       root.setAttribute('data-glass', theme.glassEffect !== false ? 'true' : 'false');
+      root.setAttribute('data-glass-aura', theme.glassAura || 'aurora');
     }
-  }, [theme.mode, theme.menuColor, theme.glassEffect]);
+  }, [theme.mode, theme.menuColor, theme.glassEffect, theme.glassAura]);
 
   // Check URL query parameters on mount for deep linking (e.g. from shared QR code)
   useEffect(() => {
@@ -475,16 +476,67 @@ export default function App() {
     }
   };
 
+  const handleToggleGlassMode = () => {
+    handleUpdateTheme({
+      ...theme,
+      glassEffect: theme.glassEffect === false ? true : false,
+    });
+  };
+
+  const renderAmbientAura = () => {
+    if (theme.glassEffect === false) return null;
+    const aura = theme.glassAura || 'aurora';
+
+    return (
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0" aria-hidden="true">
+        {aura === 'ocean' && (
+          <>
+            <div className="absolute -top-32 -left-32 w-[34rem] h-[34rem] rounded-full bg-blue-500/15 dark:bg-blue-600/20 blur-3xl animate-pulse" style={{ animationDuration: '9s' }} />
+            <div className="absolute top-1/4 -right-32 w-[32rem] h-[32rem] rounded-full bg-cyan-400/15 dark:bg-cyan-500/15 blur-3xl" />
+            <div className="absolute bottom-1/4 left-1/4 w-[30rem] h-[30rem] rounded-full bg-teal-400/12 dark:bg-teal-500/15 blur-3xl" />
+            <div className="absolute -bottom-32 right-1/4 w-[32rem] h-[32rem] rounded-full bg-sky-500/15 dark:bg-sky-600/20 blur-3xl" />
+          </>
+        )}
+        {aura === 'emerald' && (
+          <>
+            <div className="absolute -top-32 -left-32 w-[34rem] h-[34rem] rounded-full bg-emerald-500/15 dark:bg-emerald-600/20 blur-3xl animate-pulse" style={{ animationDuration: '9s' }} />
+            <div className="absolute top-1/4 -right-32 w-[32rem] h-[32rem] rounded-full bg-teal-400/15 dark:bg-teal-500/15 blur-3xl" />
+            <div className="absolute bottom-1/4 left-1/4 w-[30rem] h-[30rem] rounded-full bg-lime-400/10 dark:bg-lime-500/12 blur-3xl" />
+            <div className="absolute -bottom-32 right-1/4 w-[32rem] h-[32rem] rounded-full bg-emerald-600/15 dark:bg-emerald-700/20 blur-3xl" />
+          </>
+        )}
+        {aura === 'sunset' && (
+          <>
+            <div className="absolute -top-32 -left-32 w-[34rem] h-[34rem] rounded-full bg-rose-500/15 dark:bg-rose-600/20 blur-3xl animate-pulse" style={{ animationDuration: '9s' }} />
+            <div className="absolute top-1/4 -right-32 w-[32rem] h-[32rem] rounded-full bg-amber-400/15 dark:bg-amber-500/15 blur-3xl" />
+            <div className="absolute bottom-1/4 left-1/4 w-[30rem] h-[30rem] rounded-full bg-violet-400/12 dark:bg-violet-500/15 blur-3xl" />
+            <div className="absolute -bottom-32 right-1/4 w-[32rem] h-[32rem] rounded-full bg-fuchsia-500/15 dark:bg-fuchsia-600/20 blur-3xl" />
+          </>
+        )}
+        {aura === 'amethyst' && (
+          <>
+            <div className="absolute -top-32 -left-32 w-[34rem] h-[34rem] rounded-full bg-purple-500/15 dark:bg-purple-600/20 blur-3xl animate-pulse" style={{ animationDuration: '9s' }} />
+            <div className="absolute top-1/4 -right-32 w-[32rem] h-[32rem] rounded-full bg-fuchsia-400/15 dark:bg-fuchsia-500/15 blur-3xl" />
+            <div className="absolute bottom-1/4 left-1/4 w-[30rem] h-[30rem] rounded-full bg-indigo-400/12 dark:bg-indigo-500/15 blur-3xl" />
+            <div className="absolute -bottom-32 right-1/4 w-[32rem] h-[32rem] rounded-full bg-violet-500/15 dark:bg-violet-600/20 blur-3xl" />
+          </>
+        )}
+        {(aura === 'aurora' || !['ocean', 'emerald', 'sunset', 'amethyst'].includes(aura)) && (
+          <>
+            <div className="absolute -top-32 -left-32 w-[34rem] h-[34rem] rounded-full bg-indigo-500/15 dark:bg-indigo-600/20 blur-3xl animate-pulse" style={{ animationDuration: '8s' }} />
+            <div className="absolute top-1/4 -right-32 w-[32rem] h-[32rem] rounded-full bg-cyan-400/15 dark:bg-cyan-500/15 blur-3xl" />
+            <div className="absolute bottom-1/4 left-1/4 w-[30rem] h-[30rem] rounded-full bg-purple-400/12 dark:bg-purple-500/15 blur-3xl" />
+            <div className="absolute -bottom-32 right-1/4 w-[32rem] h-[32rem] rounded-full bg-blue-500/15 dark:bg-blue-600/20 blur-3xl" />
+          </>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 antialiased font-sans transition-colors relative overflow-x-hidden">
       {/* Ambient Glassmorphism Background Aura (Subtle Frosted Depth) */}
-      {theme.glassEffect !== false && (
-        <div className="fixed inset-0 pointer-events-none overflow-hidden z-0" aria-hidden="true">
-          <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-blue-500/10 dark:bg-blue-600/10 blur-3xl animate-pulse" style={{ animationDuration: '8s' }} />
-          <div className="absolute top-1/4 -right-32 w-96 h-96 rounded-full bg-indigo-500/10 dark:bg-indigo-600/10 blur-3xl" />
-          <div className="absolute bottom-1/4 left-1/4 w-80 h-80 rounded-full bg-teal-400/8 dark:bg-teal-500/8 blur-3xl" />
-        </div>
-      )}
+      {renderAmbientAura()}
 
       {/* Top Application Navigation: Sticky Brand Header & Horizontal Menu Bar */}
       <header className="no-print sticky top-0 z-30 shadow-xs backdrop-blur-xl">
@@ -503,6 +555,7 @@ export default function App() {
               mode: theme.mode === 'dark' ? 'light' : 'dark',
             })
           }
+          onToggleGlassMode={handleToggleGlassMode}
           onOpenEditProfile={() => setIsEditProfileModalOpen(true)}
           activeTab={activeTab}
         />

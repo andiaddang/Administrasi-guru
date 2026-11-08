@@ -28,8 +28,8 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
   const handleDismiss = onCancel || onClose || (() => {});
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-150 text-slate-800 dark:text-slate-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-md p-4 animate-in fade-in duration-150">
+      <div className="glass-panel rounded-3xl shadow-2xl border border-white/60 dark:border-slate-700/80 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-150 text-slate-800 dark:text-slate-100">
         {/* Header */}
         <div className="flex items-center justify-between p-4 bg-rose-50 dark:bg-rose-950/50 border-b border-rose-100 dark:border-rose-900/50">
           <div className="flex items-center gap-2.5">

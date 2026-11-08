@@ -141,8 +141,8 @@ export const ThemeModal: React.FC<ThemeModalProps> = ({
     THEME_PRESETS.find((p) => p.id === theme.menuColor) || THEME_PRESETS[0];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200 text-slate-800 dark:text-slate-100 my-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-md p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
+      <div className="glass-panel rounded-3xl shadow-2xl border border-white/60 dark:border-slate-700/80 w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200 text-slate-800 dark:text-slate-100 my-auto">
         {/* Header Modal */}
         <div className="flex items-center justify-between px-6 py-4 bg-slate-900 dark:bg-slate-950 text-white border-b border-slate-800">
           <div className="flex items-center gap-3">
@@ -223,38 +223,55 @@ export const ThemeModal: React.FC<ThemeModalProps> = ({
             </div>
           </div>
 
-          {/* Section 2: Efek Visual Glassmorphism Modern */}
-          <div>
-            <div className="flex items-center justify-between mb-2.5">
-              <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  2. Efek Visual Glassmorphism Modern
-                </label>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  Tata letak bersih dengan pantulan kaca buram transparan, pencahayaan lembut, dan interaksi taktil
-                </p>
+          {/* Section 2: Mode Khusus Glassmorphism Modern */}
+          <div className="p-4 sm:p-5 rounded-2xl border border-indigo-200/80 dark:border-indigo-800/80 bg-gradient-to-br from-indigo-50/50 via-white/40 to-cyan-50/30 dark:from-indigo-950/40 dark:via-slate-900/40 dark:to-cyan-950/20 backdrop-blur-md shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 mb-3 border-b border-indigo-100 dark:border-indigo-900/60">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-indigo-600 text-white shadow-xs">
+                  <Sparkles className="w-4 h-4 animate-spin-slow" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-indigo-950 dark:text-indigo-200">
+                      2. Mode Khusus: Glassmorphism Modern
+                    </label>
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-600 text-white shadow-2xs">
+                      Fitur Unggulan
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                    Transformasi estetika kaca buram (frosted glass), ambient aura dinamis, dan interaksi taktil di seluruh aplikasi
+                  </p>
+                </div>
               </div>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+              <span className="text-xs font-bold px-2.5 py-1 rounded-lg self-start sm:self-auto bg-white/80 dark:bg-slate-800/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700 shadow-2xs">
                 {theme.glassEffect !== false ? '✨ Glassmorphism Aktif' : 'Klasik Solid'}
               </span>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+
+            {/* Switch Mode: Glassmorphism vs Solid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
               <button
                 type="button"
                 onClick={() => onUpdateTheme({ ...theme, glassEffect: true })}
-                className={`flex items-start gap-2.5 p-3.5 rounded-xl border text-xs font-bold transition-all cursor-pointer relative overflow-hidden ${
+                className={`flex items-start gap-3 p-3.5 rounded-xl border text-xs font-bold transition-all cursor-pointer relative overflow-hidden ${
                   theme.glassEffect !== false
-                    ? 'border-indigo-600 bg-white/70 dark:bg-slate-800/80 backdrop-blur-md shadow-sm ring-2 ring-indigo-500/20 text-indigo-700 dark:text-indigo-300'
-                    : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                    ? 'border-indigo-600 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md shadow-md ring-2 ring-indigo-500/25 text-indigo-900 dark:text-indigo-200'
+                    : 'border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
                 }`}
               >
-                <div className="p-1.5 bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-300 rounded-lg shrink-0">
+                <div className="p-2 bg-indigo-600 text-white rounded-xl shrink-0 shadow-xs">
                   <Layers className="w-4 h-4" />
                 </div>
                 <div className="text-left">
-                  <p className="font-bold leading-tight">Glassmorphism Frosted</p>
-                  <p className="text-[10px] font-normal text-slate-500 dark:text-slate-400 mt-0.5">
-                    Transparansi kaca buram, ambient aura, & interaksi melayang modern
+                  <div className="flex items-center gap-1.5">
+                    <p className="font-extrabold text-xs">Glassmorphism Modern</p>
+                    {theme.glassEffect !== false && (
+                      <Check className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                    )}
+                  </div>
+                  <p className="text-[10px] font-normal text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                    Kaca buram tembus pandang, aura cahaya dinamis di balik kanvas, batas specular berkilau halus, dan animasi taktil.
                   </p>
                 </div>
               </button>
@@ -262,23 +279,72 @@ export const ThemeModal: React.FC<ThemeModalProps> = ({
               <button
                 type="button"
                 onClick={() => onUpdateTheme({ ...theme, glassEffect: false })}
-                className={`flex items-start gap-2.5 p-3.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                className={`flex items-start gap-3 p-3.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                   theme.glassEffect === false
-                    ? 'border-indigo-600 bg-indigo-50/80 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-200 shadow-sm ring-2 ring-indigo-500/20'
-                    : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                    ? 'border-indigo-600 bg-white/90 dark:bg-slate-800/90 text-indigo-900 dark:text-indigo-200 shadow-md ring-2 ring-indigo-500/25'
+                    : 'border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
                 }`}
               >
-                <div className="p-1.5 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg shrink-0">
+                <div className="p-2 bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl shrink-0">
                   <Sliders className="w-4 h-4" />
                 </div>
                 <div className="text-left">
-                  <p className="font-bold leading-tight">Klasik Solid (Matte)</p>
-                  <p className="text-[10px] font-normal text-slate-500 dark:text-slate-400 mt-0.5">
-                    Permukaan solid datar tradisional tanpa efek blur dan transparansi
+                  <div className="flex items-center gap-1.5">
+                    <p className="font-extrabold text-xs">Klasik Solid (Matte)</p>
+                    {theme.glassEffect === false && (
+                      <Check className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                    )}
+                  </div>
+                  <p className="text-[10px] font-normal text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                    Tampilan datar tradisional solid tanpa efek pembiasan kaca buram dan tanpa pencahayaan aura latar belakang.
                   </p>
                 </div>
               </button>
             </div>
+
+            {/* Ambient Aura Background Customizer (Saat Mode Glassmorphism Aktif) */}
+            {theme.glassEffect !== false && (
+              <div className="pt-3 border-t border-indigo-100 dark:border-indigo-900/60 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-indigo-500 animate-ping inline-block" />
+                    Pilihan Nuansa Cahaya Aura Latar Belakang (Ambient Lighting):
+                  </label>
+                  <span className="text-[10px] font-mono text-indigo-600 dark:text-indigo-400 uppercase font-semibold">
+                    Aura: {theme.glassAura || 'aurora'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  {[
+                    { id: 'aurora', name: 'Aurora Borealis', color: 'from-indigo-500 via-cyan-400 to-purple-500' },
+                    { id: 'ocean', name: 'Samudera Bahari', color: 'from-blue-600 via-sky-400 to-teal-400' },
+                    { id: 'emerald', name: 'Luminescence', color: 'from-emerald-500 via-teal-400 to-lime-400' },
+                    { id: 'sunset', name: 'Sunset Glow', color: 'from-rose-500 via-amber-400 to-purple-500' },
+                    { id: 'amethyst', name: 'Amethyst Royal', color: 'from-purple-600 via-fuchsia-400 to-indigo-500' },
+                  ].map((auraItem) => {
+                    const isAuraActive = (theme.glassAura || 'aurora') === auraItem.id;
+                    return (
+                      <button
+                        key={auraItem.id}
+                        type="button"
+                        onClick={() => onUpdateTheme({ ...theme, glassAura: auraItem.id as any })}
+                        className={`p-2 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
+                          isAuraActive
+                            ? 'border-indigo-600 dark:border-indigo-400 bg-white dark:bg-slate-800 shadow-sm ring-2 ring-indigo-500/20 font-bold'
+                            : 'border-slate-200/80 dark:border-slate-700/80 bg-white/40 dark:bg-slate-800/40 hover:bg-white/70 dark:hover:bg-slate-800/70'
+                        }`}
+                      >
+                        <div className={`w-full h-4 rounded-md bg-gradient-to-r ${auraItem.color} shadow-inner`} />
+                        <span className="text-[10px] truncate max-w-full text-slate-700 dark:text-slate-200">
+                          {auraItem.name}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Section 3: Pilihan Harmoni Warna & Gradient Preview */}

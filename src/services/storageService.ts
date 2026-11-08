@@ -49,6 +49,7 @@ export const DEFAULT_THEME_CONFIG: AppThemeConfig = {
   mode: 'light',
   menuColor: 'navy',
   glassEffect: true,
+  glassAura: 'aurora',
 };
 
 function safeGet<T>(key: string, fallback: T): T {
@@ -149,6 +150,7 @@ export const StorageService = {
     return {
       ...loaded,
       glassEffect: loaded.glassEffect !== undefined ? loaded.glassEffect : true,
+      glassAura: loaded.glassAura || 'aurora',
     };
   },
   saveTheme(theme: AppThemeConfig): void {

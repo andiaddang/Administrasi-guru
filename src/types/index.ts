@@ -64,10 +64,13 @@ export type MenuTheme =
   | 'teal'
   | 'amber';
 
+export type GlassAura = 'aurora' | 'ocean' | 'emerald' | 'sunset' | 'amethyst';
+
 export interface AppThemeConfig {
   mode: ThemeMode;
   menuColor: MenuTheme;
-  glassEffect?: boolean; // Efek Glassmorphism (Frosted glass & modern depth)
+  glassEffect?: boolean; // Mode Glassmorphism Modern (Frosted glass & modern depth)
+  glassAura?: GlassAura; // Pilihan Aura Cahaya Latar
 }
 
 export interface Student {

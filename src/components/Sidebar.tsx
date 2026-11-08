@@ -118,7 +118,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Sidebar Mobile Drawer (Desktop menggunakan Menu Bar Horisontal di Atas) */}
       <aside
-        className={`no-print fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between transition-transform duration-200 ease-in-out md:hidden shadow-2xl ${
+        className={`no-print fixed inset-y-0 left-0 z-50 w-72 glass-panel backdrop-blur-2xl border-r border-slate-200/80 dark:border-slate-800 flex flex-col justify-between transition-transform duration-200 ease-in-out md:hidden shadow-2xl ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -214,10 +214,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onOpenTheme();
               onClose();
             }}
-            className="w-full flex items-center justify-center gap-2 py-2 px-3 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors border border-slate-200 dark:border-slate-700 shadow-2xs cursor-pointer"
+            className="w-full flex items-center justify-between py-2 px-3 text-xs font-semibold text-slate-700 dark:text-slate-200 glass-button rounded-xl transition-colors border border-slate-200/80 dark:border-slate-700/80 shadow-2xs cursor-pointer"
           >
-            <Palette className="w-4 h-4 text-indigo-500" />
-            <span>Tema: {theme.mode === 'dark' ? 'Gelap' : 'Terang'} · {theme.menuColor}</span>
+            <div className="flex items-center gap-2">
+              <Palette className="w-4 h-4 text-indigo-500" />
+              <span>Tema: {theme.mode === 'dark' ? 'Gelap' : 'Terang'} · {theme.menuColor}</span>
+            </div>
+            {theme.glassEffect !== false && (
+              <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded">
+                ✨ Glass
+              </span>
+            )}
           </button>
 
           {/* Share Button */}

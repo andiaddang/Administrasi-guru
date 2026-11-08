@@ -1,6 +1,6 @@
 import React from 'react';
 import { User, SchoolProfile, AppThemeConfig, MenuTheme, ThemeMode } from '../types';
-import { Menu, LogOut, UserCircle, Palette, Sun, Moon, Edit3, Camera } from 'lucide-react';
+import { Menu, LogOut, UserCircle, Palette, Sun, Moon, Edit3, Camera, Sparkles } from 'lucide-react';
 
 interface HeaderProps {
   school: SchoolProfile;
@@ -12,6 +12,7 @@ interface HeaderProps {
   onOpenShare: () => void;
   onOpenTheme: () => void;
   onToggleThemeMode: () => void;
+  onToggleGlassMode?: () => void;
   onOpenEditProfile: () => void;
   activeTab: string;
 }
@@ -26,6 +27,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenShare,
   onOpenTheme,
   onToggleThemeMode,
+  onToggleGlassMode,
   onOpenEditProfile,
   activeTab,
 }) => {
@@ -178,12 +180,42 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
           </button>
 
+          {/* Dedicated Glassmorphism Mode Toggle */}
+          {onToggleGlassMode && (
+            <button
+              type="button"
+              onClick={onToggleGlassMode}
+              className={`p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+                theme.glassEffect !== false
+                  ? 'bg-indigo-600/15 dark:bg-indigo-400/20 text-indigo-700 dark:text-indigo-300 border border-indigo-400/50 dark:border-indigo-400/40 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-300 glass-button'
+              }`}
+              title={
+                theme.glassEffect !== false
+                  ? 'Mode Khusus Glassmorphism Modern Aktif (Klik untuk Mode Solid)'
+                  : 'Aktifkan Mode Khusus Glassmorphism Modern'
+              }
+              aria-label="Toggle Mode Glassmorphism Modern"
+            >
+              <Sparkles
+                className={`w-3.5 h-3.5 ${
+                  theme.glassEffect !== false
+                    ? 'text-indigo-600 dark:text-indigo-300'
+                    : 'text-slate-400'
+                }`}
+              />
+              <span className="hidden sm:inline text-[11px]">
+                {theme.glassEffect !== false ? 'Glass On' : 'Glass Off'}
+              </span>
+            </button>
+          )}
+
           {/* Menu Bar Color & Theme Customizer Button */}
           <button
             type="button"
             onClick={onOpenTheme}
             className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white glass-button rounded-xl transition-all cursor-pointer"
-            title="Pilih Warna Menu Bar & Efek Glassmorphism"
+            title="Pilih Warna Menu Bar, Efek Glassmorphism & Cahaya Aura"
           >
             <span className={`w-2.5 h-2.5 rounded-full ${getAccentDot(theme.menuColor)} ring-1 ring-black/10 dark:ring-white/20`} />
             <span className="hidden sm:inline text-[11px] font-semibold">Tema & Efek</span>

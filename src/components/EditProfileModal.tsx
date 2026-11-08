@@ -118,8 +118,8 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 animate-in fade-in duration-150 backdrop-blur-xs">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-150 text-slate-800 dark:text-slate-100 max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 animate-in fade-in duration-150 backdrop-blur-md">
+      <div className="glass-panel rounded-3xl shadow-2xl border border-white/60 dark:border-slate-700/80 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-150 text-slate-800 dark:text-slate-100 max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-2.5">
