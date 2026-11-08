@@ -67,6 +67,7 @@ export type MenuTheme =
 export interface AppThemeConfig {
   mode: ThemeMode;
   menuColor: MenuTheme;
+  glassEffect?: boolean; // Efek Glassmorphism (Frosted glass & modern depth)
 }
 
 export interface Student {

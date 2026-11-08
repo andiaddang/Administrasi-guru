@@ -48,6 +48,7 @@ export interface GoogleSyncConfig {
 export const DEFAULT_THEME_CONFIG: AppThemeConfig = {
   mode: 'light',
   menuColor: 'navy',
+  glassEffect: true,
 };
 
 function safeGet<T>(key: string, fallback: T): T {
@@ -144,7 +145,11 @@ export const StorageService = {
   },
 
   getTheme(): AppThemeConfig {
-    return safeGet<AppThemeConfig>(KEYS.THEME, DEFAULT_THEME_CONFIG);
+    const loaded = safeGet<AppThemeConfig>(KEYS.THEME, DEFAULT_THEME_CONFIG);
+    return {
+      ...loaded,
+      glassEffect: loaded.glassEffect !== undefined ? loaded.glassEffect : true,
+    };
   },
   saveTheme(theme: AppThemeConfig): void {
     safeSet(KEYS.THEME, theme);

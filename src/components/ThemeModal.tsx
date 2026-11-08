@@ -223,12 +223,70 @@ export const ThemeModal: React.FC<ThemeModalProps> = ({
             </div>
           </div>
 
-          {/* Section 2: Pilihan Harmoni Warna & Gradient Preview */}
+          {/* Section 2: Efek Visual Glassmorphism Modern */}
+          <div>
+            <div className="flex items-center justify-between mb-2.5">
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  2. Efek Visual Glassmorphism Modern
+                </label>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Tata letak bersih dengan pantulan kaca buram transparan, pencahayaan lembut, dan interaksi taktil
+                </p>
+              </div>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                {theme.glassEffect !== false ? '✨ Glassmorphism Aktif' : 'Klasik Solid'}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => onUpdateTheme({ ...theme, glassEffect: true })}
+                className={`flex items-start gap-2.5 p-3.5 rounded-xl border text-xs font-bold transition-all cursor-pointer relative overflow-hidden ${
+                  theme.glassEffect !== false
+                    ? 'border-indigo-600 bg-white/70 dark:bg-slate-800/80 backdrop-blur-md shadow-sm ring-2 ring-indigo-500/20 text-indigo-700 dark:text-indigo-300'
+                    : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                }`}
+              >
+                <div className="p-1.5 bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-300 rounded-lg shrink-0">
+                  <Layers className="w-4 h-4" />
+                </div>
+                <div className="text-left">
+                  <p className="font-bold leading-tight">Glassmorphism Frosted</p>
+                  <p className="text-[10px] font-normal text-slate-500 dark:text-slate-400 mt-0.5">
+                    Transparansi kaca buram, ambient aura, & interaksi melayang modern
+                  </p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onUpdateTheme({ ...theme, glassEffect: false })}
+                className={`flex items-start gap-2.5 p-3.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  theme.glassEffect === false
+                    ? 'border-indigo-600 bg-indigo-50/80 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-200 shadow-sm ring-2 ring-indigo-500/20'
+                    : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                }`}
+              >
+                <div className="p-1.5 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg shrink-0">
+                  <Sliders className="w-4 h-4" />
+                </div>
+                <div className="text-left">
+                  <p className="font-bold leading-tight">Klasik Solid (Matte)</p>
+                  <p className="text-[10px] font-normal text-slate-500 dark:text-slate-400 mt-0.5">
+                    Permukaan solid datar tradisional tanpa efek blur dan transparansi
+                  </p>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Section 3: Pilihan Harmoni Warna & Gradient Preview */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <div>
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  2. Palet Warna & Color Gradient Harmonis
+                  3. Palet Warna & Color Gradient Harmonis
                 </label>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                   Klik tema untuk melihat pratinjau langsung ke seluruh tombol, navbar, tabel, dan formulir

@@ -66,8 +66,9 @@ export default function App() {
         root.setAttribute('data-mode', 'light');
       }
       root.setAttribute('data-theme', theme.menuColor || 'navy');
+      root.setAttribute('data-glass', theme.glassEffect !== false ? 'true' : 'false');
     }
-  }, [theme.mode, theme.menuColor]);
+  }, [theme.mode, theme.menuColor, theme.glassEffect]);
 
   // Check URL query parameters on mount for deep linking (e.g. from shared QR code)
   useEffect(() => {
@@ -475,9 +476,18 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 antialiased font-sans transition-colors">
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 antialiased font-sans transition-colors relative overflow-x-hidden">
+      {/* Ambient Glassmorphism Background Aura (Subtle Frosted Depth) */}
+      {theme.glassEffect !== false && (
+        <div className="fixed inset-0 pointer-events-none overflow-hidden z-0" aria-hidden="true">
+          <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-blue-500/10 dark:bg-blue-600/10 blur-3xl animate-pulse" style={{ animationDuration: '8s' }} />
+          <div className="absolute top-1/4 -right-32 w-96 h-96 rounded-full bg-indigo-500/10 dark:bg-indigo-600/10 blur-3xl" />
+          <div className="absolute bottom-1/4 left-1/4 w-80 h-80 rounded-full bg-teal-400/8 dark:bg-teal-500/8 blur-3xl" />
+        </div>
+      )}
+
       {/* Top Application Navigation: Sticky Brand Header & Horizontal Menu Bar */}
-      <header className="no-print sticky top-0 z-30 shadow-xs">
+      <header className="no-print sticky top-0 z-30 shadow-xs backdrop-blur-xl">
         <Header
           school={school}
           currentUser={currentUser}
@@ -520,7 +530,7 @@ export default function App() {
       />
 
       {/* Main Container: Full-width dynamic workspace without left sidebar */}
-      <div className="flex-1 flex flex-col max-w-7xl w-full mx-auto">
+      <div className="flex-1 flex flex-col max-w-7xl w-full mx-auto relative z-10">
         {/* Dynamic Main Workspace */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0">
           {activeTab === 'dashboard' && (

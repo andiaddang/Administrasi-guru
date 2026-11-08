@@ -58,40 +58,40 @@ export const Header: React.FC<HeaderProps> = ({
     if (mode === 'dark') {
       switch (menuColor) {
         case 'emerald':
-          return 'bg-slate-900 border-b border-emerald-900/50';
+          return 'bg-slate-900/80 backdrop-blur-xl border-b border-emerald-900/40';
         case 'navy':
-          return 'bg-slate-900 border-b border-blue-900/50';
+          return 'bg-slate-900/80 backdrop-blur-xl border-b border-blue-900/40';
         case 'maroon':
-          return 'bg-stone-900 border-b border-rose-950';
+          return 'bg-stone-900/80 backdrop-blur-xl border-b border-rose-950/60';
         case 'amethyst':
-          return 'bg-slate-900 border-b border-purple-900/50';
+          return 'bg-slate-900/80 backdrop-blur-xl border-b border-purple-900/40';
         case 'teal':
-          return 'bg-slate-900 border-b border-teal-900/50';
+          return 'bg-slate-900/80 backdrop-blur-xl border-b border-teal-900/40';
         case 'amber':
-          return 'bg-stone-900 border-b border-amber-950/60';
+          return 'bg-stone-900/80 backdrop-blur-xl border-b border-amber-950/50';
         case 'slate':
-          return 'bg-zinc-900 border-b border-zinc-800';
+          return 'bg-zinc-900/80 backdrop-blur-xl border-b border-zinc-800/60';
         default:
-          return 'bg-slate-900 border-b border-slate-800';
+          return 'bg-slate-900/80 backdrop-blur-xl border-b border-slate-800/60';
       }
     }
     switch (menuColor) {
       case 'emerald':
-        return 'bg-emerald-50/60 border-b border-emerald-200/80';
+        return 'bg-emerald-50/70 backdrop-blur-xl border-b border-emerald-200/60';
       case 'navy':
-        return 'bg-blue-50/50 border-b border-blue-200/80';
+        return 'bg-blue-50/60 backdrop-blur-xl border-b border-blue-200/60';
       case 'maroon':
-        return 'bg-rose-50/50 border-b border-rose-200/80';
+        return 'bg-rose-50/60 backdrop-blur-xl border-b border-rose-200/60';
       case 'amethyst':
-        return 'bg-purple-50/50 border-b border-purple-200/80';
+        return 'bg-purple-50/60 backdrop-blur-xl border-b border-purple-200/60';
       case 'teal':
-        return 'bg-teal-50/50 border-b border-teal-200/80';
+        return 'bg-teal-50/70 backdrop-blur-xl border-b border-teal-200/60';
       case 'amber':
-        return 'bg-amber-50/50 border-b border-amber-200/80';
+        return 'bg-amber-50/60 backdrop-blur-xl border-b border-amber-200/60';
       case 'slate':
-        return 'bg-slate-100/70 border-b border-slate-300';
+        return 'bg-slate-100/75 backdrop-blur-xl border-b border-slate-200/80';
       default:
-        return 'bg-white border-b border-slate-200';
+        return 'bg-white/80 backdrop-blur-xl border-b border-slate-200/60';
     }
   };
 
@@ -164,7 +164,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={onToggleThemeMode}
-            className="p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white bg-white/80 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg transition-all cursor-pointer shadow-2xs flex items-center gap-1.5"
+            className="p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white glass-button rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
             title={theme.mode === 'dark' ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
             aria-label="Toggle Mode Gelap/Terang"
           >
@@ -182,18 +182,18 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={onOpenTheme}
-            className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white bg-white/80 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg transition-all cursor-pointer shadow-2xs"
-            title="Pilih Warna Menu Bar & Aksen Aplikasi"
+            className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white glass-button rounded-xl transition-all cursor-pointer"
+            title="Pilih Warna Menu Bar & Efek Glassmorphism"
           >
             <span className={`w-2.5 h-2.5 rounded-full ${getAccentDot(theme.menuColor)} ring-1 ring-black/10 dark:ring-white/20`} />
-            <span className="hidden sm:inline text-[11px] font-semibold">Warna Menu</span>
+            <span className="hidden sm:inline text-[11px] font-semibold">Tema & Efek</span>
           </button>
 
           {/* Share Link & Barcode Button */}
           <button
             type="button"
             onClick={onOpenShare}
-            className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-indigo-700 dark:hover:text-indigo-300 bg-white/80 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 hover:border-indigo-200 rounded-lg transition-all cursor-pointer shadow-2xs"
+            className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-indigo-700 dark:hover:text-indigo-300 glass-button rounded-xl transition-all cursor-pointer"
             title="Bagikan Tautan & Barcode QR Code"
           >
             <span className="text-indigo-600 dark:text-indigo-400 font-bold">☵</span>
@@ -207,7 +207,7 @@ export const Header: React.FC<HeaderProps> = ({
                 type="button"
                 onClick={onOpenEditProfile}
                 title="Klik untuk mengubah foto profil, nama guru, dan NIP"
-                className="flex items-center gap-2.5 p-1 sm:pl-2.5 sm:pr-1.5 sm:py-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-left transition-all cursor-pointer group border border-slate-200/60 dark:border-slate-700/60 hover:border-indigo-300 dark:hover:border-indigo-600 bg-white/50 dark:bg-slate-800/50 shadow-2xs"
+                className="flex items-center gap-2.5 p-1 sm:pl-2.5 sm:pr-1.5 sm:py-1 rounded-xl glass-button text-left transition-all cursor-pointer group"
               >
                 <div className="hidden sm:flex flex-col text-right">
                   <span className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 leading-tight flex items-center justify-end gap-1">

@@ -588,7 +588,7 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
   return (
     <div className="space-y-6 text-slate-800 dark:text-slate-100">
       {/* Header bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 glass-panel p-5 rounded-2xl border border-white/60 dark:border-slate-800/80 shadow-xs">
         <div>
           <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
             Presensi & Rekapitulasi Kehadiran
@@ -675,8 +675,8 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
         <div className="space-y-4">
           {/* KALENDER PRESENSI KELAS INTERAKTIF DENGAN TANDA SELESAI */}
           {showCalendar && (
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs transition-all">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5 mb-3.5 border-b border-slate-100 dark:border-slate-800">
+            <div className="glass-panel rounded-2xl border border-white/60 dark:border-slate-800/80 p-4 sm:p-5 shadow-xs transition-all">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5 mb-3.5 border-b border-slate-200/50 dark:border-slate-800/70">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
                     <CalendarDays className="w-4 h-4" />
@@ -864,9 +864,9 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
           )}
 
           {/* REKAP KEHADIRAN HARIAN LANGSUNG DI ATAS TABEL */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs transition-all">
+          <div className="glass-panel rounded-2xl border border-white/60 dark:border-slate-800/80 p-4 sm:p-5 shadow-xs transition-all">
             {/* Header info bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5 mb-4 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5 mb-4 border-b border-slate-200/50 dark:border-slate-800/70">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
                   <PieChart className="w-4 h-4" />
@@ -1168,9 +1168,9 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
           )}
 
           {/* Student attendance list table */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
+          <div className="glass-panel rounded-2xl border border-white/60 dark:border-slate-800/80 overflow-hidden shadow-xs">
             {/* Bar Terpadu Tabel Presensi: Wali Kelas di Kiri, Tanggal Presensi, Status Info, Setting Semua Hadir & Simpan Presensi */}
-            <div className="p-3 sm:p-4 bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-3 text-xs">
+            <div className="p-3 sm:p-4 bg-white/40 dark:bg-slate-800/50 backdrop-blur-xs border-b border-slate-200/50 dark:border-slate-800/70 flex flex-col lg:flex-row lg:items-center justify-between gap-3 text-xs">
               {/* Sisi Kiri: Teks Wali Kelas, Tanggal Presensi, Status Sudah/Belum Absen & Jumlah Siswa */}
               <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
                 {/* Teks Wali Kelas Pindah ke Sebelah Kiri */}
@@ -1377,9 +1377,9 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
         /* TAB 2: REKAP BULANAN PRESENSI & SEMUA RIWAYAT */
         <div className="space-y-4">
           {/* Simplified Clean Rekap Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 glass-panel p-3.5 sm:p-4 rounded-2xl border border-white/60 dark:border-slate-800/80 shadow-2xs">
             {/* Navigasi Tampilan Matriks vs Riwayat Sesi */}
-            <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-1 p-1 bg-slate-100/80 dark:bg-slate-800/80 backdrop-blur-xs rounded-lg border border-slate-200/80 dark:border-slate-700">
               <button
                 type="button"
                 onClick={() => setRekapViewMode('matrix')}
@@ -1407,8 +1407,8 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
               </button>
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-              <span className="font-semibold text-slate-700 dark:text-slate-300">
+            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
+              <span className="font-bold text-slate-800 dark:text-slate-200">
                 {selectedClassObj?.name}
               </span>
               <span>•</span>
@@ -1420,8 +1420,8 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
 
           {/* TAMPILAN 1: MATRIKS PRESENSI HARIAN LENGKAP */}
           {rekapViewMode === 'matrix' && (
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
-              <div className="p-3.5 sm:p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-2">
+            <div className="glass-panel rounded-2xl border border-white/60 dark:border-slate-800/80 overflow-hidden shadow-xs">
+              <div className="p-3.5 sm:p-4 bg-white/40 dark:bg-slate-800/50 backdrop-blur-xs border-b border-slate-200/50 dark:border-slate-800/70 flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-bold text-slate-800 dark:text-slate-200">
                     Matriks Presensi Harian Siswa · {selectedClassObj?.name}
@@ -1677,9 +1677,9 @@ export const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
 
           {/* TAMPILAN 2: TABEL DRAFT SEMUA RIWAYAT SESI PRESENSI */}
           {rekapViewMode === 'history' && (
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs space-y-0">
+            <div className="glass-panel rounded-2xl border border-white/60 dark:border-slate-800/80 overflow-hidden shadow-xs space-y-0">
               {/* Header Bar Tabel Draft */}
-              <div className="p-3.5 sm:p-4 bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-3">
+              <div className="p-3.5 sm:p-4 bg-white/40 dark:bg-slate-800/50 backdrop-blur-xs border-b border-slate-200/50 dark:border-slate-800/70 flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-3">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
                     <History className="w-4 h-4" />

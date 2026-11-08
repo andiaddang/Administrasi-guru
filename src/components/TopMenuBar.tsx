@@ -48,65 +48,65 @@ export const TopMenuBar: React.FC<TopMenuBarProps> = ({
     switch (menuColor) {
       case 'emerald':
         return {
-          barBg: 'bg-emerald-50/50 dark:bg-slate-900/95 border-b border-emerald-200/80 dark:border-emerald-950',
+          barBg: 'bg-emerald-50/60 dark:bg-slate-900/80 backdrop-blur-xl border-b border-emerald-200/50 dark:border-emerald-950/60',
           activeBtn:
-            'bg-white dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-200 font-bold border-b-2 border-emerald-600 dark:border-emerald-400 shadow-2xs',
+            'bg-white/90 dark:bg-emerald-950/90 text-emerald-800 dark:text-emerald-200 font-bold border-b-2 border-emerald-600 dark:border-emerald-400 shadow-xs backdrop-blur-md',
           activeIcon: 'text-emerald-600 dark:text-emerald-400',
-          hoverBtn: 'hover:bg-emerald-100/60 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300',
+          hoverBtn: 'hover:bg-emerald-100/50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-300',
         };
       case 'navy':
         return {
-          barBg: 'bg-blue-50/40 dark:bg-slate-900/95 border-b border-blue-200/80 dark:border-blue-950',
+          barBg: 'bg-blue-50/50 dark:bg-slate-900/80 backdrop-blur-xl border-b border-blue-200/50 dark:border-blue-950/60',
           activeBtn:
-            'bg-white dark:bg-blue-950/80 text-blue-800 dark:text-blue-200 font-bold border-b-2 border-blue-600 dark:border-blue-400 shadow-2xs',
+            'bg-white/90 dark:bg-blue-950/90 text-blue-800 dark:text-blue-200 font-bold border-b-2 border-blue-600 dark:border-blue-400 shadow-xs backdrop-blur-md',
           activeIcon: 'text-blue-600 dark:text-blue-400',
-          hoverBtn: 'hover:bg-blue-100/60 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300',
+          hoverBtn: 'hover:bg-blue-100/50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-300',
         };
       case 'maroon':
         return {
-          barBg: 'bg-rose-50/40 dark:bg-stone-900/95 border-b border-rose-200/80 dark:border-rose-950',
+          barBg: 'bg-rose-50/50 dark:bg-stone-900/80 backdrop-blur-xl border-b border-rose-200/50 dark:border-rose-950/60',
           activeBtn:
-            'bg-white dark:bg-rose-950/80 text-rose-800 dark:text-rose-200 font-bold border-b-2 border-rose-700 dark:border-rose-500 shadow-2xs',
+            'bg-white/90 dark:bg-rose-950/90 text-rose-800 dark:text-rose-200 font-bold border-b-2 border-rose-700 dark:border-rose-500 shadow-xs backdrop-blur-md',
           activeIcon: 'text-rose-700 dark:text-rose-400',
-          hoverBtn: 'hover:bg-rose-100/60 dark:hover:bg-stone-800 text-slate-600 dark:text-slate-300',
+          hoverBtn: 'hover:bg-rose-100/50 dark:hover:bg-stone-800/60 text-slate-600 dark:text-slate-300',
         };
       case 'amethyst':
         return {
-          barBg: 'bg-purple-50/40 dark:bg-slate-900/95 border-b border-purple-200/80 dark:border-purple-950',
+          barBg: 'bg-purple-50/50 dark:bg-slate-900/80 backdrop-blur-xl border-b border-purple-200/50 dark:border-purple-950/60',
           activeBtn:
-            'bg-white dark:bg-purple-950/80 text-purple-800 dark:text-purple-200 font-bold border-b-2 border-purple-600 dark:border-purple-400 shadow-2xs',
+            'bg-white/90 dark:bg-purple-950/90 text-purple-800 dark:text-purple-200 font-bold border-b-2 border-purple-600 dark:border-purple-400 shadow-xs backdrop-blur-md',
           activeIcon: 'text-purple-600 dark:text-purple-400',
-          hoverBtn: 'hover:bg-purple-100/60 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300',
+          hoverBtn: 'hover:bg-purple-100/50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-300',
         };
       case 'teal':
         return {
-          barBg: 'bg-teal-50/50 dark:bg-slate-900/95 border-b border-teal-200/80 dark:border-teal-950',
+          barBg: 'bg-teal-50/60 dark:bg-slate-900/80 backdrop-blur-xl border-b border-teal-200/50 dark:border-teal-950/60',
           activeBtn:
-            'bg-white dark:bg-teal-950/80 text-teal-800 dark:text-teal-200 font-bold border-b-2 border-teal-600 dark:border-teal-400 shadow-2xs',
+            'bg-white/90 dark:bg-teal-950/90 text-teal-800 dark:text-teal-200 font-bold border-b-2 border-teal-600 dark:border-teal-400 shadow-xs backdrop-blur-md',
           activeIcon: 'text-teal-600 dark:text-teal-400',
-          hoverBtn: 'hover:bg-teal-100/60 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300',
+          hoverBtn: 'hover:bg-teal-100/50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-300',
         };
       case 'amber':
         return {
-          barBg: 'bg-amber-50/50 dark:bg-stone-900/95 border-b border-amber-200/80 dark:border-amber-950',
+          barBg: 'bg-amber-50/60 dark:bg-stone-900/80 backdrop-blur-xl border-b border-amber-200/50 dark:border-amber-950/60',
           activeBtn:
-            'bg-white dark:bg-amber-950/80 text-amber-800 dark:text-amber-200 font-bold border-b-2 border-amber-600 dark:border-amber-400 shadow-2xs',
+            'bg-white/90 dark:bg-amber-950/90 text-amber-800 dark:text-amber-200 font-bold border-b-2 border-amber-600 dark:border-amber-400 shadow-xs backdrop-blur-md',
           activeIcon: 'text-amber-600 dark:text-amber-400',
-          hoverBtn: 'hover:bg-amber-100/60 dark:hover:bg-stone-800 text-slate-600 dark:text-slate-300',
+          hoverBtn: 'hover:bg-amber-100/50 dark:hover:bg-stone-800/60 text-slate-600 dark:text-slate-300',
         };
       case 'slate':
         return {
-          barBg: 'bg-slate-100/70 dark:bg-zinc-900/95 border-b border-slate-300 dark:border-zinc-800',
+          barBg: 'bg-slate-100/75 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-slate-200/80 dark:border-zinc-800/60',
           activeBtn:
-            'bg-white dark:bg-zinc-800 text-slate-900 dark:text-slate-100 font-bold border-b-2 border-slate-700 dark:border-slate-300 shadow-2xs',
+            'bg-white/90 dark:bg-zinc-800/90 text-slate-900 dark:text-slate-100 font-bold border-b-2 border-slate-700 dark:border-slate-300 shadow-xs backdrop-blur-md',
           activeIcon: 'text-slate-800 dark:text-slate-200',
-          hoverBtn: 'hover:bg-slate-200/70 dark:hover:bg-zinc-800/60 text-slate-600 dark:text-slate-300',
+          hoverBtn: 'hover:bg-slate-200/50 dark:hover:bg-zinc-800/50 text-slate-600 dark:text-slate-300',
         };
       default:
         return {
-          barBg: 'bg-white/95 dark:bg-slate-900/95 border-b border-slate-200 dark:border-slate-800',
+          barBg: 'bg-white/75 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/60',
           activeBtn:
-            'bg-indigo-50/80 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-200 font-bold border-b-2 border-indigo-600 dark:border-indigo-400 shadow-2xs',
+            'bg-white/90 dark:bg-indigo-950/90 text-indigo-700 dark:text-indigo-200 font-bold border-b-2 border-indigo-600 dark:border-indigo-400 shadow-xs backdrop-blur-md',
           activeIcon: 'text-indigo-600 dark:text-indigo-400',
           hoverBtn: 'hover:bg-slate-100/80 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300',
         };
