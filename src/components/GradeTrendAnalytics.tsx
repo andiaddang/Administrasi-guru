@@ -42,6 +42,32 @@ import {
   ComposedChart,
 } from 'recharts';
 
+// Helper Format Tanggal Penilaian Lengkap Bahasa Indonesia
+const formatFullAssessmentDate = (dateStr?: string): string => {
+  if (!dateStr || dateStr === '-') return '-';
+  const clean = dateStr.trim();
+  const dateObj = new Date(clean.length === 10 ? `${clean}T00:00:00` : clean);
+  if (isNaN(dateObj.getTime())) return dateStr;
+  return new Intl.DateTimeFormat('id-ID', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(dateObj);
+};
+
+const formatFullAssessmentDateWithDay = (dateStr?: string): string => {
+  if (!dateStr || dateStr === '-') return '-';
+  const clean = dateStr.trim();
+  const dateObj = new Date(clean.length === 10 ? `${clean}T00:00:00` : clean);
+  if (isNaN(dateObj.getTime())) return dateStr;
+  return new Intl.DateTimeFormat('id-ID', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(dateObj);
+};
+
 interface GradeTrendAnalyticsProps {
   grades: GradeRecord[];
   students: Student[];
@@ -501,7 +527,7 @@ export const GradeTrendAnalytics: React.FC<GradeTrendAnalyticsProps> = ({
               <span>·</span>
               <span>Semester {data.semester}</span>
               <span>·</span>
-              <span>{data.date}</span>
+              <span className="font-sans font-medium text-indigo-300 dark:text-indigo-600">{formatFullAssessmentDateWithDay(data.date)}</span>
             </div>
           </div>
 
