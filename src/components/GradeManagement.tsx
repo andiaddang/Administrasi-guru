@@ -988,8 +988,6 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
   // Pengaturan urutan komponen penilaian berdasarkan tanggal yang diinput ('asc' = kronologis terlama ke terbaru, 'desc' = terbaru ke terlama)
   const [columnSortOrder, setColumnSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  // Mode Tampilan Tabel: 'chronological' (Posisi Kiri Terlama -> Posisi Kanan Terbaru, Default) atau 'pilar' (Kelompok 5 Pilar)
-  const [tableDisplayMode, setTableDisplayMode] = useState<'chronological' | 'pilar'>('chronological');
 
   // Sub-kolom aktif untuk kelas terpilih (default: 3 Tugas, 2 Formatif, 1 Sumatif TP, 1 STS, 1 SAS), diurutkan berdasarkan tanggal input
   const currentClassColumns = useMemo<AssessmentColumn[]>(() => {
@@ -1055,13 +1053,6 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
     return sortColumnsChronologically(currentClassColumns, columnSortOrder);
   }, [currentClassColumns, columnSortOrder]);
 
-  // Kolom aktif yang digunakan untuk render tabel (tergantung mode tampilan)
-  const displayedColumns = useMemo<AssessmentColumn[]>(() => {
-    if (tableDisplayMode === 'chronological') {
-      return chronologicalColumns;
-    }
-    return [...tugasCols, ...formatifCols, ...sumatifCols, ...stsCols, ...sasCols];
-  }, [tableDisplayMode, chronologicalColumns, tugasCols, formatifCols, sumatifCols, stsCols, sasCols]);
 
   // Seluruh sub-kolom aktif berurutan kronologis (Posisi Kiri Terlama -> Posisi Kanan Terbaru)
   const allColumns = useMemo<AssessmentColumn[]>(() => {
@@ -1742,14 +1733,12 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
   // Total colspan tabel (untuk baris kosong)
   const totalTableColSpan =
     4 + // No, NISN, Nama, Jenis Kelamin
-    (tableDisplayMode === 'chronological'
-      ? Math.max(1, displayedColumns.length)
-      : (showTugasSection ? Math.max(1, tugasCols.length) : 0) +
-        (showAvgTugasCol ? 1 : 0) +
-        (showFormatifSection ? Math.max(1, formatifCols.length) : 0) +
-        (showSumatifSection ? Math.max(1, sumatifCols.length) : 0) +
-        (showSTSSection ? Math.max(1, stsCols.length) : 0) +
-        (showSASSection ? Math.max(1, sasCols.length) : 0)) +
+    (showTugasSection ? Math.max(1, tugasCols.length) : 0) +
+    (showAvgTugasCol ? 1 : 0) +
+    (showFormatifSection ? Math.max(1, formatifCols.length) : 0) +
+    (showSumatifSection ? Math.max(1, sumatifCols.length) : 0) +
+    (showSTSSection ? Math.max(1, stsCols.length) : 0) +
+    (showSASSection ? Math.max(1, sasCols.length) : 0) +
     (showPsikomotorikSikap ? 9 : 1) + // 4 Afektif + 5 Psikomotorik
     3; // Nilai Akhir, Ketercapaian, Kelengkapan
 
@@ -2616,40 +2605,6 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Pengalih Mode Tampilan Tabel: Urutan Tanggal (Kronologis) vs Kelompok 5 Pilar */}
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl border border-slate-300 dark:border-slate-700 shadow-2xs">
-            <button
-              type="button"
-              onClick={() => {
-                setTableDisplayMode('chronological');
-                showToast('Mode Tabel: Urutan Tanggal Kronologis (Posisi Kiri Terlama → Posisi Kanan Terbaru).');
-              }}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-                tableDisplayMode === 'chronological'
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-              }`}
-              title="Urutan Kolom Berdasarkan Tanggal: Posisi kiri terlama ke posisi kanan terbaru"
-            >
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Urutan Tanggal (Kiri Terlama → Kanan Terbaru)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setTableDisplayMode('pilar');
-                showToast('Mode Tabel: Kelompokkan 5 Pilar Penilaian.');
-              }}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-                tableDisplayMode === 'pilar'
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-              }`}
-              title="Tampilkan berdasarkan kelompok 5 pilar (Tugas, Formatif, Sumatif TP, STS, SAS)"
-            >
-              <span>Kelompok 5 Pilar</span>
-            </button>
-          </div>
 
           {/* Tombol Arah Urutan Kronologis */}
           <button
@@ -2738,133 +2693,107 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                   JENIS KELAMIN
                 </th>
 
-                {/* PILAR PENILAIAN ATAU KRONOLOGIS */}
-                {tableDisplayMode === 'chronological' ? (
+                {/* KOMPONEN PENILAIAN DENGAN NAMA KOMPONEN & BOBOT LENGKAP */}
+                {/* 1. TUGAS (Bobot %) */}
+                {showTugasSection && (
                   <th
-                    colSpan={Math.max(1, displayedColumns.length)}
-                    className="py-2.5 px-3 bg-gradient-to-r from-blue-700 via-indigo-700 to-violet-800 text-white border-b border-x border-indigo-900 text-center shadow-inner"
+                    colSpan={Math.max(1, tugasCols.length)}
+                    className="py-2 px-2.5 bg-sky-100/95 dark:bg-sky-950/90 border-b border-x border-sky-300 dark:border-sky-800 text-sky-950 dark:text-sky-100 text-center"
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-2 px-2">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-white/20 text-white uppercase tracking-wider flex items-center gap-1 shadow-2xs">
-                          <ArrowRight className="w-3 h-3 text-emerald-300" />
-                          POSISI KIRI TERLAMA → POSISI KANAN TERBARU
-                        </span>
-                        <span className="font-extrabold text-xs tracking-wide uppercase text-white">
-                          URUTAN PENILAIAN BERDASARKAN TANGGAL ({displayedColumns.length} PENILAIAN)
-                        </span>
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className="font-extrabold text-xs text-sky-950 dark:text-sky-100 uppercase tracking-tight block">
+                        TUGAS
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-sky-600 text-white shadow-2xs">
+                        {weights.Tugas}%
+                      </span>
+                    </div>
+                  </th>
+                )}
+
+                {/* 2. RATA-RATA TUGAS (Muncul Otomatis & Terintegrasi) */}
+                {showAvgTugasCol && (
+                  <th
+                    rowSpan={2}
+                    className="py-2 px-2 font-bold text-center bg-sky-200/90 dark:bg-sky-900/90 border-x-2 border-b border-sky-400 dark:border-sky-700 text-sky-950 dark:text-sky-50 w-28 min-w-[105px] max-w-[120px] shadow-xs align-middle"
+                  >
+                    <div className="space-y-0.5">
+                      <div className="font-extrabold text-xs text-sky-950 dark:text-sky-50 leading-tight uppercase tracking-tight">
+                        RATA-RATA TUGAS
                       </div>
-                      <div className="text-[10px] text-indigo-100 font-semibold hidden md:flex items-center gap-2">
-                        <span className="bg-indigo-900/60 px-2.5 py-0.5 rounded-md border border-indigo-400/30">
-                          Otomatis bergeser ke kiri/kanan saat tanggal disimpan
-                        </span>
+                      <div className="text-[10px] text-sky-900 dark:text-sky-200 font-bold bg-sky-300/60 dark:bg-sky-800/60 px-1.5 py-0.5 rounded inline-block">
+                        Bobot: {weights.Tugas}%
                       </div>
                     </div>
                   </th>
-                ) : (
-                  <>
-                    {/* TUGAS (Bobot %) */}
-                    {showTugasSection && (
-                      <th
-                        colSpan={Math.max(1, tugasCols.length)}
-                        className="py-2 px-2.5 bg-sky-100/95 dark:bg-sky-950/90 border-b border-x border-sky-300 dark:border-sky-800 text-sky-950 dark:text-sky-100 text-center"
-                      >
-                        <div className="flex items-center justify-center gap-1.5">
-                          <span className="font-extrabold text-xs text-sky-950 dark:text-sky-100 uppercase tracking-tight block">
-                            TUGAS
-                          </span>
-                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-sky-600 text-white shadow-2xs">
-                            {weights.Tugas}%
-                          </span>
-                        </div>
-                      </th>
-                    )}
+                )}
 
-                    {/* RATA-RATA TUGAS */}
-                    {showAvgTugasCol && (
-                      <th
-                        rowSpan={2}
-                        className="py-2 px-2 font-bold text-center bg-sky-200/90 dark:bg-sky-900/90 border-x-2 border-b border-sky-400 dark:border-sky-700 text-sky-950 dark:text-sky-50 w-28 min-w-[105px] max-w-[120px] shadow-xs align-middle"
-                      >
-                        <div className="space-y-0.5">
-                          <div className="font-extrabold text-xs text-sky-950 dark:text-sky-50 leading-tight uppercase tracking-tight">
-                            RATA-RATA TUGAS
-                          </div>
-                          <div className="text-[10px] text-sky-900 dark:text-sky-200 font-bold bg-sky-300/60 dark:bg-sky-800/60 px-1.5 py-0.5 rounded inline-block">
-                            Bobot: {weights.Tugas}%
-                          </div>
-                        </div>
-                      </th>
-                    )}
+                {/* 3. FORMATIF / ULANGAN (Bobot %) */}
+                {showFormatifSection && (
+                  <th
+                    colSpan={Math.max(1, formatifCols.length)}
+                    className="py-2 px-2.5 bg-emerald-100/95 dark:bg-emerald-950/90 border-b border-x border-emerald-300 dark:border-emerald-800 text-emerald-950 dark:text-emerald-100 text-center"
+                  >
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className="font-extrabold text-xs text-emerald-950 dark:text-emerald-100 uppercase tracking-tight block">
+                        FORMATIF / ULANGAN
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-600 text-white shadow-2xs">
+                        {weights.Harian}%
+                      </span>
+                    </div>
+                  </th>
+                )}
 
-                    {/* FORMATIF / ULANGAN (Bobot %) */}
-                    {showFormatifSection && (
-                      <th
-                        colSpan={Math.max(1, formatifCols.length)}
-                        className="py-2 px-2.5 bg-emerald-100/95 dark:bg-emerald-950/90 border-b border-x border-emerald-300 dark:border-emerald-800 text-emerald-950 dark:text-emerald-100 text-center"
-                      >
-                        <div className="flex items-center justify-center gap-1.5">
-                          <span className="font-extrabold text-xs text-emerald-950 dark:text-emerald-100 uppercase tracking-tight block">
-                            FORMATIF / ULANGAN
-                          </span>
-                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-600 text-white shadow-2xs">
-                            {weights.Harian}%
-                          </span>
-                        </div>
-                      </th>
-                    )}
+                {/* 4. SUMATIF TP (LINGKUP MATERI) (Bobot %) */}
+                {showSumatifSection && (
+                  <th
+                    colSpan={Math.max(1, sumatifCols.length)}
+                    className="py-2 px-2.5 bg-purple-100/95 dark:bg-purple-950/90 border-b border-x border-purple-300 dark:border-purple-800 text-purple-950 dark:text-purple-100 text-center"
+                  >
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className="font-extrabold text-xs text-purple-950 dark:text-purple-100 uppercase tracking-tight block">
+                        SUMATIF TP
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-purple-600 text-white shadow-2xs">
+                        {weights.Sumatif}%
+                      </span>
+                    </div>
+                  </th>
+                )}
 
-                    {/* SUMATIF TP (LINGKUP MATERI) (Bobot %) */}
-                    {showSumatifSection && (
-                      <th
-                        colSpan={Math.max(1, sumatifCols.length)}
-                        className="py-2 px-2.5 bg-purple-100/95 dark:bg-purple-950/90 border-b border-x border-purple-300 dark:border-purple-800 text-purple-950 dark:text-purple-100 text-center"
-                      >
-                        <div className="flex items-center justify-center gap-1.5">
-                          <span className="font-extrabold text-xs text-purple-950 dark:text-purple-100 uppercase tracking-tight block">
-                            SUMATIF TP
-                          </span>
-                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-purple-600 text-white shadow-2xs">
-                            {weights.Sumatif}%
-                          </span>
-                        </div>
-                      </th>
-                    )}
+                {/* 5. SUMATIF TENGAH SEMESTER / STS (Bobot %) */}
+                {showSTSSection && (
+                  <th
+                    colSpan={Math.max(1, stsCols.length)}
+                    className="py-2 px-2.5 bg-amber-100/95 dark:bg-amber-950/90 border-b border-x border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-100 text-center"
+                  >
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className="font-extrabold text-xs text-amber-950 dark:text-amber-100 uppercase tracking-tight block text-center">
+                        STS
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-600 text-white shadow-2xs">
+                        {weights.STS}%
+                      </span>
+                    </div>
+                  </th>
+                )}
 
-                    {/* SUMATIF TENGAH SEMESTER / STS (Bobot %) */}
-                    {showSTSSection && (
-                      <th
-                        colSpan={Math.max(1, stsCols.length)}
-                        className="py-2 px-2.5 bg-amber-100/95 dark:bg-amber-950/90 border-b border-x border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-100 text-center"
-                      >
-                        <div className="flex items-center justify-center gap-1.5">
-                          <span className="font-extrabold text-xs text-amber-950 dark:text-amber-100 uppercase tracking-tight block text-center">
-                            STS
-                          </span>
-                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-600 text-white shadow-2xs">
-                            {weights.STS}%
-                          </span>
-                        </div>
-                      </th>
-                    )}
-
-                    {/* SUMATIF AKHIR SEMESTER SAS (Bobot %) */}
-                    {showSASSection && (
-                      <th
-                        colSpan={Math.max(1, sasCols.length)}
-                        className="py-2 px-2.5 bg-rose-100/95 dark:bg-rose-950/90 border-b border-x border-rose-300 dark:border-rose-800 text-rose-950 dark:text-rose-100 text-center"
-                      >
-                        <div className="flex items-center justify-center gap-1.5">
-                          <span className="font-extrabold text-xs text-rose-950 dark:text-rose-100 uppercase tracking-tight block text-center">
-                            SAS
-                          </span>
-                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white shadow-2xs">
-                            {weights.SAS}%
-                          </span>
-                        </div>
-                      </th>
-                    )}
-                  </>
+                {/* 6. SUMATIF AKHIR SEMESTER SAS (Bobot %) */}
+                {showSASSection && (
+                  <th
+                    colSpan={Math.max(1, sasCols.length)}
+                    className="py-2 px-2.5 bg-rose-100/95 dark:bg-rose-950/90 border-b border-x border-rose-300 dark:border-rose-800 text-rose-950 dark:text-rose-100 text-center"
+                  >
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className="font-extrabold text-xs text-rose-950 dark:text-rose-100 uppercase tracking-tight block text-center">
+                        SAS
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white shadow-2xs">
+                        {weights.SAS}%
+                      </span>
+                    </div>
+                  </th>
                 )}
 
                 {/* GABUNGAN PENILAIAN PSIKOMOTORIK DAN SIKAP (DISETELAH SAS) */}
@@ -2948,85 +2877,8 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
 
               {/* BARIS HEADER 2: RINCIAN SUB-KOLOM (JUDUL, TANGGAL, TOMBOL EDIT & HAPUS) */}
               <tr className="border-b border-slate-200 dark:border-slate-700 divide-x divide-slate-200 dark:divide-slate-700">
-                {tableDisplayMode === 'chronological' ? (
-                  displayedColumns.map((col, idx) => (
-                    <th
-                      key={col.key}
-                      className="py-2.5 px-3 min-w-[165px] max-w-[215px] font-bold text-slate-800 dark:text-slate-100 align-top group hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors border-x border-slate-200 dark:border-slate-700"
-                    >
-                      <div className="flex flex-col h-full justify-between gap-1.5 text-left">
-                        {/* Header Atas: Badge Pilar & Posisi Urutan (#1, #2, dst.) */}
-                        <div className="flex items-center justify-between gap-1">
-                          <span
-                            className={`px-2 py-0.5 rounded-md text-[9px] font-black tracking-tight border uppercase shadow-2xs ${getTypeBadgeClass(
-                              col.type
-                            )}`}
-                          >
-                            {GRADE_TYPE_SHORT[col.type]}
-                          </span>
-                          <span
-                            className="text-[10px] font-extrabold text-slate-600 dark:text-slate-300 font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 shadow-2xs"
-                            title={`Urutan ke-${idx + 1} (${idx === 0 ? 'Posisi Paling Kiri (Terlama)' : idx === displayedColumns.length - 1 ? 'Posisi Paling Kanan (Terbaru)' : 'Kronologis'})`}
-                          >
-                            #{idx + 1}
-                          </span>
-                        </div>
-
-                        {/* Judul / Deskripsi Materi */}
-                        <div
-                          onClick={() => handleOpenEditColumn(col)}
-                          className="cursor-pointer group/title"
-                          title={`Klik untuk mengedit deskripsi materi & tanggal: ${col.title}`}
-                        >
-                          <div className="w-full text-xs font-bold text-slate-900 dark:text-white leading-snug whitespace-normal break-normal hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors line-clamp-2">
-                            {col.title}
-                          </div>
-                        </div>
-
-                        {/* Tanggal Penilaian Secara Lengkap */}
-                        <div
-                          className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 text-[10px] text-slate-700 dark:text-slate-300 font-semibold shadow-2xs"
-                          title={`Tanggal Penilaian Lengkap: ${formatFullAssessmentDateWithDay(col.date)}`}
-                        >
-                          <Calendar className={`w-3 h-3 ${getTypeIconColor(col.type)} shrink-0`} />
-                          <span className="truncate leading-tight font-medium">
-                            {formatFullAssessmentDate(col.date)}
-                          </span>
-                        </div>
-
-                        {/* Bobot & Tombol Aksi */}
-                        <div className="flex items-center justify-between pt-1 border-t border-slate-200/80 dark:border-slate-700/80 text-[10px] text-slate-500 dark:text-slate-400">
-                          <span className="text-[9px] font-bold text-slate-600 dark:text-slate-400">
-                            Bobot {weights[col.type]}%
-                          </span>
-                          <div className="flex items-center gap-0.5 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEditColumn(col)}
-                              className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 p-0.5 rounded hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors cursor-pointer"
-                              title={`Edit teks & tanggal "${col.title}" (${formatFullAssessmentDateWithDay(col.date)})`}
-                            >
-                              <Pencil className="w-3 h-3" />
-                            </button>
-                            {col.type !== 'STS' && col.type !== 'SAS' && (
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteColumn(col)}
-                                className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 p-0.5 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
-                                title={`Hapus kolom "${col.title}"`}
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </th>
-                  ))
-                ) : (
-                  <>
-                    {/* Sub-kolom Tugas */}
-                    {showTugasSection &&
+                {/* Sub-kolom Tugas */}
+                {showTugasSection &&
                       (tugasCols.length > 0 ? (
                         tugasCols.map((col) => (
                           <th
@@ -3318,8 +3170,6 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                           Belum ada kolom SAS
                         </th>
                       ))}
-                  </>
-                )}
 
                 {/* SUB-KOLOM PENILAIAN PSIKOMOTORIK DAN SIKAP (DISETELAH SAS) */}
                 {showPsikomotorikSikap && (
@@ -3423,33 +3273,8 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                           </span>
                         </td>
 
-                        {/* KOLOM PENILAIAN TERURUT KRONOLOGIS (POSISI KIRI TERLAMA → KANAN TERBARU) */}
-                        {tableDisplayMode === 'chronological' ? (
-                          displayedColumns.map((col) => {
-                            const currentScore = studentScores[col.key] ?? '';
-                            return (
-                              <td key={col.key} className="py-1.5 px-2 text-center min-w-[165px] max-w-[215px]">
-                                <input
-                                  type="text"
-                                  inputMode="numeric"
-                                  pattern="[0-9]*"
-                                  placeholder="—"
-                                  title={`Nilai ${student.name} · [${GRADE_TYPE_SHORT[col.type]}] ${col.title} · Tanggal: ${formatFullAssessmentDateWithDay(col.date)}`}
-                                  value={currentScore}
-                                  onChange={(e) =>
-                                    handleScoreChange(student.id, col.key, e.target.value)
-                                  }
-                                  className={`w-16 h-8 text-center text-xs font-bold rounded-lg border mx-auto block transition-colors duration-150 ${getScoreInputColorClass(
-                                    currentScore
-                                  )} focus:outline-none`}
-                                />
-                              </td>
-                            );
-                          })
-                        ) : (
-                          <>
-                            {/* KOLOM 1: Input Nilai Sub-Kolom Tugas Mandiri / Kelompok */}
-                            {showTugasSection &&
+                        {/* KOLOM 1: Input Nilai Sub-Kolom Tugas Mandiri / Kelompok */}
+                        {showTugasSection &&
                               (tugasCols.length > 0 ? (
                                 tugasCols.map((col) => {
                                   const currentScore = studentScores[col.key] ?? '';
@@ -3619,8 +3444,6 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
                               ) : (
                                 <td className="py-2 px-1 text-center text-slate-400 italic text-xs min-w-[160px]">—</td>
                               ))}
-                          </>
-                        )}
 
                         {/* CELL PENILAIAN PSIKOMOTORIK DAN SIKAP (DISISIPKAN SETELAH SAS) */}
                         {showPsikomotorikSikap ? (
@@ -3854,26 +3677,8 @@ Total Nilai Akhir = ${evalItem.finalScore.toFixed(1)} (Total Bobot ${totalWeight
                     RATA-RATA KELAS:
                   </td>
 
-                  {/* RATA-RATA KELAS PER KOLOM PENILAIAN */}
-                  {tableDisplayMode === 'chronological' ? (
-                    displayedColumns.map((col) => {
-                      const scores = studentEvaluations
-                        .map((e) => e.studentScores[col.key])
-                        .filter((v): v is number => typeof v === 'number' && !isNaN(v));
-                      const avg = scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : '-';
-                      return (
-                        <td key={col.key} className="py-2 px-1 text-center font-mono text-slate-700 dark:text-slate-300">
-                          <div className="font-extrabold">{avg}</div>
-                          <div className="text-[9px] text-slate-400 font-sans font-semibold">
-                            {scores.length}/{studentEvaluations.length} dinilai
-                          </div>
-                        </td>
-                      );
-                    })
-                  ) : (
-                    <>
-                      {/* Sub-kolom Tugas Averages */}
-                      {showTugasSection &&
+                  {/* Sub-kolom Tugas Averages */}
+                  {showTugasSection &&
                         tugasCols.map((col) => {
                           const scores = studentEvaluations
                             .map((e) => e.studentScores[col.key])
@@ -3961,8 +3766,6 @@ Total Nilai Akhir = ${evalItem.finalScore.toFixed(1)} (Total Bobot ${totalWeight
                             </td>
                           );
                         })}
-                    </>
-                  )}
 
                   {/* FOOTER PSIKOMOTORIK DAN SIKAP (DISETELAH SAS) */}
                   {showPsikomotorikSikap ? (

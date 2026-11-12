@@ -525,10 +525,6 @@ async function startServer() {
   const distPath = path.resolve(process.cwd(), 'dist');
   const isProduction = process.env.NODE_ENV === 'production';
 
-  app.listen(port, host, () => {
-    console.log(`Server running at http://${host}:${port}`);
-  });
-
   if (isProduction && fs.existsSync(distPath)) {
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
@@ -545,6 +541,13 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   }
+
+  app.listen(port, host, () => {
+    console.log(`Server running at http://${host}:${port}`);
+  });
 }
 
-startServer();
+startServer().catch((err) => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
+});
