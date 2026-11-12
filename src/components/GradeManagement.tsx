@@ -36,6 +36,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar,
+  ArrowUpDown,
 } from 'lucide-react';
 import { GradeTrendAnalytics } from './GradeTrendAnalytics';
 
@@ -221,6 +222,53 @@ export const createDefaultClassColumns = (classId: string, subject: string, date
     subject,
   },
 ];
+
+/**
+ * Mengurutkan komponen penilaian berdasarkan tanggal yang diinput:
+ * - Urutan tanggal (asc: kronologis terlama -> terbaru, desc: terbaru -> terlama)
+ * - Jika tanggal sama, urutkan berdasarkan judul / nomor alami
+ */
+export const sortColumnsByDate = (
+  cols: AssessmentColumn[],
+  order: 'asc' | 'desc' = 'asc'
+): AssessmentColumn[] => {
+  return [...cols].sort((a, b) => {
+    const dateA = (a.date || '').trim();
+    const dateB = (b.date || '').trim();
+    if (dateA !== dateB) {
+      if (!dateA) return 1;
+      if (!dateB) return -1;
+      return order === 'asc' ? dateA.localeCompare(dateB) : dateB.localeCompare(dateA);
+    }
+    return a.title.localeCompare(b.title, undefined, { numeric: true });
+  });
+};
+
+export const sortAllClassColumns = (
+  cols: AssessmentColumn[],
+  order: 'asc' | 'desc' = 'asc'
+): AssessmentColumn[] => {
+  const typeOrder: Record<GradeType, number> = {
+    Tugas: 1,
+    Harian: 2,
+    Sumatif: 3,
+    STS: 4,
+    SAS: 5,
+  };
+  return [...cols].sort((a, b) => {
+    if (typeOrder[a.type] !== typeOrder[b.type]) {
+      return typeOrder[a.type] - typeOrder[b.type];
+    }
+    const dateA = (a.date || '').trim();
+    const dateB = (b.date || '').trim();
+    if (dateA !== dateB) {
+      if (!dateA) return 1;
+      if (!dateB) return -1;
+      return order === 'asc' ? dateA.localeCompare(dateB) : dateB.localeCompare(dateA);
+    }
+    return a.title.localeCompare(b.title, undefined, { numeric: true });
+  });
+};
 
 const STORAGE_COLUMNS_KEY = 'sman1_gowa_assessment_subcolumns_v3';
 
@@ -900,19 +948,24 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
   // 3. STRUKTUR SUB-KOLOM PENILAIAN PER KELAS
   const [classColumnsMap, setClassColumnsMap] = useState<Record<string, AssessmentColumn[]>>(getStoredColumnsByClass);
 
-  // Sub-kolom aktif untuk kelas terpilih (default: 3 Tugas, 2 Formatif, 1 Sumatif TP, 1 STS, 1 SAS)
+  // Pengaturan urutan komponen penilaian berdasarkan tanggal yang diinput ('asc' = kronologis terlama ke terbaru, 'desc' = terbaru ke terlama)
+  const [columnSortOrder, setColumnSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  // Sub-kolom aktif untuk kelas terpilih (default: 3 Tugas, 2 Formatif, 1 Sumatif TP, 1 STS, 1 SAS), diurutkan berdasarkan tanggal input
   const currentClassColumns = useMemo<AssessmentColumn[]>(() => {
     const existing = classColumnsMap[selectedClassId];
     if (existing && existing.length > 0) {
-      return existing;
+      return sortAllClassColumns(existing, columnSortOrder);
     }
     const today = new Date().toISOString().slice(0, 10);
-    return createDefaultClassColumns(selectedClassId, selectedSubject, today);
-  }, [classColumnsMap, selectedClassId, selectedSubject]);
+    const defaults = createDefaultClassColumns(selectedClassId, selectedSubject, today);
+    return sortAllClassColumns(defaults, columnSortOrder);
+  }, [classColumnsMap, selectedClassId, selectedSubject, columnSortOrder]);
 
   const updateClassColumns = (newCols: AssessmentColumn[]) => {
+    const sorted = sortAllClassColumns(newCols, columnSortOrder);
     setClassColumnsMap((prev) => {
-      const next = { ...prev, [selectedClassId]: newCols };
+      const next = { ...prev, [selectedClassId]: sorted };
       saveStoredColumnsByClass(next);
       return next;
     });
@@ -926,31 +979,36 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
     SAS: 5,
   };
 
-  // Sub-kolom terpisah berdasarkan 5 pilar komponen penilaian:
-  // Kolom 1: Tugas (default 3 sub-kolom)
+  // Sub-kolom terpisah berdasarkan 5 pilar komponen penilaian yang diurutkan berdasarkan tanggal input:
+  // Kolom 1: Tugas (diurutkan berdasarkan tanggal input)
   const tugasCols = useMemo(() => {
-    return currentClassColumns.filter((c) => c.type === 'Tugas');
-  }, [currentClassColumns]);
+    const list = currentClassColumns.filter((c) => c.type === 'Tugas');
+    return sortColumnsByDate(list, columnSortOrder);
+  }, [currentClassColumns, columnSortOrder]);
 
-  // Kolom 3: Formatif / Ulangan (default 2 sub-kolom)
+  // Kolom 3: Formatif / Ulangan (diurutkan berdasarkan tanggal input)
   const formatifCols = useMemo(() => {
-    return currentClassColumns.filter((c) => c.type === 'Harian');
-  }, [currentClassColumns]);
+    const list = currentClassColumns.filter((c) => c.type === 'Harian');
+    return sortColumnsByDate(list, columnSortOrder);
+  }, [currentClassColumns, columnSortOrder]);
 
-  // Sumatif Lingkup Materi TP (default 1 sub-kolom)
+  // Sumatif Lingkup Materi TP (diurutkan berdasarkan tanggal input)
   const sumatifCols = useMemo(() => {
-    return currentClassColumns.filter((c) => c.type === 'Sumatif');
-  }, [currentClassColumns]);
+    const list = currentClassColumns.filter((c) => c.type === 'Sumatif');
+    return sortColumnsByDate(list, columnSortOrder);
+  }, [currentClassColumns, columnSortOrder]);
 
-  // Sumatif Tengah Semester STS (default 1 kolom)
+  // Sumatif Tengah Semester STS (diurutkan berdasarkan tanggal input)
   const stsCols = useMemo(() => {
-    return currentClassColumns.filter((c) => c.type === 'STS');
-  }, [currentClassColumns]);
+    const list = currentClassColumns.filter((c) => c.type === 'STS');
+    return sortColumnsByDate(list, columnSortOrder);
+  }, [currentClassColumns, columnSortOrder]);
 
-  // Sumatif Akhir Semester SAS (default 1 kolom)
+  // Sumatif Akhir Semester SAS (diurutkan berdasarkan tanggal input)
   const sasCols = useMemo(() => {
-    return currentClassColumns.filter((c) => c.type === 'SAS');
-  }, [currentClassColumns]);
+    const list = currentClassColumns.filter((c) => c.type === 'SAS');
+    return sortColumnsByDate(list, columnSortOrder);
+  }, [currentClassColumns, columnSortOrder]);
 
   // Seluruh sub-kolom aktif berurutan
   const allColumns = useMemo<AssessmentColumn[]>(() => {
@@ -1446,7 +1504,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
     setIsAddColumnModalOpen(false);
     setNewColTitle('');
     setIsDirty(true);
-    showToast(`Penilaian [${GRADE_TYPE_SHORT[newColType]}] "${cleanTitle}" berhasil ditambahkan.`);
+    showToast(`Penilaian [${GRADE_TYPE_SHORT[newColType]}] "${cleanTitle}" (Tanggal: ${formatFullAssessmentDate(cleanDate)}) berhasil ditambahkan & diurutkan.`);
   };
 
   // Hapus Komponen Penilaian
@@ -1553,7 +1611,7 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
     setIsEditColumnModalOpen(false);
     setColumnToEdit(null);
     setIsDirty(true);
-    showToast(`Sub-kolom berhasil diperbarui menjadi "${cleanTitle}".`);
+    showToast(`Penilaian "${cleanTitle}" berhasil diperbarui & diurutkan sesuai tanggal.`);
   };
 
   // Atur Ulang ke Konfigurasi Default (3 Tugas, 2 Formatif, 1 Sumatif TP, 1 STS, 1 SAS)
@@ -2503,6 +2561,30 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Tombol Urutkan Komponen Penilaian Berdasarkan Tanggal Input */}
+          <button
+            type="button"
+            onClick={() => {
+              const nextOrder = columnSortOrder === 'asc' ? 'desc' : 'asc';
+              setColumnSortOrder(nextOrder);
+              const sorted = sortAllClassColumns(currentClassColumns, nextOrder);
+              updateClassColumns(sorted);
+              showToast(
+                `Komponen penilaian berhasil diurutkan berdasarkan tanggal: ${
+                  nextOrder === 'asc' ? 'Terlama ke Terbaru (Kronologis)' : 'Terbaru ke Terlama'
+                }.`
+              );
+            }}
+            className="px-3.5 py-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50/90 dark:bg-indigo-950/70 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 border border-indigo-200/90 dark:border-indigo-800/80 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+            title={`Urutkan komponen penilaian berdasarkan tanggal yang diinput (${
+              columnSortOrder === 'asc' ? 'Terlama → Terbaru (Kronologis)' : 'Terbaru → Terlama'
+            })`}
+          >
+            <Calendar className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+            <span>Urut Tanggal: {columnSortOrder === 'asc' ? 'Terlama ke Terbaru' : 'Terbaru ke Terlama'}</span>
+            <ArrowUpDown className="w-3 h-3 text-indigo-500" />
+          </button>
+
           {/* Tombol Penilaian Psikomotorik & Sikap di samping tabel penilaian */}
           <button
             type="button"
@@ -3837,9 +3919,14 @@ Total Nilai Akhir = ${evalItem.finalScore.toFixed(1)} (Total Bobot ${totalWeight
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 font-mono"
                 />
                 {newColDate && (
-                  <div className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-800/70 text-[11px] text-indigo-700 dark:text-indigo-300 font-medium">
-                    <Calendar className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                    <span>Format Lengkap: <strong>{formatFullAssessmentDateWithDay(newColDate)}</strong></span>
+                  <div className="mt-2 space-y-1">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-800/70 text-[11px] text-indigo-700 dark:text-indigo-300 font-medium">
+                      <Calendar className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                      <span>Format Lengkap: <strong>{formatFullAssessmentDateWithDay(newColDate)}</strong></span>
+                    </div>
+                    <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium pl-1">
+                      *Kolom penilaian akan otomatis ditempatkan sesuai urutan tanggal yang diinput.
+                    </p>
                   </div>
                 )}
               </div>
@@ -3930,9 +4017,14 @@ Total Nilai Akhir = ${evalItem.finalScore.toFixed(1)} (Total Bobot ${totalWeight
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 font-mono"
                 />
                 {editColDate && (
-                  <div className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-800/70 text-[11px] text-indigo-700 dark:text-indigo-300 font-medium">
-                    <Calendar className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                    <span>Format Lengkap: <strong>{formatFullAssessmentDateWithDay(editColDate)}</strong></span>
+                  <div className="mt-2 space-y-1">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-800/70 text-[11px] text-indigo-700 dark:text-indigo-300 font-medium">
+                      <Calendar className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                      <span>Format Lengkap: <strong>{formatFullAssessmentDateWithDay(editColDate)}</strong></span>
+                    </div>
+                    <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium pl-1">
+                      *Kolom penilaian akan otomatis diurutkan ulang pada tabel sesuai tanggal yang diubah.
+                    </p>
                   </div>
                 )}
               </div>
