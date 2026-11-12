@@ -36,8 +36,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar,
-  ArrowUpDown,
-  ArrowRight,
 } from 'lucide-react';
 import { GradeTrendAnalytics } from './GradeTrendAnalytics';
 
@@ -2605,32 +2603,6 @@ export const GradeManagement: React.FC<GradeManagementProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-
-          {/* Tombol Arah Urutan Kronologis */}
-          <button
-            type="button"
-            onClick={() => {
-              const nextOrder = columnSortOrder === 'asc' ? 'desc' : 'asc';
-              setColumnSortOrder(nextOrder);
-              const sorted = sortAllClassColumns(currentClassColumns, nextOrder);
-              updateClassColumns(sorted);
-              showToast(
-                `Urutan tanggal kolom: ${
-                  nextOrder === 'asc' ? 'Posisi Kiri Terlama → Posisi Kanan Terbaru' : 'Posisi Kiri Terbaru → Posisi Kanan Terlama'
-                }.`
-              );
-            }}
-            className="px-3.5 py-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50/90 dark:bg-indigo-950/70 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 border border-indigo-200/90 dark:border-indigo-800/80 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
-            title={`Arah Urutan Kolom: ${
-              columnSortOrder === 'asc' ? 'Posisi Kiri Terlama → Posisi Kanan Terbaru' : 'Posisi Kiri Terbaru → Posisi Kanan Terlama'
-            } (Klik untuk membalik)`}
-          >
-            <ArrowUpDown className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-            <span>
-              {columnSortOrder === 'asc' ? 'Kiri Terlama → Kanan Terbaru' : 'Kiri Terbaru → Kanan Terlama'}
-            </span>
-          </button>
-
           {/* Tombol Penilaian Psikomotorik & Sikap di samping tabel penilaian */}
           <button
             type="button"
@@ -3966,14 +3938,11 @@ Total Nilai Akhir = ${evalItem.finalScore.toFixed(1)} (Total Bobot ${totalWeight
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 font-mono"
                 />
                 {newColDate && (
-                  <div className="mt-2 space-y-1">
+                  <div className="mt-2">
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-800/70 text-[11px] text-indigo-700 dark:text-indigo-300 font-medium">
                       <Calendar className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
                       <span>Format Lengkap: <strong>{formatFullAssessmentDateWithDay(newColDate)}</strong></span>
                     </div>
-                    <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold pl-1">
-                      *Otomatis urutkan tanggal, bulan, &amp; tahun: Kolom baru langsung otomatis ditempatkan pada posisi kronologis (posisi kiri terlama → kanan terbaru).
-                    </p>
                   </div>
                 )}
               </div>
@@ -4064,14 +4033,11 @@ Total Nilai Akhir = ${evalItem.finalScore.toFixed(1)} (Total Bobot ${totalWeight
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 font-mono"
                 />
                 {editColDate && (
-                  <div className="mt-2 space-y-1">
+                  <div className="mt-2">
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-800/70 text-[11px] text-indigo-700 dark:text-indigo-300 font-medium">
                       <Calendar className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
                       <span>Format Lengkap: <strong>{formatFullAssessmentDateWithDay(editColDate)}</strong></span>
                     </div>
-                    <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold pl-1">
-                      *Otomatis urutkan tanggal, bulan, &amp; tahun: Posisi kolom otomatis bergeser (posisi kiri terlama, posisi kanan terbaru) saat tombol simpan diklik.
-                    </p>
                   </div>
                 )}
               </div>
